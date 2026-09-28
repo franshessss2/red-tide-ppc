@@ -2,7 +2,7 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SEED_ZONES } from '../data/zones'
-import { ZONE_LOAD_STAGGER_MS } from '../motion/mapMotion'
+import { zoneLoadDelayMs } from '../motion/mapMotion'
 import type { Zone, ZoneStatus } from '../types'
 import { Map } from './Map'
 
@@ -70,7 +70,7 @@ describe('zone load-in wiring', () => {
       Number(path.style.getPropertyValue('--zone-delay').replace('ms', '')),
     )
     delays.forEach((delay, index) => {
-      expect(delay).toBe(index * ZONE_LOAD_STAGGER_MS)
+      expect(delay).toBe(zoneLoadDelayMs(index))
     })
   })
 })

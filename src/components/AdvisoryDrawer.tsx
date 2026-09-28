@@ -1,5 +1,7 @@
 import { useCallback } from 'react'
 import { motion, useTransform } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, tween } from '../motion/tokens'
 import { MorphChevronIcon } from './MorphChevron'
 import {
   advisoryShare,
@@ -216,6 +218,7 @@ export function AdvisoryDrawer({ advisory, zones, pending }: AdvisoryDrawerProps
         <motion.div
           ref={panel.panelRef}
           id="advisory-drawer-body"
+          inert={!open}
           style={{ x: panel.offsetX }}
           drag="x"
           dragListener={false}
@@ -259,6 +262,7 @@ function AdvisoryGauge({
   zones: number
   pending: number
 }) {
+  const reduce = useReducedMotion()
   const share = advisoryShare(advisory, zones)
   const wave = tideWavePath({ scale: share })
   const baseline = tideBaselinePath()
@@ -293,9 +297,12 @@ function AdvisoryGauge({
         {/* Two tiles, drifted -50% on a loop: seamless because the wave is
             periodic. The trace is amber until something is actually flagged. */}
         <g className="animate-tide-drift" style={{ color: share > 0 ? 'var(--color-advisory)' : 'var(--color-line)' }}>
-          <path d={wave} stroke="currentColor" strokeWidth="1.4" fill="none" />
-          <path
+          <motion.path d={wave} initial={false} animate={{ d: wave }} transition={tween(reduce, MOTION.time.reveal)} stroke="currentColor" strokeWidth="1.4" fill="none" />
+          <motion.path
             d={wave}
+            initial={false}
+            animate={{ d: wave }}
+            transition={tween(reduce, MOTION.time.reveal)}
             stroke="currentColor"
             strokeWidth="1.4"
             fill="none"

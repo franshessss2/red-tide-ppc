@@ -12,9 +12,10 @@ import {
   useDragControls,
   useMotionValue,
   useMotionValueEvent,
-  useReducedMotion,
 } from 'motion/react'
 import type { DragControls, MotionValue } from 'motion/react'
+import { useReducedMotion } from './preferences'
+import { MOTION } from './tokens'
 import {
   SIDE_PANEL_FALLBACK_WIDTH,
   drawerWindowWidth,
@@ -27,25 +28,6 @@ import type {
   SidePanelOffsets,
   SidePanelState,
 } from './sidePanelAnchors'
-
-/**
- * Spring the drawer snaps with.
- *
- * Deliberately the same spring as the zone sheet (stiffness 420, damping 34,
- * mass 0.85): the drawer and the sheet are two gestures in one app, and they
- * should feel like one physics system. Duplicated rather than imported because
- * the sheet module is frozen — this interaction must not risk it.
- *
- * For reduced-motion we jump instantly (no spring), so keyboard users and
- * users with vestibular preferences still get a functional drawer without
- * motion.
- */
-const SIDE_PANEL_SPRING = {
-  type: 'spring',
-  stiffness: 420,
-  damping: 34,
-  mass: 0.85,
-} as const
 
 /** A gesture that travelled less than this (px) was a tap, not a drag. */
 const DRAG_SLOP = 6
@@ -148,9 +130,6 @@ export function useSidePanel(
   const dragTravelled = useRef(0)
   const stateRef = useRef(state)
 
-  useEffect(() => {
-    stateRef.current = state
-  }, [state])
 
   const stopSnap = useCallback(() => {
     snapAnimation.current?.stop()
@@ -159,6 +138,7 @@ export function useSidePanel(
 
   const settle = useCallback(
     (target: SidePanelState) => {
+      stateRef.current = target
       setState(target)
       stopSnap()
       const to = offsets[target]
@@ -166,10 +146,12 @@ export function useSidePanel(
         offsetX.jump(to)
         return
       }
-      snapAnimation.current = animate(offsetX, to, SIDE_PANEL_SPRING)
+      snapAnimation.current = animate(offsetX, to, MOTION.spring)
     },
     [offsets, offsetX, reduceMotion, stopSnap],
   )
+
+  useEffect(() => stopSnap, [stopSnap])
 
   const goTo = useCallback((target: SidePanelState) => settle(target), [settle])
 
@@ -231,8 +213,10 @@ export function useSidePanel(
   // mounts `collapsed` never paints a fallback-width mis-pin.
   useLayoutEffect(() => {
     stopSnap()
+    dragControls.cancel()
+    setDragging(false)
     offsetX.jump(offsets[stateRef.current])
-  }, [offsets, offsetX, stopSnap])
+  }, [offsets, offsetX, stopSnap, reduceMotion, dragControls])
 
   return {
     panelRef,

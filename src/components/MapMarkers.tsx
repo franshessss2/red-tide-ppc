@@ -6,6 +6,9 @@ import { polygonCentroid, INTRO_GLIDE_SECONDS, INTRO_GLIDE_SESSION_KEY, INTRO_GL
 import { MAP_CENTER, MAP_DEFAULT_ZOOM } from '../data/zones'
 import { zoneTheme } from '../styles/statusTheme'
 import type { Report, Zone } from '../types'
+import { cameraFor } from '../motion/camera'
+import { prefersReducedMotion, useReducedMotion } from '../motion/preferences'
+import { createMotionScope } from '../motion/scope'
 
 /**
  * Phase 3 map markers: report pins at zone centroids, the user-location
@@ -33,6 +36,7 @@ const PIN_COLORS: Record<Report['status'], string> = {
  * per report id — handing Leaflet a fresh DivIcon would reset its DOM).
  */
 export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[] }) {
+  const reduce = useReducedMotion()
   const centroids = useMemo(() => {
     const byZone = new Map<string, [number, number]>()
     for (const zone of zones) byZone.set(zone.id, polygonCentroid(zone.polygon))
@@ -47,15 +51,19 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
 
   // Icons cached per id so later report mutations never reset older pins'
   // DOM (a reset would replay the drop on pins that already landed).
-  const iconCache = useRef<Map<string, DivIcon>>(new Map())
+  const iconCache = useRef<Map<string, { status: Report['status']; reduced: boolean; icon: DivIcon }>>(new Map())
   const icons = useMemo(() => {
+    const present = new Set(reports.map(report => report.id))
+    for (const id of iconCache.current.keys()) if (!present.has(id)) iconCache.current.delete(id)
     for (const report of reports) {
-      if (iconCache.current.has(report.id)) continue
-      const fresh = !knownAtMount.current?.has(report.id)
+      const cached = iconCache.current.get(report.id)
+      if (cached?.status === report.status && cached.reduced === reduce) continue
+      const fresh = !reduce && !cached && !knownAtMount.current?.has(report.id)
+      knownAtMount.current?.add(report.id)
       const color = PIN_COLORS[report.status]
       iconCache.current.set(
         report.id,
-        divIcon({
+        { status: report.status, reduced: reduce, icon: divIcon({
           className: 'report-pin-wrap',
           iconSize: [16, 16],
           iconAnchor: [8, 8],
@@ -63,17 +71,17 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
             `<span class="report-pin${fresh ? ' report-pin--fresh' : ''}" style="color:${color}">` +
             (fresh ? '<span class="report-ring" aria-hidden="true"></span>' : '') +
             '<span class="report-pin-body" aria-hidden="true"></span></span>',
-        }),
+        }) },
       )
     }
     return iconCache.current
-  }, [reports])
+  }, [reports, reduce])
 
   return (
     <>
       {reports.map((report) => {
         const at = centroids.get(report.zoneId)
-        const icon = icons.get(report.id)
+        const icon = icons.get(report.id)?.icon
         if (!at || !icon) return null
         return (
           <Marker
@@ -101,10 +109,11 @@ export function UserLocationDot() {
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) return
+    const scope = createMotionScope()
     let watchId: number | null = null
     try {
       watchId = navigator.geolocation.watchPosition(
-        (position) => setPos([position.coords.latitude, position.coords.longitude]),
+        scope.guard((position: GeolocationPosition) => setPos([position.coords.latitude, position.coords.longitude])),
         () => {
           /* denied / unavailable: no dot, no error surface */
         },
@@ -114,6 +123,7 @@ export function UserLocationDot() {
       /* geolocation threw synchronously: same outcome as denied */
     }
     return () => {
+      scope.dispose()
       if (watchId !== null) {
         try {
           navigator.geolocation.clearWatch(watchId)
@@ -147,33 +157,18 @@ export function UserLocationDot() {
  */
 export function IntroGlide() {
   const map = useMap()
-  const started = useRef(false)
-
   useEffect(() => {
-    if (started.current) return
-    started.current = true
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return
-    }
-    let seen = false
-    try {
-      seen = sessionStorage.getItem(INTRO_GLIDE_SESSION_KEY) === 'done'
-      sessionStorage.setItem(INTRO_GLIDE_SESSION_KEY, 'done')
-    } catch {
-      /* storage unavailable (private mode quirks): skip the glide quietly */
-      return
-    }
-    if (seen) return
-
-    map.setView(MAP_CENTER, INTRO_GLIDE_WIDE_ZOOM, { animate: false })
-    const frame = requestAnimationFrame(() => {
-      map.flyTo(MAP_CENTER, MAP_DEFAULT_ZOOM, { duration: INTRO_GLIDE_SECONDS })
-    })
-    return () => cancelAnimationFrame(frame)
+    if (prefersReducedMotion()) return
+    try { if (sessionStorage.getItem(INTRO_GLIDE_SESSION_KEY) === 'done') return }
+    catch { return }
+    const settle = () => map.setView(MAP_CENTER, MAP_DEFAULT_ZOOM, { animate: false })
+    // Defer the entire operation. StrictMode may cancel setup before the
+    // first frame; it must not leave a wide camera with an already-seen flag.
+    return cameraFor(map).run(() => {
+      try { sessionStorage.setItem(INTRO_GLIDE_SESSION_KEY, 'done') } catch { /* optional */ }
+      map.setView(MAP_CENTER, INTRO_GLIDE_WIDE_ZOOM, { animate: false })
+      map.flyTo(MAP_CENTER, MAP_DEFAULT_ZOOM, { animate: true, duration: INTRO_GLIDE_SECONDS })
+    }, settle, true, true)
   }, [map])
-
   return null
 }

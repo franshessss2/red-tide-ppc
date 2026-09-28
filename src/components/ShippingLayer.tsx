@@ -1,4 +1,5 @@
 import { CircleMarker, Polyline, Tooltip } from 'react-leaflet'
+import { useReducedMotion } from '../motion/preferences'
 import type { ShippingFeature } from '../data/shipping'
 import {
   SHIPPING_DISCLAIMER,
@@ -139,13 +140,15 @@ function ShippingHazard({
  *   than snapping. Reduced motion skips the fade.
  */
 export function ShippingLayer({ opacity = 1 }: { opacity?: number }) {
+  const reduce = useReducedMotion()
+  const visibleOpacity = reduce ? (opacity > 0 ? 1 : 0) : opacity
   return (
     <>
       {SHIPPING_FEATURES.map((feature) =>
         feature.kind === 'hazard' ? (
-          <ShippingHazard key={feature.id} feature={feature} opacity={opacity} />
+          <ShippingHazard key={feature.id} feature={feature} opacity={visibleOpacity} />
         ) : (
-          <ShippingLine key={feature.id} feature={feature} opacity={opacity} />
+          <ShippingLine key={feature.id} feature={feature} opacity={visibleOpacity} />
         ),
       )}
       {/* Screen-reader summary: the map geometry itself is not announced. */}

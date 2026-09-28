@@ -294,3 +294,5 @@ describe('RouteTransition', () => {
     expect(seen.maxFrames()).toBe(1)
   })
 })
+
+vi.mock('./preferences', () => ({ useReducedMotion: () => reduceMotion }))

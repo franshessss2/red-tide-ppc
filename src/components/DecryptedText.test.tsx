@@ -97,3 +97,5 @@ describe('DecryptedText', () => {
     expect(setIntervalSpy).not.toHaveBeenCalled()
   })
 })
+
+vi.mock('../motion/preferences', () => ({ useReducedMotion: () => reduceMotion }))

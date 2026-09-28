@@ -30,7 +30,9 @@ const PASSCODE = 'test-passcode'
 async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('link', { name: /open the map/i }))
   // The map page is lazy; wait for it to mount.
-  await screen.findByRole('button', { name: 'Reset view' })
+  await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
+  const tab = screen.getByTestId('zone-drawer-tab')
+  if (tab.getAttribute('aria-expanded') === 'false') await user.click(tab)
 }
 
 function zoneCard(name: string): HTMLElement {
@@ -41,6 +43,7 @@ function zoneCard(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  sessionStorage.setItem('red-tide:intro:v1', 'seen')
   clearDemoData()
   setBackendForTesting(createDemoBackend())
   useAppStore.setState({
@@ -185,7 +188,7 @@ describe('the full report → approve loop', () => {
     // The form closed itself and the zone now shows a pending count.
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull()
-    })
+    }, { timeout: 3500 })
     expect(await screen.findByText('1 pending report')).toBeTruthy()
 
     // --- 2. admin unlocks and approves --------------------------------
@@ -219,6 +222,7 @@ describe('the full report → approve loop', () => {
       await screen.findByText(/zone is under advisory|zones are under advisory/i),
     ).toBeTruthy()
 
+    await user.click(screen.getByTestId('zone-drawer-tab'))
     const card = zoneCard(ZONE)
     expect(within(card).getByText('Advisory')).toBeTruthy()
   })

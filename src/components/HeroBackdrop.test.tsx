@@ -110,3 +110,5 @@ describe('HeroBackdrop', () => {
     expect(await screen.findByTestId('ferrofluid-canvas')).toBeTruthy()
   })
 })
+
+vi.mock('../motion/preferences', async () => ({ ...await vi.importActual<typeof import('../motion/preferences')>('../motion/preferences'), useReducedMotion: () => reduceMotion }))

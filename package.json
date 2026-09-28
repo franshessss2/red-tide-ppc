@@ -5,14 +5,15 @@
   "type": "module",
   "description": "Community-driven red tide (PSP) advisory and reporting map for Puerto Princesa, Palawan",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/demo.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --force",
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
-    "seed:dry-run": "tsx scripts/seed.ts --dry-run"
+    "seed:dry-run": "tsx scripts/seed.ts --dry-run",
+    "dev:demo": "node scripts/demo.mjs"
   },
   "dependencies": {
     "@fontsource/bebas-neue": "^5.3.0",

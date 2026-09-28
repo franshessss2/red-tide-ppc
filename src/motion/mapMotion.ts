@@ -1,64 +1,11 @@
-/**
- * Pure motion constants and helpers for the /map animations.
- *
- * No DOM, no Leaflet, no `motion` imports here — everything is unit-testable
- * arithmetic (same policy as `sidePanelAnchors.ts`). Anything that touches
- * the map instance lives in `Map.tsx`; anything that touches CSS lives in
- * `styles/map-motion.css`.
- *
- * HARD CONSTRAINTS HONOURED EVERYWHERE IN THIS PASS
- * -------------------------------------------------
- *  - only `transform`, `opacity` and cheap SVG paint properties
- *    (stroke-opacity, stroke-dashoffset) are animated — never filter,
- *    box-shadow or backdrop-filter;
- *  - `prefers-reduced-motion` means instant state changes: every duration
- *    here has a reduced-motion counterpart that jumps instead of animates;
- *  - every looping animation is paused while the camera moves
- *    (`MapLoopGate` toggles `.map-motion-paused` on the Leaflet container).
- */
+import { MOTION, staggerDelay } from './tokens'
 
-/**
- * The one app spring (stiffness 420, damping 34, mass 0.85) — the same physics
- * the drawers snap with (`useSidePanel`), shared so the pill indicator, the
- * chevron morph and the drawer feel like one system. Declared here (not
- * imported from `useSidePanel`) because that module is frozen by convention;
- * the numbers deliberately match.
- */
-export const APP_SPRING = {
-  type: 'spring',
-  stiffness: 420,
-  damping: 34,
-  mass: 0.85,
-} as const
-
-/** Zone load-in: one fade per polygon, ease-out. */
-export const ZONE_LOAD_DURATION_MS = 500
-
-/**
- * Per-zone stagger for the load-in. The brief allows 60-80ms; 70ms keeps the
- * whole 7-zone cascade under half a second after the last zone starts.
- */
-export const ZONE_LOAD_STAGGER_MS = 70
-
-/** Camera flight to a focused zone (seconds). Brief: 0.8-1.0s. */
-export const FOCUS_FLIGHT_SECONDS = 0.9
-
-/**
- * Advisory stroke pulse loop, seconds. Brief: 3-4s. Kept at the slow end —
- * this runs forever on safety-critical polygons and must never nag.
- */
-export const ADVISORY_PULSE_SECONDS = 3.5
-
-/**
- * Delay before zone `index` starts its load-in fade (ms).
- * Defensive about its input: jsdom and malformed renders can hand through
- * NaN/undefined indices, and a NaN delay would freeze the animation at
- * opacity 0 forever.
- */
-export function zoneLoadDelayMs(index: number): number {
-  if (!Number.isFinite(index) || index < 0) return 0
-  return Math.floor(index) * ZONE_LOAD_STAGGER_MS
-}
+export const APP_SPRING = MOTION.spring
+export const ZONE_LOAD_DURATION_MS = MOTION.time.reveal * 1000
+export const ZONE_LOAD_STAGGER_MS = MOTION.time.stagger * 1000
+export const FOCUS_FLIGHT_SECONDS = MOTION.time.camera
+export const ADVISORY_PULSE_SECONDS = MOTION.time.advisoryLoop
+export const zoneLoadDelayMs = (index: number) => staggerDelay(Math.floor(index)) * 1000
 
 /** Padding (px) applied around a focused zone's flyToBounds. */
 export interface FocusPadding {

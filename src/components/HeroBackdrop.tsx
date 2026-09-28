@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { usePageVisible, useReducedMotion } from '../motion/preferences'
+import { Component, Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
  * The landing hero's backdrop, and the single place that decides whether any
@@ -40,13 +40,22 @@ import { useReducedMotion } from 'motion/react'
  * flashes as a black hole, and a failed chunk load is invisible.
  */
 
+import { createMotionScope } from '../motion/scope'
+import { MOTION } from '../motion/tokens'
+
+class BackdropBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render() { return this.state.failed ? null : this.props.children }
+}
+
 const Ferrofluid = lazy(() => import('./ferrofluid/Ferrofluid'))
 
 /** Amber / off-white / near-black, matching the app's tokens. */
 export const FERROFLUID_COLORS = ['#f0a500', '#eaeaea', '#080808']
 
 /** Wait for idle before pulling the WebGL chunk (ms fallback for Safari). */
-const IDLE_TIMEOUT_MS = 1200
+const IDLE_TIMEOUT_MS = MOTION.time.idle * 1000
 
 /**
  * The always-present, zero-cost backdrop, in two layers:
@@ -107,14 +116,14 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
   // Has the hero ever been on screen, and is the tab in front? Both must hold
   // for a frame to be drawn.
   const [visible, setVisible] = useState(false)
-  const [tabActive, setTabActive] = useState(
-    () => typeof document === 'undefined' || !document.hidden,
-  )
+  const tabActive = usePageVisible()
+  const [hasSeen, setHasSeen] = useState(false)
   // Gate on idle so the shader chunk never competes with first paint.
   const [idle, setIdle] = useState(false)
 
   useEffect(() => {
-    if (reduceMotion) return
+    if (reduceMotion || !tabActive) return
+    const scope = createMotionScope()
 
     type IdleWindow = Window & {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
@@ -123,12 +132,13 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
     const w = window as IdleWindow
 
     if (typeof w.requestIdleCallback === 'function') {
-      const handle = w.requestIdleCallback(() => setIdle(true), { timeout: IDLE_TIMEOUT_MS })
-      return () => w.cancelIdleCallback?.(handle)
+      const handle = w.requestIdleCallback(scope.guard(() => setIdle(true)), { timeout: IDLE_TIMEOUT_MS })
+      scope.own(() => w.cancelIdleCallback?.(handle))
+      return () => scope.dispose()
     }
-    const timer = window.setTimeout(() => setIdle(true), IDLE_TIMEOUT_MS)
-    return () => window.clearTimeout(timer)
-  }, [reduceMotion])
+    scope.timeout(() => setIdle(true), IDLE_TIMEOUT_MS)
+    return () => scope.dispose()
+  }, [reduceMotion, tabActive])
 
   // Pause when the hero leaves the viewport.
   useEffect(() => {
@@ -140,13 +150,15 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
       // No observer: treat the hero as visible. It is at the top of the page,
       // and `document.hidden` still gates the loop.
       setVisible(true)
+      setHasSeen(true)
       return
     }
 
+    const scope = createMotionScope()
     const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) setVisible(entry.isIntersecting)
-      },
+      scope.guard((entries) => {
+        for (const entry of entries) { setVisible(entry.isIntersecting); if (entry.isIntersecting) setHasSeen(true) }
+      }),
       // NO positive rootMargin. It was '100px', which measured as a real bug:
       // the landing page at 1280x800 is only ~537px of scroll, so a fully
       // scrolled-out hero still sits at bottom=-88px — inside a 100px margin,
@@ -157,15 +169,8 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
       { threshold: 0, rootMargin: '0px' },
     )
     observer.observe(element)
-    return () => observer.disconnect()
-  }, [reduceMotion])
-
-  // Pause when the tab is backgrounded.
-  useEffect(() => {
-    if (reduceMotion) return
-    const onVisibility = () => setTabActive(!document.hidden)
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    scope.own(() => observer.disconnect())
+    return () => scope.dispose()
   }, [reduceMotion])
 
   // Reduced motion: the gradient IS the backdrop. No lazy import is triggered,
@@ -186,7 +191,7 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
   // Only mount the canvas once the hero has actually been seen *and* the
   // browser has gone idle — a visitor who lands and immediately scrolls past
   // never pays for the chunk.
-  const mountCanvas = idle && visible
+  const mountCanvas = idle && hasSeen
 
   return (
     <div
@@ -199,7 +204,7 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
       <StaticBackdrop />
 
       {mountCanvas ? (
-        <Suspense fallback={null}>
+        <BackdropBoundary><Suspense fallback={null}>
           <div className="absolute inset-0 opacity-70">
             <Ferrofluid
               // Capped hard at 1: the dominant cost of a full-bleed shader is
@@ -224,7 +229,7 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
               mouseInteraction={false}
             />
           </div>
-        </Suspense>
+        </Suspense></BackdropBoundary>
       ) : null}
 
       {/*

@@ -40,7 +40,7 @@ export function Scanline() {
  */
 export function RegistrationMarks() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-2 z-[1005]">
+    <div aria-hidden="true" className="pointer-events-none absolute inset-2 z-[var(--layer-loading)]">
       {(
         [
           'left-0 top-0 border-l border-t',

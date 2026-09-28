@@ -202,3 +202,5 @@ describe('BlurText', () => {
     expect(screen.getByLabelText('abc')).toBeTruthy()
   })
 })
+
+vi.mock('../motion/preferences', () => ({ useReducedMotion: () => reduceMotion }))

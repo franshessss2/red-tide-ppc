@@ -1,7 +1,9 @@
+import { MOTION } from '../motion/tokens'
+import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { animate, motion, useReducedMotion, useScroll, useSpring } from 'motion/react'
+import { motion, useScroll, useSpring } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
@@ -75,7 +77,7 @@ const MAP_CTA_PREFETCH = {
 const LANDING_CONTAINER =
   'w-full max-w-2xl px-5 min-[400px]:px-6 md:max-w-4xl md:px-8 lg:max-w-6xl xl:max-w-7xl xl:px-10 2xl:max-w-[100rem] 2xl:px-12'
 
-const EASE_OUT_QUINT = [0.22, 1, 0.36, 1] as const
+const EASE_OUT_QUINT = MOTION.ease.out
 
 const HOW_IT_WORKS = [
   'Find your shore — seven zones cover the coast, from the city bay to St. Paul Bay.',
@@ -89,23 +91,6 @@ export function Landing() {
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
   const reduceMotion = useReducedMotion()
-  const titleRef = useRef<HTMLHeadingElement>(null)
-  const titleGlowRef = useRef<{ stop: () => void } | null>(null)
-  // Latest preference, so the decrypt callback (stored in a ref inside
-  // DecryptedText) does not restart the scramble when this identity changes.
-  const reduceMotionRef = useRef(reduceMotion)
-  reduceMotionRef.current = reduceMotion
-
-  useEffect(() => {
-    if (!reduceMotion) return
-    titleGlowRef.current?.stop()
-    if (titleRef.current) titleRef.current.style.filter = ''
-  }, [reduceMotion])
-
-  useEffect(() => {
-    return () => titleGlowRef.current?.stop()
-  }, [])
-
   const counts = useMemo(() => {
     const result: Record<ZoneStatus, number> = { safe: 0, unconfirmed: 0, advisory: 0 }
     for (const zone of zones) result[zone.status] += 1
@@ -125,8 +110,8 @@ export function Landing() {
       hidden: {},
       show: {
         transition: {
-          staggerChildren: reduceMotion ? 0 : 0.07,
-          delayChildren: reduceMotion ? 0 : 0.15,
+          staggerChildren: reduceMotion ? 0 : MOTION.time.stagger,
+          delayChildren: reduceMotion ? 0 : MOTION.time.fast,
         },
       },
     }),
@@ -140,7 +125,7 @@ export function Landing() {
         opacity: 1,
         y: 0,
         transition: {
-          duration: reduceMotion ? 0 : 0.4,
+          duration: reduceMotion ? 0 : MOTION.time.reveal,
           ease: EASE_OUT_QUINT,
         },
       },
@@ -155,9 +140,9 @@ export function Landing() {
         opacity: 1,
         y: 0,
         transition: {
-          duration: reduceMotion ? 0 : 0.45,
+          duration: reduceMotion ? 0 : MOTION.time.reveal,
           ease: EASE_OUT_QUINT,
-          staggerChildren: reduceMotion ? 0 : 0.08,
+          staggerChildren: reduceMotion ? 0 : MOTION.time.stagger,
         },
       },
     }),
@@ -171,7 +156,7 @@ export function Landing() {
         opacity: 1,
         y: 0,
         transition: {
-          duration: reduceMotion ? 0 : 0.35,
+          duration: reduceMotion ? 0 : MOTION.time.reveal,
           ease: EASE_OUT_QUINT,
         },
       },
@@ -274,31 +259,12 @@ export function Landing() {
                       label lives on the heading itself: the scrambling text is
                       aria-hidden, so a screen reader never reads the glyphs. */}
                   <h1
-                    ref={titleRef}
                     aria-label="Red Tide"
                     className="font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
                   >
                     <DecryptedText
                       text="RED TIDE"
-                      onComplete={() => {
-                        // Reduced motion keeps the resolved title and skips the
-                        // glow. The 100ms delay is the breath after the last
-                        // character locks, not a gate on the heading.
-                        if (reduceMotionRef.current) return
-                        const node = titleRef.current
-                        if (!node) return
-                        titleGlowRef.current?.stop()
-                        titleGlowRef.current = animate(
-                          node,
-                          {
-                            filter: [
-                              'drop-shadow(0 0 12px rgba(255, 82, 82, 0.6))',
-                              'drop-shadow(0 0 0px rgba(255, 82, 82, 0))',
-                            ],
-                          },
-                          { duration: 1.2, ease: 'easeOut', delay: 0.1 },
-                        )
-                      }}
+
                     />
                   </h1>
 
@@ -505,13 +471,12 @@ export function Landing() {
  * z-800 sits above page content and under the landing header (z-900).
  */
 function LandingScrollProgress() {
+  const reduce = useReducedMotion()
+  return reduce ? null : <AnimatedReadingProgress />
+}
+function AnimatedReadingProgress() {
   const { scrollYProgress } = useScroll()
-  const scaleY = useSpring(scrollYProgress, {
-    stiffness: 70,
-    damping: 32,
-    mass: 0.4,
-    restDelta: 0.001,
-  })
+  const scaleY = useSpring(scrollYProgress, MOTION.spring)
 
   return (
     <div
@@ -540,7 +505,7 @@ function Figure({
       <p
         className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
-        {ready ? <CountUp to={value} from={0} duration={1.2} /> : <span aria-hidden="true">·</span>}
+        {ready ? <CountUp to={value} from={0} duration={MOTION.time.count} /> : <span aria-hidden="true">·</span>}
       </p>
       <p className="mt-1.5 text-[11px] leading-snug text-faint lg:mt-2 lg:text-xs">{label}</p>
     </div>

@@ -1,3 +1,4 @@
+import { MOTION } from './tokens'
 import { describe, expect, it } from 'vitest'
 import {
   ADVISORY_PULSE_SECONDS,
@@ -12,8 +13,8 @@ import {
 } from './mapMotion'
 
 describe('motion constants (brief limits)', () => {
-  it('load-in is 500ms with a 60-80ms stagger', () => {
-    expect(ZONE_LOAD_DURATION_MS).toBe(500)
+  it('load-in follows the shared reveal with a 60-80ms stagger', () => {
+    expect(ZONE_LOAD_DURATION_MS).toBe(MOTION.time.reveal * 1000)
     expect(ZONE_LOAD_STAGGER_MS).toBeGreaterThanOrEqual(60)
     expect(ZONE_LOAD_STAGGER_MS).toBeLessThanOrEqual(80)
   })
@@ -33,7 +34,7 @@ describe('zoneLoadDelayMs', () => {
   it('staggers each zone by the stagger constant', () => {
     expect(zoneLoadDelayMs(0)).toBe(0)
     expect(zoneLoadDelayMs(1)).toBe(ZONE_LOAD_STAGGER_MS)
-    expect(zoneLoadDelayMs(6)).toBe(6 * ZONE_LOAD_STAGGER_MS)
+    expect(zoneLoadDelayMs(6)).toBe(MOTION.time.staggerLimit * 1000)
   })
 
   it('never returns a NaN or negative delay', () => {

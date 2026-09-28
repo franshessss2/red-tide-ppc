@@ -1,53 +1,13 @@
-/* ===========================================================================
-   Landing motion.
-
-   The primary "Open the map" control only. Safety copy and the secondary
-   link stay plain — a hover must never be what makes the route reachable.
-
-   Timing lives on a class, not Tailwind `transition`. The global link
-   shorthand in micro-interactions.css (`transition:` on every `a`) would
-   otherwise own the duration and drop the glow/lift channels.
-   =========================================================================== */
-
-/* Enter 180ms ease-out (set on :hover). Leave and press are 100ms ease-in,
-   which is the resting transition so mouseout and :active share it. */
+/* The primary CTA shares timing with the map controls. Paint stays static;
+   only a small lift and press signal interaction. */
 .landing-map-cta {
-  transition:
-    translate 100ms ease-in,
-    filter 100ms ease-in,
-    box-shadow 100ms ease-in,
-    scale 100ms ease-in;
+  transition: translate var(--dur-fast) var(--ease-out-quint),
+    scale var(--dur-fast) var(--ease-out-quint), background-color var(--dur-fast) var(--ease-out-quint);
 }
-
-.landing-map-cta:hover {
-  translate: 0 -2px;
-  filter: brightness(1.1);
-  box-shadow: 0 4px 20px -4px rgba(240, 165, 0, 0.35);
-  transition-duration: 180ms;
-  transition-timing-function: ease-out;
-}
-
-/* Press reverses the lift and the glow, and dips to the same 0.97 the rest
-   of the app uses (`micro-interactions.css`). Declared after :hover so a
-   held pointer wins those two properties; brightness stays from :hover. */
-.landing-map-cta:active {
-  translate: 0 0;
-  scale: 0.97;
-  box-shadow: none;
-  transition-duration: 100ms;
-  transition-timing-function: ease-in;
-}
-
+.landing-map-cta:hover { translate: 0 -2px; background-color: #ffc04c; }
+.landing-map-cta:active { translate: none; scale: .97; }
 @media (prefers-reduced-motion: reduce) {
-  /* Brightness only. No lift, no glow, no scale — including the instant
-     version, which would still read as a jump. */
-  .landing-map-cta:hover,
-  .landing-map-cta:active {
-    translate: none;
-    scale: none;
-    box-shadow: none;
-    filter: brightness(1.1);
-  }
+  .landing-map-cta:hover, .landing-map-cta:active { translate: none; scale: none; }
 }
 
 /* Right-edge scroll progress. 2px, accent, track at 0.3 / fill at full.

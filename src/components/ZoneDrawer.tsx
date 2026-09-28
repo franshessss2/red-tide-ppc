@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { animate, motion, useReducedMotion, useTransform } from 'motion/react'
+import { motion, useTransform } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, staggerDelay } from '../motion/tokens'
+import { useEntrance } from '../motion/useEntrance'
+import { usePulse } from '../motion/usePulse'
 import { MorphChevronIcon } from './MorphChevron'
 import { formatRelative } from '../lib/format'
 import { ZONE_STATUS_ORDER } from '../lib/status'
@@ -14,7 +18,6 @@ import type { SidePanelController } from '../motion/useSidePanel'
 import { useClipWindowWidth } from '../motion/useSidePanel'
 import { zoneTheme } from '../styles/statusTheme'
 import type { Zone, ZoneStatus } from '../types'
-import { BlurText } from './BlurText'
 import { DemoBanner } from './DemoBanner'
 import { ZoneListSkeleton } from './LoadingState'
 import { StatusPip } from './StatusPip'
@@ -113,23 +116,7 @@ function HeaderPipPulse({
   state: 'open' | 'collapsed'
   children: React.ReactNode
 }) {
-  const reduceMotion = useReducedMotion()
-  const ref = useRef<HTMLSpanElement>(null)
-  const prev = useRef(state)
-
-  useEffect(() => {
-    const opened = prev.current === 'collapsed' && state === 'open'
-    prev.current = state
-    if (!opened || reduceMotion) return
-    const node = ref.current
-    if (!node) return
-    const controls = animate(
-      node,
-      { scale: [1, 1.4, 1] },
-      { duration: 0.4, ease: 'easeOut' },
-    )
-    return () => controls.stop()
-  }, [state, reduceMotion])
+  const ref = usePulse<HTMLSpanElement>(state, 1.2, state === 'open')
 
   return (
     <span ref={ref} className="inline-grid shrink-0 origin-center">
@@ -138,29 +125,10 @@ function HeaderPipPulse({
   )
 }
 
-function hasIntersectionObserver(): boolean {
-  return typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function'
-}
-
-/**
- * Zone card with scroll-triggered reveal inside the drawer's own scroll
- * container (NOT window). Uses IntersectionObserver with root = drawer
- * scroll container, so cards fade+slide as they enter the drawer's viewport
- * while scrolling down.
- *
- * - opacity 0 → 1, y: 8px → 0, 300ms ease-out
- * - once: true (hasSeen prevents re-animation)
- * - prefers-reduced-motion: show instantly
- * - initial open stagger preserved: cards that become visible within 600ms
- *   of the drawer opening get a delay of index * 0.065s, mimicking the
- *   existing open stagger (0.065s). Cards that appear later via scroll have
- *   no extra delay.
- * - Fallback for jsdom / no IO: visible immediately so tests pass.
- */
 function ZoneCardItem({
   zone,
   index,
-  scrollRootRef,
+  scrollRoot,
   open,
   pending,
   isSelected,
@@ -170,7 +138,7 @@ function ZoneCardItem({
 }: {
   zone: Zone
   index: number
-  scrollRootRef: React.RefObject<HTMLDivElement | null>
+  scrollRoot: Element | null
   open: boolean
   pending: number
   isSelected: boolean
@@ -180,71 +148,17 @@ function ZoneCardItem({
 }) {
   const reduceMotion = useReducedMotion()
   const cardRef = useRef<HTMLLIElement>(null)
-  const [inView, setInView] = useState(() => {
-    if (reduceMotion) return true
-    if (!hasIntersectionObserver()) return true
-    return false
-  })
-  const [hasSeen, setHasSeen] = useState(() => {
-    if (reduceMotion) return true
-    if (!hasIntersectionObserver()) return true
-    return false
-  })
-  const [isInitialBatch, setIsInitialBatch] = useState(false)
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setInView(true)
-      setHasSeen(true)
-      return
-    }
-    if (hasSeen) return
-    if (!open) return
-    const el = cardRef.current
-    if (!el) return
-    if (!hasIntersectionObserver()) {
-      setInView(true)
-      setHasSeen(true)
-      setIsInitialBatch(true)
-      return
-    }
-    const root = scrollRootRef.current
-    // If root is not yet available (first frame), observe with null root
-    // and re-observe when root becomes available via the effect deps.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          const elapsed = Date.now() - (openTimestampRef.current ?? Date.now())
-          setIsInitialBatch(elapsed < 600)
-          setInView(true)
-          setHasSeen(true)
-          observer.disconnect()
-        }
-      },
-      {
-        root: root ?? null,
-        threshold: 0.15,
-        rootMargin: '0px 0px -10% 0px',
-      },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [open, scrollRootRef, reduceMotion, hasSeen, openTimestampRef, scrollRootRef.current])
-
+  const firstBatch = Date.now() - openTimestampRef.current < (MOTION.time.reveal + MOTION.time.staggerLimit) * 1000
+  const delay = firstBatch ? staggerDelay(index, reduceMotion) : 0
+  const controls = useEntrance(cardRef, open, scrollRoot, delay)
   const theme = zoneTheme(zone.status)
-  const delay = reduceMotion ? 0 : isInitialBatch ? index * 0.065 : 0
 
   return (
     <motion.li
       ref={cardRef}
       initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-      animate={inView || hasSeen ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-      transition={
-        reduceMotion
-          ? { duration: 0 }
-          : { duration: 0.3, ease: 'easeOut', delay }
-      }
-      className={`group relative overflow-hidden rounded-lg border bg-ink transition-colors duration-200 ${
+      animate={controls}
+      className={`group relative overflow-hidden rounded-lg border bg-ink transition-colors duration-[var(--motion-base)] ${
         isSelected
           ? 'border-accent/50 ring-1 ring-accent/20'
           : 'border-line hover:border-line-soft hover:bg-ink-3'
@@ -302,71 +216,10 @@ function ZoneCardItem({
   )
 }
 
-/**
- * Primer section with:
- * - Heading using BlurText word-by-word blur reveal, triggered by the
- *   drawer's scroll container (root = drawer scroll), delay 0, word delay 60ms
- * - Paragraphs fading in staggered as user scrolls to them, via
- *   IntersectionObserver on drawer container, once true, 280ms ease-out,
- *   stagger 80ms, y 6→0
- * - Respects prefers-reduced-motion
- */
-function Primer({
-  scrollRoot,
-  scrollRootRef,
-  open,
-}: {
-  scrollRoot: Element | null
-  scrollRootRef: React.RefObject<HTMLDivElement | null>
-  open: boolean
-}) {
-  const reduceMotion = useReducedMotion()
+/** Educational copy is always mounted; one reveal owner for the whole section. */
+function Primer({ scrollRoot, open }: { scrollRoot: Element | null; open: boolean }) {
   const sectionRef = useRef<HTMLElement>(null)
-  const [sectionInView, setSectionInView] = useState(() => {
-    if (reduceMotion) return true
-    if (!hasIntersectionObserver()) return true
-    return false
-  })
-  const [hasSeen, setHasSeen] = useState(() => {
-    if (reduceMotion) return true
-    if (!hasIntersectionObserver()) return true
-    return false
-  })
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setSectionInView(true)
-      setHasSeen(true)
-      return
-    }
-    if (hasSeen) return
-    if (!open) return
-    const el = sectionRef.current
-    if (!el) return
-    if (!hasIntersectionObserver()) {
-      setSectionInView(true)
-      setHasSeen(true)
-      return
-    }
-    const root = scrollRootRef.current
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setSectionInView(true)
-          setHasSeen(true)
-          observer.disconnect()
-        }
-      },
-      {
-        root: root ?? null,
-        threshold: 0.2,
-        rootMargin: '0px 0px -10% 0px',
-      },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [open, scrollRootRef, reduceMotion, hasSeen, scrollRootRef.current])
-
+  const controls = useEntrance(sectionRef, open, scrollRoot)
   const paragraphs = useMemo(
     () => [
       'An algae bloom that can colour the water reddish-brown. Shellfish — tahong, talaba, halaan, alamang — concentrate its toxin as they feed.',
@@ -381,72 +234,11 @@ function Primer({
     'Zone outlines are approximate, for demonstration — not official boundaries.'
 
   return (
-    <section
-      ref={sectionRef}
-      className="mt-6 rounded-lg border border-line bg-ink p-4"
-    >
-      <h2 className="font-display text-xl leading-none text-paper">
-        {reduceMotion || !hasIntersectionObserver() ? (
-          <>What is red tide? </>
-        ) : (
-          <BlurText
-            text="What is red tide?"
-            animateBy="words"
-            direction="top"
-            delay={60}
-            threshold={0.2}
-            rootMargin="0px 0px -10% 0px"
-            root={scrollRoot}
-            className="font-display text-xl leading-none text-paper"
-            as="span"
-          />
-        )}{' '}
-        <span className="font-sans text-sm font-normal text-faint">
-          / “pula ang dagat”
-        </span>
-      </h2>
-
-      {paragraphs.map((text, idx) => (
-        <motion.p
-          key={idx}
-          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          animate={
-            sectionInView || hasSeen ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }
-          }
-          transition={
-            reduceMotion
-              ? { duration: 0 }
-              : {
-                  duration: 0.28,
-                  ease: 'easeOut',
-                  delay: idx * 0.08,
-                }
-          }
-          className={`text-sm leading-relaxed text-muted ${idx === 0 ? 'mt-3' : 'mt-2'}`}
-        >
-          {text}
-        </motion.p>
-      ))}
-
-      <motion.p
-        initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-        animate={
-          sectionInView || hasSeen ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }
-        }
-        transition={
-          reduceMotion
-            ? { duration: 0 }
-            : {
-                duration: 0.28,
-                ease: 'easeOut',
-                delay: paragraphs.length * 0.08,
-              }
-        }
-        className="mt-4 font-mono text-[10px] leading-relaxed text-faint"
-      >
-        {footnote}
-      </motion.p>
-    </section>
+    <motion.section ref={sectionRef} animate={controls} className="mt-6 rounded-lg border border-line bg-ink p-4">
+      <h2 className="font-display text-xl leading-none text-paper">What is red tide? <span className="font-sans text-sm font-normal text-faint">/ “pula ang dagat”</span></h2>
+      {paragraphs.map((text, idx) => <p key={text} className={`text-sm leading-relaxed text-muted ${idx === 0 ? 'mt-3' : 'mt-2'}`}>{text}</p>)}
+      <p className="mt-4 font-mono text-[10px] leading-relaxed text-faint">{footnote}</p>
+    </motion.section>
   )
 }
 
@@ -460,7 +252,6 @@ export function ZoneDrawer({
   onFocusZone,
   onReport,
 }: ZoneDrawerProps) {
-  const reduceMotion = useReducedMotion()
   const open = panel.state === 'open'
   const advisoryCount = counts.advisory ?? 0
   const summary = zoneSummaryLine(zones.length, advisoryCount)
@@ -494,35 +285,6 @@ export function ZoneDrawer({
       setScrollRoot(scrollRef.current)
     }
   }, [open])
-
-  // Staggered entrance: the cards ride the drawer's own open/collapsed state,
-  // driven by the same spring physics as the drag. This is kept for the
-  // initial open animation (65ms per card). The scroll-triggered reveal
-  // inside ZoneCardItem is separate — it handles cards coming into view as
-  // the user scrolls DOWN through the list.
-  const [revealed, setRevealed] = useState(false)
-  useEffect(() => {
-    setRevealed(true)
-  }, [])
-
-  const listVariants = useMemo(
-    () => ({
-      hidden: {},
-      show: {
-        transition: {
-          staggerChildren: reduceMotion ? 0 : 0.065,
-          delayChildren: reduceMotion ? 0 : 0.065,
-        },
-      },
-    }),
-    [reduceMotion],
-  )
-
-  // The list itself still uses the open stagger for its first commit.
-  // Individual cards now also have their own scroll-triggered reveal
-  // (ZoneCardItem) which uses the drawer's scroll container as root.
-  // Keeping the list variants preserves the existing open feel while the
-  // new per-card IntersectionObserver handles the down-scroll case.
 
   const handleTabClick = useCallback(
     (event: React.MouseEvent) => {
@@ -596,6 +358,8 @@ export function ZoneDrawer({
         <motion.div
           ref={panel.panelRef}
           id="zone-drawer-body"
+          inert={!open}
+          aria-hidden={!open}
           style={{ x: panel.offsetX }}
           drag="x"
           dragListener={false}
@@ -737,10 +501,7 @@ export function ZoneDrawer({
               {!zonesReady && <ZoneListSkeleton />}
 
               {zonesReady && (
-                <motion.ul
-                  variants={listVariants}
-                  initial="hidden"
-                  animate={open && revealed ? 'show' : 'hidden'}
+                <ul
                   className="mt-2.5 grid gap-2"
                 >
                   {zones.map((zone, idx) => {
@@ -751,7 +512,7 @@ export function ZoneDrawer({
                         key={zone.id}
                         zone={zone}
                         index={idx}
-                        scrollRootRef={scrollRef}
+                        scrollRoot={scrollRoot}
                         open={open}
                         pending={pending}
                         isSelected={isSelected}
@@ -761,7 +522,7 @@ export function ZoneDrawer({
                       />
                     )
                   })}
-                </motion.ul>
+                </ul>
               )}
 
               {zones.length === 0 && zonesReady && (
@@ -773,7 +534,6 @@ export function ZoneDrawer({
 
               <Primer
                 scrollRoot={scrollRoot}
-                scrollRootRef={scrollRef}
                 open={open}
               />
 

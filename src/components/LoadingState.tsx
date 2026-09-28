@@ -1,4 +1,6 @@
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { usePageVisible, useReducedMotion } from '../motion/preferences'
+import { MOTION } from '../motion/tokens'
 
 /**
  * Branded loading states.
@@ -20,6 +22,8 @@ import { motion, useReducedMotion } from 'motion/react'
 /** The app's wave mark, drawn on a loop. */
 export function BrandMark({ className = 'h-10 w-10' }: { className?: string }) {
   const reduceMotion = useReducedMotion()
+  const visible = usePageVisible()
+  const still = reduceMotion || !visible
 
   return (
     <svg
@@ -37,8 +41,8 @@ export function BrandMark({ className = 'h-10 w-10' }: { className?: string }) {
         initial={{ pathLength: reduceMotion ? 1 : 0, opacity: reduceMotion ? 1 : 0.25 }}
         animate={{ pathLength: 1, opacity: 1 }}
         transition={{
-          duration: reduceMotion ? 0.01 : 0.9,
-          repeat: reduceMotion ? 0 : Infinity,
+          duration: still ? 0 : MOTION.time.count,
+          repeat: still ? 0 : Infinity,
           repeatType: 'reverse',
           ease: 'easeInOut',
         }}
@@ -56,8 +60,8 @@ export function BrandMark({ className = 'h-10 w-10' }: { className?: string }) {
         initial={{ pathLength: reduceMotion ? 1 : 0 }}
         animate={{ pathLength: 1 }}
         transition={{
-          duration: reduceMotion ? 0.01 : 1.4,
-          repeat: reduceMotion ? 0 : Infinity,
+          duration: still ? 0 : MOTION.time.waveTint,
+          repeat: still ? 0 : Infinity,
           repeatType: 'loop',
           ease: 'easeInOut',
         }}
@@ -73,7 +77,7 @@ export function MapLoadingOverlay({ label = 'Loading zones' }: { label?: string 
       role="status"
       aria-live="polite"
       aria-busy="true"
-      className="absolute inset-0 z-[1005] grid place-items-center bg-ink/88 backdrop-blur-sm"
+      className="absolute inset-0 z-[var(--layer-loading)] grid place-items-center bg-ink/88 backdrop-blur-sm"
     >
       <div className="flex flex-col items-center">
         <BrandMark className="h-11 w-11 text-accent" />

@@ -168,14 +168,16 @@ describe('ZoneDrawer toggle paths', () => {
 
   it('reaches both states without dragging: summary button, state dots, chevron', async () => {
     const user = userEvent.setup()
-    renderZoneDrawer()
+    renderZoneDrawer('open')
 
     // The summary line toggles.
     await user.click(
       within(drawer()).getByRole('button', {
-        name: '1 zone · No advisories — Open the zone drawer',
+        name: '1 zone · No advisories — Collapse the zone drawer',
       }),
     )
+    await waitFor(() => expect(drawer().dataset.state).toBe('collapsed'))
+    await user.click(tab())
     await waitFor(() => expect(drawer().dataset.state).toBe('open'))
 
     // The state dots jump directly, with aria-pressed on the current state.
@@ -189,12 +191,12 @@ describe('ZoneDrawer toggle paths', () => {
     await user.click(collapsedDot)
     await waitFor(() => expect(drawer().dataset.state).toBe('collapsed'))
     const openDot = within(drawer())
-      .getAllByRole('button', { name: 'Open the zone drawer' })
+      .getAllByRole('button', { name: 'Open the zone drawer', hidden: true })
       .find((el) => el.getAttribute('aria-pressed') !== null)!
     // Collapsed is current: its dot is the pressed one.
     expect(collapsedDot.getAttribute('aria-pressed')).toBe('true')
     expect(openDot.getAttribute('aria-pressed')).toBe('false')
-    await user.click(openDot)
+    await user.click(tab())
     await waitFor(() => expect(drawer().dataset.state).toBe('open'))
     expect(openDot.getAttribute('aria-pressed')).toBe('true')
 
@@ -314,32 +316,35 @@ describe('ZoneDrawer clip guarantees', () => {
 })
 
 describe('ZoneDrawer content parity with the sheet', () => {
-  it('keeps the zone list mounted while collapsed — the clip is visual only', () => {
+  it('keeps collapsed content mounted but removes it from navigation', () => {
     renderZoneDrawer()
 
     expect(drawer().dataset.state).toBe('collapsed')
-    // The report flow and screen readers keep their full DOM.
+    expect(document.getElementById('zone-drawer-body')?.hasAttribute('inert')).toBe(true)
+    expect(within(drawer()).queryByRole('button', { name: /Report here/i })).toBeNull()
+    // Content stays mounted while inaccessible off screen.
     expect(
-      within(drawer()).getByRole('heading', { name: 'Puerto Princesa Bay (City Proper)' }),
+      within(drawer()).getByRole('heading', { name: 'Puerto Princesa Bay (City Proper)', hidden: true }),
     ).toBeTruthy()
     expect(within(drawer()).getByText('No advisories')).toBeTruthy()
     expect(
-      within(drawer()).getByRole('button', { name: /Report here/i }),
+      within(drawer()).getByRole('button', { name: /Report here/i, hidden: true }),
     ).toBeTruthy()
   })
 
   it('carries the OSM credit twice inside, mirroring the sheet', () => {
     renderZoneDrawer()
 
-    const compact = within(drawer()).getByRole('link', { name: '© OSM' })
+    const compact = within(drawer()).getByRole('link', { name: '© OSM', hidden: true })
     expect(compact.getAttribute('href')).toBe('https://www.openstreetmap.org/copyright')
-    const full = within(drawer()).getByRole('link', { name: '© OpenStreetMap' })
+    const full = within(drawer()).getByRole('link', { name: '© OpenStreetMap', hidden: true })
     expect(full.getAttribute('href')).toBe('https://www.openstreetmap.org/copyright')
   })
 })
 
 describe('ZoneDrawer on the map page', () => {
   beforeEach(() => {
+  sessionStorage.setItem('red-tide:intro:v1', 'seen')
     clearDemoData()
     setBackendForTesting(createDemoBackend())
     useAppStore.setState({
@@ -362,7 +367,7 @@ describe('ZoneDrawer on the map page', () => {
   async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
     render(<App />)
     await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' })
+    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
   }
 
   it('replaces the bottom strip entirely: no sheet anchors, no 01/03 readout', async () => {

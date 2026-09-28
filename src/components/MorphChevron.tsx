@@ -1,5 +1,6 @@
-import { motion, useReducedMotion } from 'motion/react'
-import { APP_SPRING } from '../motion/mapMotion'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { spring } from '../motion/tokens'
 
 /**
  * The drawer chevron, as a GEOMETRY MORPH instead of a rotation or an icon
@@ -37,7 +38,7 @@ export function MorphChevron({
       // `d` is animatable because both endpoints share the M/L/L structure.
       animate={{ d: open ? CHEVRON_OPEN : CHEVRON_COLLAPSED }}
       initial={false}
-      transition={reduceMotion ? { duration: 0 } : APP_SPRING}
+      transition={spring(reduceMotion)}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}
