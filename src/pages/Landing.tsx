@@ -8,7 +8,6 @@ import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
 import { DecryptedText } from '../components/DecryptedText'
-import { DemoBanner } from '../components/DemoBanner'
 import { Header } from '../components/Header'
 import { HeroBackdrop } from '../components/HeroBackdrop'
 import { StatusPip } from '../components/StatusPip'
@@ -51,7 +50,7 @@ import type { ZoneStatus } from '../types'
  *
  * WHAT IS DELIBERATELY NOT ANIMATED
  * ---------------------------------
- * The secondary CTA, the "what is red tide" primer, the `DemoBanner` and the
+ * The secondary CTA, the "what is red tide" primer and the
  * "not an official BFAR advisory" disclaimer are plain DOM. The primary
  * "Open the map" link has a CSS hover only (`landing-motion.css`) — present
  * and clickable on the first frame; reduced motion keeps brightness without
@@ -191,7 +190,6 @@ export function Landing() {
           title="Red Tide"
           right={
             <>
-              <DemoBanner variant="chip" />
               <Link
                 to="/admin"
                 className="rounded-md border border-line bg-ink-2/85 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
@@ -247,6 +245,7 @@ export function Landing() {
                   <BlurText
                     as="p"
                     text="Community early warning"
+                    trigger="mount"
                     animateBy="letters"
                     direction="top"
                     delay={14}
@@ -264,7 +263,7 @@ export function Landing() {
                   >
                     <DecryptedText
                       text="RED TIDE"
-
+                      delay={0}
                     />
                   </h1>
 
@@ -443,10 +442,6 @@ export function Landing() {
                 </ul>
               </section>
             )}
-          </div>
-
-          <div className="mt-14 sm:mt-12">
-            <DemoBanner />
           </div>
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-line py-7 text-xs text-faint sm:mt-8 sm:gap-1.5 sm:py-6 sm:flex-row sm:items-center sm:justify-between">

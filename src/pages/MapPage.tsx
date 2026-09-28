@@ -6,7 +6,6 @@ import type { Map as LeafletMap } from 'leaflet'
 import { AnimatePresence, motion } from 'motion/react'
 import { RegistrationMarks, Scanline } from '../components/Ambient'
 import { AdvisoryDrawer } from '../components/AdvisoryDrawer'
-import { DemoBanner } from '../components/DemoBanner'
 import { Header } from '../components/Header'
 import { StatusKey } from '../components/StatusKey'
 import { MapLoadingOverlay } from '../components/LoadingState'
@@ -239,7 +238,6 @@ export function MapPage() {
         title="Red Tide"
         right={
           <>
-            <DemoBanner variant="chip" />
             <span className="relative inline-flex">
               <button
                 type="button"

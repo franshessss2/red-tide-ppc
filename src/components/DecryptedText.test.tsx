@@ -76,6 +76,13 @@ describe('DecryptedText', () => {
     expect(overlayText(container)).toBe('RED TIDE')
   })
 
+  it('starts the default scramble on the first frame without a timeout', () => {
+    const frame = vi.fn().mockReturnValue(1)
+    vi.stubGlobal('requestAnimationFrame', frame)
+    render(<DecryptedText text="RED TIDE" />)
+    expect(frame).toHaveBeenCalledOnce()
+  })
+
   it('renders plain text immediately on a small viewport, with no scramble', () => {
     setViewportMatches(true)
     const setIntervalSpy = vi.spyOn(window, 'setInterval')

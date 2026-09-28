@@ -18,7 +18,6 @@ import type { SidePanelController } from '../motion/useSidePanel'
 import { useClipWindowWidth } from '../motion/useSidePanel'
 import { zoneTheme } from '../styles/statusTheme'
 import type { Zone, ZoneStatus } from '../types'
-import { DemoBanner } from './DemoBanner'
 import { ZoneListSkeleton } from './LoadingState'
 import { StatusPip } from './StatusPip'
 import { ZoneStatusBadge } from './StatusBadge'
@@ -231,7 +230,7 @@ function Primer({ scrollRoot, open }: { scrollRoot: Element | null; open: boolea
   )
 
   const footnote =
-    'Zone outlines are approximate, for demonstration — not official boundaries.'
+    'Zone outlines are approximate — not official boundaries.'
 
   return (
     <motion.section ref={sectionRef} animate={controls} className="mt-6 rounded-lg border border-line bg-ink p-4">
@@ -536,10 +535,6 @@ export function ZoneDrawer({
                 scrollRoot={scrollRoot}
                 open={open}
               />
-
-              <div className="mt-3">
-                <DemoBanner />
-              </div>
 
               <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
                 <p>

@@ -7,7 +7,6 @@ import { MOTION, spring, tween } from '../motion/tokens'
 import { CountUp } from '../components/CountUp'
 import { usePulse } from '../motion/usePulse'
 import { AdminGate } from '../components/AdminGate'
-import { DemoBanner } from '../components/DemoBanner'
 import { Header } from '../components/Header'
 import { Notice } from '../components/Notice'
 import { ReportQueueSkeleton } from '../components/LoadingState'
@@ -117,7 +116,6 @@ function AdminDashboard() {
         }
       />
       <main className={`mx-auto pb-16 pt-5 sm:pt-7 ${ADMIN_CONTAINER}`}>
-        <div className="mb-5"><DemoBanner /></div>
         <div className="mb-5 grid grid-cols-3 gap-3 md:gap-4">
           <Stat label="Pending" value={pendingReports.length} tone="amber" />
           <Stat label="Under advisory" value={advisoryZones.length} tone="red" />
@@ -287,8 +285,8 @@ function AdminDashboard() {
 
         <p className="mt-8 rounded-lg border border-line bg-ink-2 p-3 font-mono text-[10px] leading-relaxed text-faint">
           This view is protected by a client-side passcode only. Anyone with the
-          page source can read it, so treat the passcode as a demo lock — not
-          security. Replace it with Firebase Auth before this is used for real
+          page source can read it, so the passcode does not provide secure
+          authentication. Replace it with Firebase Auth before this is used for real
           advisories.
         </p>
       </main>
