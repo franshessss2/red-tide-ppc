@@ -24,7 +24,7 @@ import {
 import { resolveActiveStatus } from '../motion/statusKey'
 import { useReducedMotion } from '../motion/preferences'
 import { usePresenceProgress } from '../motion/usePresenceProgress'
-import { MOTION, tween } from '../motion/tokens'
+import { MOTION, spring, tween } from '../motion/tokens'
 
 import { selectPendingCountByZone, selectZoneById, useAppStore } from '../store'
 import type { Zone, ZoneStatus } from '../types'
@@ -269,10 +269,14 @@ export function MapPage() {
                   <path d="M12 8V5m-3 3V6h6v2" />
                 </svg>
               </button>
+              <AnimatePresence>
               {shippingHintOpen && (
-                <span
+                <motion.span key="shipping-hint"
+                  initial={{ scale: reduceMotion ? 1 : 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: reduceMotion ? 0 : -4, transition: { duration: reduceMotion ? 0 : MOTION.time.hintExit, ease: MOTION.ease.in } }}
+                  transition={spring(reduceMotion)} style={{ transformOrigin: 'top right' }}
                   role="status"
-                  className="absolute right-0 top-[calc(100%+10px)] z-[var(--layer-controls)] w-max max-w-[240px] rounded-lg border border-line bg-ink-2/92 px-3 py-2 text-left shadow-lg backdrop-blur-md"
+                  className="absolute right-0 top-[calc(100%+10px)] z-[var(--layer-controls)] w-max max-w-[240px] rounded-lg border border-line bg-ink-2 px-3 py-2 text-left shadow-lg"
                 >
                   <span className="block font-display text-[11px] font-semibold leading-snug tracking-[0.02em] text-[#9cc4f7]">
                     New: shipping lane lines
@@ -288,8 +292,9 @@ export function MapPage() {
                   >
                     Got it
                   </button>
-                </span>
+                </motion.span>
               )}
+              </AnimatePresence>
             </span>
             <button
               type="button"
