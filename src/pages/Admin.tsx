@@ -1,7 +1,11 @@
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence } from 'motion/react'
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, spring, tween } from '../motion/tokens'
+import { CountUp } from '../components/CountUp'
+import { usePulse } from '../motion/usePulse'
 import { AdminGate } from '../components/AdminGate'
 import { DemoBanner } from '../components/DemoBanner'
 import { Header } from '../components/Header'
@@ -42,7 +46,26 @@ const ZONE_STATUS_CHOICES: ZoneStatus[] = ['safe', 'unconfirmed', 'advisory']
  */
 export function Admin() {
   const adminUnlocked = useAppStore((state) => state.adminUnlocked)
-  return adminUnlocked ? <AdminDashboard /> : <AdminGate />
+  const reduce = useReducedMotion()
+  // A state transition inside /admin, never a route entrance. Initial=false
+  // leaves both direct admin visits and already-unlocked visits immediate.
+  // Solid headers avoid backdrop-filter inside a temporarily transformed tree.
+  return <AnimatePresence mode={reduce ? 'sync' : 'wait'} initial={false} custom={reduce}>
+    {adminUnlocked ? (
+      <motion.div key="dashboard" className="min-h-full [&_header]:bg-ink [&_header]:backdrop-blur-none"
+        initial={{ opacity: 0, y: reduce ? 0 : 8 }} animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, transition: { duration: 0 } }} transition={tween(reduce, MOTION.time.readySwap)}>
+        <AdminDashboard />
+      </motion.div>
+    ) : (
+      <motion.div key="gate" className="min-h-full [&_header]:bg-ink [&_header]:backdrop-blur-none"
+        initial={false} animate={{ opacity: 1, scale: 1 }} exit="exit"
+        variants={{ exit: (reduced: boolean) => ({ opacity: 0, scale: reduced ? 1 : 0.98,
+          transition: { duration: reduced ? 0 : MOTION.time.hintExit, ease: MOTION.ease.in } }) }}>
+        <AdminGate />
+      </motion.div>
+    )}
+  </AnimatePresence>
 }
 
 function AdminDashboard() {
@@ -57,6 +80,8 @@ function AdminDashboard() {
   const lockAdmin = useAppStore((state) => state.lockAdmin)
 
   const [tab, setTab] = useState<Tab>('pending')
+  const reduceMotion = useReducedMotion()
+  const tabGroup = useId()
 
   const pendingReports = useMemo(() => selectPendingReports(reports), [reports])
   const reviewedReports = useMemo(() => selectReviewedReports(reports), [reports])
@@ -99,6 +124,7 @@ function AdminDashboard() {
           <Stat label="Total reports" value={reports.length} tone="slate" />
         </div>
 
+        <LayoutGroup id={tabGroup}>
         <div
           role="tablist"
           aria-label="Admin sections"
@@ -113,12 +139,14 @@ function AdminDashboard() {
                 aria-selected={isActive}
                 type="button"
                 onClick={() => setTab(entry.id)}
-                className={`flex-1 rounded-lg px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-[var(--motion-base)] ${
+                className={`relative isolate flex-1 rounded-lg px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-[var(--motion-base)] ${
                   isActive
-                    ? 'bg-accent text-ink'
+                    ? 'text-ink'
                     : 'text-muted hover:bg-white/5 hover:text-paper'
                 }`}
               >
+                {isActive && <motion.span aria-hidden="true" layoutId="admin-tab-active"
+                  className="absolute inset-0 -z-10 rounded-lg bg-accent" transition={spring(reduceMotion)} />}
                 {entry.label}
                 {entry.id === 'pending' && pendingReports.length > 0 && (
                   <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${isActive ? 'bg-ink/20 text-ink' : 'bg-accent text-ink'}`}>
@@ -130,37 +158,38 @@ function AdminDashboard() {
           })}
         </div>
 
+        </LayoutGroup>
+
         {tab === 'pending' && (
           <section className="mt-5" aria-label="Pending reports">
-            {!reportsReady ? (
-              <ReportQueueSkeleton className={REPORT_GRID} />
-            ) : pendingReports.length === 0 ? (
-              <EmptyState
-                title="Nothing waiting for review"
-                body="New community reports will show up here as soon as they are submitted."
-              />
-            ) : (
-              <>
-                <p className="mb-3 text-xs leading-relaxed text-muted">
-                  Approving confirms the report and puts its zone under advisory
-                  immediately. Rejecting dismisses the report and leaves the zone
-                  unchanged.
-                </p>
-                <ul className={REPORT_GRID}>
-                  <AnimatePresence initial={false}>
-                    {pendingReports.map((report) => (
-                      <ReportCard
-                        key={report.id}
-                        report={report}
-                        zoneName={zoneNameFor(zones, report.zoneId)}
-                        busy={busyReportId !== null}
-                        onApprove={() => approveReport(report.id)}
-                        onReject={() => rejectReport(report.id)}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </ul>
-              </>
+            {!reportsReady ? <ReportQueueSkeleton className={REPORT_GRID} /> : (
+              <AnimatePresence mode="wait" initial={false}>
+                {pendingReports.length === 0 ? (
+                  <motion.div key="empty" initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+                    animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0 } }}
+                    transition={tween(reduceMotion, MOTION.time.readySwap)}>
+                    <EmptyState title="Nothing waiting for review"
+                      body="New community reports will show up here as soon as they are submitted." />
+                  </motion.div>
+                ) : (
+                  <motion.div key="queue" initial={false} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: tween(reduceMotion, MOTION.time.emptyDelay) }}>
+                    <p className="mb-3 text-xs leading-relaxed text-muted">
+                      Approving confirms the report and puts its zone under advisory
+                      immediately. Rejecting dismisses the report and leaves the zone unchanged.
+                    </p>
+                    <ul className={REPORT_GRID}>
+                      <AnimatePresence initial={false} propagate>
+                        {pendingReports.map((report) => (
+                          <ReportCard key={report.id} report={report}
+                            zoneName={zoneNameFor(zones, report.zoneId)} busy={busyReportId !== null}
+                            onApprove={() => approveReport(report.id)} onReject={() => rejectReport(report.id)} />
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </section>
         )}
@@ -278,6 +307,7 @@ function Stat({
   value: number
   tone: 'amber' | 'red' | 'slate'
 }) {
+  const valueRef = usePulse<HTMLParagraphElement>(value, 1.08, true, MOTION.time.statAck)
   const toneClass =
     tone === 'amber'
       ? 'text-accent'
@@ -289,8 +319,8 @@ function Stat({
     <div className="min-w-0 rounded-xl border border-line bg-ink-2 p-3 lg:p-5">
       {/* Bebas Neue for the number: at a glance, the count is what an admin
           needs, and the condensed face reads larger in the same space. */}
-      <p className={`font-display text-3xl leading-none tabular-nums lg:text-5xl ${toneClass}`}>
-        {value}
+      <p ref={valueRef} className={`origin-left font-display text-3xl leading-none tabular-nums lg:text-5xl ${toneClass}`}>
+        <CountUp to={value} duration={MOTION.time.count} />
       </p>
       <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-faint">
         {label}

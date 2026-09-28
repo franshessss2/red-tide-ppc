@@ -20,7 +20,7 @@ import type { Report } from '../types'
  * controls while `busy` so a double-tap cannot fire two writes.
  *
  * MOTION:
- * - Exit: opacity 1→0, y 0→-8px, height collapses to 0, 220ms ease-in
+ * - Exit: opacity 1→0, y 0→-8px, 220ms ease-in
  * - No success animation before the write completes; the store owns confirmation.
  * - Reduced motion: instant removal
  */
@@ -59,15 +59,13 @@ export function ReportCard({
       layout={!reduceMotion}
       aria-busy={waiting}
       initial={false}
-      animate={{ opacity: 1, y: 0, height: 'auto', scale: 1 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={
         reduceMotion
           ? { opacity: 0, transition: { duration: 0 } }
           : {
               opacity: 0,
               y: -8,
-              height: 0,
-              marginBottom: 0,
               scale: 0.98,
               transition: tween(false, MOTION.time.exit),
             }
@@ -130,7 +128,7 @@ export function ReportCard({
               type="button"
               onClick={() => void run('approve', onApprove)}
               disabled={waiting}
-              className="motion-press group relative flex-1 overflow-hidden rounded-lg bg-advisory px-3 py-2.5 text-sm font-semibold text-ink transition-[filter,transform] duration-[var(--motion-base)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+              className="motion-press group relative flex-1 overflow-hidden rounded-lg bg-advisory px-3 py-2.5 text-sm font-semibold text-ink transition-transform duration-[var(--motion-base)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <span
                 aria-hidden="true"
