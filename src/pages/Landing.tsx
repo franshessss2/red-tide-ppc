@@ -1,9 +1,9 @@
-import { MOTION } from '../motion/tokens'
+import { MOTION, tween } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useScroll, useSpring } from 'motion/react'
+import { AnimatePresence, motion, useScroll, useSpring } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
@@ -308,9 +308,13 @@ export function Landing() {
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
                 {/* -------------------------------------------------- live status */}
-                <motion.section variants={overviewChildVariants} aria-label="Live status">
+                <motion.section variants={overviewChildVariants} aria-label="Live status" className="relative">
+                  <AnimatePresence mode="popLayout" initial={false}>
                   {zonesReady ? (
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
+                    <motion.div key="ready" initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+                      animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                      transition={tween(reduceMotion, MOTION.time.readySwap)}
+                      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
                       <StatusPip
                         hex={dominantTheme.hex}
                         pulses={dominantTheme.pulses}
@@ -325,15 +329,18 @@ export function Landing() {
                       <span className="ml-auto text-paper/80">
                         {pendingTotal} pending report{pendingTotal === 1 ? '' : 's'}
                       </span>
-                    </div>
+                    </motion.div>
                   ) : (
-                    <p
+                    <motion.p key="loading"
+                      initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }} transition={tween(reduceMotion, MOTION.time.readySwap)}
                       role="status"
                       className="animate-pulse rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] text-faint"
                     >
                       Reading the water…
-                    </p>
+                    </motion.p>
                   )}
+                  </AnimatePresence>
                 </motion.section>
 
                 {/* ------------------------------------------------------ figures */}
@@ -505,7 +512,7 @@ function Figure({
       <p
         className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
-        {ready ? <CountUp to={value} from={0} duration={MOTION.time.count} /> : <span aria-hidden="true">·</span>}
+        <CountUp to={ready ? value : 0} from={0} duration={MOTION.time.count} />
       </p>
       <p className="mt-1.5 text-[11px] leading-snug text-faint lg:mt-2 lg:text-xs">{label}</p>
     </div>

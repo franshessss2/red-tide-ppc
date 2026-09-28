@@ -1,6 +1,8 @@
 /** Shared seconds, physics, easing and layer order. CSS receives these from MotionProvider. */
 export const MOTION = {
   time: {
+    canvasFade: 0.7, readySwap: 0.3, errorExpand: 0.2, errorShake: 0.36,
+    photoSwap: 0.25, statAck: 0.32, hintExit: 0.15, emptyDelay: 0.24,
     instant: 0, fast: 0.14, base: 0.22, reveal: 0.38, exit: 0.22,
     routeOut: 0.35, routeIn: 0.4, pulse: 0.55, count: 0.9, countUpdate: 0.6,
     stagger: 0.065, staggerLimit: 0.32, wash: 0.8,
