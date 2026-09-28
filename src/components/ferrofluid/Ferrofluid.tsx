@@ -369,13 +369,21 @@ export default function Ferrofluid({
     }
     if (mouseInteraction) canvas.addEventListener('pointermove', onPointerMove)
 
+    let disposed = false
+    let running = false
+    let renderedAt: number | null = null
+    let elapsed = 0
     const loop = (t: number) => {
-      if (pausedRef.current) {
+      if (disposed || !running || pausedRef.current) {
         rafRef.current = null
         return
       }
       rafRef.current = requestAnimationFrame(loop)
-      uniforms.iTime.value = t * 0.001
+      // Cap this decorative shader at 30fps and resume from the frozen phase.
+      if (renderedAt !== null && t - renderedAt < 33) return
+      elapsed += renderedAt === null ? 0 : Math.min((t - renderedAt) / 1000, 0.05)
+      renderedAt = t
+      uniforms.iTime.value = elapsed
       if (mouseInteraction && mouseDampening > 0) {
         if (!lastTimeRef.current) lastTimeRef.current = t
         const dt = (t - lastTimeRef.current) / 1000
@@ -400,11 +408,14 @@ export default function Ferrofluid({
     }
 
     const start = () => {
-      if (rafRef.current !== null || pausedRef.current) return
+      if (disposed || rafRef.current !== null || pausedRef.current) return
+      running = true
+      renderedAt = null
       lastTimeRef.current = 0
       rafRef.current = requestAnimationFrame(loop)
     }
     const stop = () => {
+      running = false
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       rafRef.current = null
     }
@@ -421,6 +432,7 @@ export default function Ferrofluid({
     start()
 
     return () => {
+      disposed = true
       stop()
       startRef.current = null
       stopRef.current = null

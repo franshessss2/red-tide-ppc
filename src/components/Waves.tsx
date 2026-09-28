@@ -1,5 +1,6 @@
+import { MOTION, easeOut } from '../motion/tokens'
+import { useReducedMotion } from '../motion/preferences'
 import { useEffect, useRef } from 'react'
-import { useReducedMotion } from 'motion/react'
 
 /**
  * Canvas wave background for the landing page (reactbits.dev "Waves" pattern,
@@ -44,7 +45,7 @@ const LAYERS: WaveLayer[] = [
 /** Minimum ms between drawn frames — caps the loop at ~30 fps. */
 const FRAME_INTERVAL_MS = 33
 /** Rest amber (`#f0a500`) → redder amber (`#e27036`, hsl ~20) while an advisory is up. */
-const TINT_MS = 1500
+const TINT_MS = MOTION.time.waveTint * 1000
 const REST_RGB = [0xf0, 0xa5, 0x00] as const
 const ADVISORY_RGB = [0xe2, 0x70, 0x36] as const
 
@@ -126,7 +127,7 @@ export function Waves({
       }
       if (mix !== mixTo) {
         const elapsed = Math.min(1, (tSeconds - shiftStart) / (TINT_MS / 1000))
-        const eased = 1 - (1 - elapsed) ** 3
+        const eased = easeOut(elapsed)
         mix = mixFrom + (mixTo - mixFrom) * eased
       }
       return tintedStroke(mix)
@@ -161,6 +162,7 @@ export function Waves({
     }
 
     function loop(now: number): void {
+      if (!running) return
       raf = requestAnimationFrame(loop)
       // Frame cap: skip ticks that land sooner than ~33 ms after the last
       // drawn frame, so 90/120 Hz displays do not multiply the cost.
@@ -170,7 +172,7 @@ export function Waves({
     }
 
     function start(): void {
-      if (running || reduceMotion) return
+      if (running || reduceMotion || document.hidden) return
       running = true
       raf = requestAnimationFrame(loop)
     }

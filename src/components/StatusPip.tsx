@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { motion, useAnimationControls, useReducedMotion } from 'motion/react'
-
+import { usePulse } from '../motion/usePulse'
 /**
  * The status dot, and the one piece of motion that *means* something.
  *
@@ -50,31 +48,17 @@ export function StatusPip({
   glowClass?: string
   className?: string
 }) {
-  const controls = useAnimationControls()
-  const reduceMotion = useReducedMotion()
-  const mounted = useRef(false)
-
-  useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true
-      return
-    }
-    if (reduceMotion) return
-    void controls.start({
-      scale: [1, 1.3, 1],
-      transition: { duration: 0.55, times: [0, 0.35, 1], ease: 'easeOut' },
-    })
-  }, [trigger, reduceMotion, controls])
+  const ref = usePulse<HTMLSpanElement>(trigger, 1.2, trigger !== undefined)
 
   return (
     <span
       className={`relative grid shrink-0 place-items-center ${SIZE_CLASS[size]} ${className}`}
       aria-hidden="true"
     >
-      <motion.span
+      <span
+        ref={ref}
         className={`absolute inset-0 rounded-full ${glowClass}`}
         style={{ backgroundColor: hex }}
-        animate={controls}
       />
       {pulses && (
         <span

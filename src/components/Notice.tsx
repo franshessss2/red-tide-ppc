@@ -1,8 +1,12 @@
 import { useEffect } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { createPortal } from 'react-dom'
+import { useReducedMotion } from '../motion/preferences'
+import { createMotionScope } from '../motion/scope'
+import { MOTION, spring } from '../motion/tokens'
 import { useAppStore } from '../store'
 
-const AUTO_DISMISS_MS = 7000
+const AUTO_DISMISS_MS = MOTION.time.noticeHold * 1000
 
 /**
  * Floating success/error toast driven by the store.
@@ -15,42 +19,45 @@ const AUTO_DISMISS_MS = 7000
  * red and do not auto-dismiss differently — but they read as urgent, while a
  * success sits on the raised surface with an amber tick.
  */
-export function Notice() {
+export function Notice({ suppressNotice }: { suppressNotice?: string } = {}) {
   const error = useAppStore((state) => state.error)
   const notice = useAppStore((state) => state.notice)
   const dismissMessages = useAppStore((state) => state.dismissMessages)
   const reduceMotion = useReducedMotion()
 
+  const message = error ?? (notice === suppressNotice ? null : notice)
   useEffect(() => {
-    if (!notice && !error) return
-    const timer = setTimeout(dismissMessages, AUTO_DISMISS_MS)
-    return () => clearTimeout(timer)
-  }, [notice, error, dismissMessages])
+    // Consume only this form's duplicate success. Never clear another notice
+    // or an error from a concurrent operation.
+    if (notice && notice === suppressNotice && !error) dismissMessages()
+  }, [notice, suppressNotice, error, dismissMessages])
+  useEffect(() => {
+    if (!message) return
+    const scope = createMotionScope()
+    scope.timeout(dismissMessages, AUTO_DISMISS_MS)
+    return () => scope.dispose()
+  }, [message, dismissMessages])
 
-  const message = error ?? notice
   const isError = Boolean(error)
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {message && (
         <motion.div
-          role="status"
-          aria-live="polite"
+          key={message}
+          role={isError ? 'alert' : 'status'}
+          aria-live={isError ? 'assertive' : 'polite'}
           initial={{ opacity: 0, y: reduceMotion ? 0 : 16, scale: reduceMotion ? 1 : 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: reduceMotion ? 0 : 10, scale: reduceMotion ? 1 : 0.98 }}
-          transition={
-            reduceMotion
-              ? { duration: 0.01 }
-              : { type: 'spring', stiffness: 420, damping: 34 }
-          }
-          className="pointer-events-none fixed inset-x-4 bottom-4 z-[1100] sm:inset-x-auto sm:right-4 sm:w-96"
+          transition={spring(reduceMotion)}
+          className="pointer-events-none fixed inset-x-4 bottom-4 z-[var(--layer-notice)] sm:inset-x-auto sm:right-4 sm:w-96"
         >
           <div
-            className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-3 backdrop-blur-md ${
+            className={`pointer-events-auto flex items-start gap-3 rounded-xl border bg-ink-2 p-3 ${
               isError
-                ? 'border-advisory/40 bg-advisory/12'
-                : 'border-line bg-ink-2/95'
+                ? 'border-advisory/40'
+                : 'border-line'
             }`}
           >
             <span
@@ -95,6 +102,6 @@ export function Notice() {
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>, document.body
   )
 }

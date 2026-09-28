@@ -2,7 +2,8 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route } from 'react-router-dom'
 import { RouteTransition } from './motion/RouteTransition'
 import { Admin } from './pages/Admin'
-import { Landing } from './pages/Landing'
+import { SplashScreen } from './components/SplashScreen'
+import { RouteErrorBoundary } from './motion/RouteErrorBoundary'
 import { useAppStore } from './store'
 
 /**
@@ -31,7 +32,13 @@ let mapPageModule: Promise<typeof import('./pages/MapPage')> | null = null
  * idle prefetch would spend that budget on people who never open the map.
  */
 export function prefetchMapPage() {
-  mapPageModule ??= import('./pages/MapPage')
+  if (!mapPageModule) {
+    const attempt = import('./pages/MapPage')
+    mapPageModule = attempt
+    // Hover prefetch must not produce an unhandled rejection. Lazy callers
+    // still receive the original rejection for the route error boundary.
+    void attempt.catch(() => { if (mapPageModule === attempt) mapPageModule = null })
+  }
   return mapPageModule
 }
 
@@ -81,12 +88,13 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <RouteErrorBoundary>
       {/*
         `RouteTransition` renders the <Routes> itself, so it can pin the
         outgoing tree to the outgoing location while it fades out.
       */}
       <RouteTransition prepare={ROUTE_PREPARATION}>
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<SplashScreen />} />
         <Route
           path="/map"
           element={
@@ -98,6 +106,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </RouteTransition>
+          </RouteErrorBoundary>
     </BrowserRouter>
   )
 }

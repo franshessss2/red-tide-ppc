@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION } from '../motion/tokens'
+import { cameraFor } from '../motion/camera'
 
 /**
  * The top-right control column: one vertical stack holding every floating
@@ -40,7 +43,7 @@ export function MapControlColumn({
 }) {
   return (
     <aside
-      className="pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(4.5rem+env(safe-area-inset-top))] z-[1010] flex flex-col items-end gap-2"
+      className="pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(4.5rem+env(safe-area-inset-top))] z-[var(--layer-chrome)] flex flex-col items-end gap-2"
       aria-label="Map controls"
       data-testid="map-control-column"
     >
@@ -58,6 +61,13 @@ export function MapControlColumn({
  * animated zooms) and mirror its disabled states at the zoom limits.
  */
 export function ZoomControls({ map }: { map: LeafletMap | null }) {
+  const reduce = useReducedMotion()
+  const zoomBy = (delta: number) => {
+    if (!map) return
+    const target = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta))
+    const center = map.getCenter()
+    cameraFor(map).run(() => reduce ? map.setZoom(target, { animate: false }) : map.flyTo(center, target, { duration: MOTION.time.base }), () => map.setZoom(target, { animate: false }), !reduce)
+  }
   const [limits, setLimits] = useState({ canZoomIn: false, canZoomOut: false })
   // The live zoom level, republished as a data attribute so the real-browser
   // pass can prove the buttons actually drive the map (a DOM value, not a
@@ -85,7 +95,7 @@ export function ZoomControls({ map }: { map: LeafletMap | null }) {
   }, [map])
 
   const buttonClass =
-    'grid h-11 w-11 place-items-center text-paper/75 transition-colors hover:text-accent disabled:cursor-default disabled:opacity-35 disabled:hover:text-paper/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'
+    'motion-press grid h-11 w-11 place-items-center text-paper/75 transition-colors hover:text-accent disabled:cursor-default disabled:opacity-35 disabled:hover:text-paper/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'
 
   return (
     <div
@@ -97,7 +107,7 @@ export function ZoomControls({ map }: { map: LeafletMap | null }) {
     >
       <button
         type="button"
-        onClick={() => map?.zoomIn()}
+        onClick={() => zoomBy(1)}
         disabled={!limits.canZoomIn}
         aria-label="Zoom in"
         title="Zoom in"
@@ -117,7 +127,7 @@ export function ZoomControls({ map }: { map: LeafletMap | null }) {
       <span aria-hidden="true" className="block h-px w-full bg-line" />
       <button
         type="button"
-        onClick={() => map?.zoomOut()}
+        onClick={() => zoomBy(-1)}
         disabled={!limits.canZoomOut}
         aria-label="Zoom out"
         title="Zoom out"

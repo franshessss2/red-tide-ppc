@@ -1,8 +1,9 @@
+import { reportSuccessMessage } from '../lib/reportFeedback'
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Map as LeafletMap } from 'leaflet'
-import { AnimatePresence, animate, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { RegistrationMarks, Scanline } from '../components/Ambient'
 import { AdvisoryDrawer } from '../components/AdvisoryDrawer'
 import { DemoBanner } from '../components/DemoBanner'
@@ -21,7 +22,9 @@ import {
   DRAWER_RESERVE_OPEN,
 } from '../motion/mapMotion'
 import { resolveActiveStatus } from '../motion/statusKey'
-import '../styles/micro-interactions.css'
+import { useReducedMotion } from '../motion/preferences'
+import { usePresenceProgress } from '../motion/usePresenceProgress'
+import { MOTION, tween } from '../motion/tokens'
 
 import { selectPendingCountByZone, selectZoneById, useAppStore } from '../store'
 import type { Zone, ZoneStatus } from '../types'
@@ -105,13 +108,7 @@ export function MapPage() {
   // safety reference that must not compete with the advisory zones. Local UI
   // state on purpose: not app data, nothing to persist or sync.
   const [shippingLanesVisible, setShippingLanesVisible] = useState(false)
-  // Mounted flag keeps the layer in the tree during fade-out, so it can
-  // animate 1→0 before unmounting (150ms). Opacity is multiplied onto every
-  // Leaflet path's stroke/fill opacity.
-  const [shippingMounted, setShippingMounted] = useState(false)
-  const [shippingOpacity, setShippingOpacity] = useState(0)
-  const shippingFadeRef = useRef<ReturnType<typeof animate> | null>(null)
-  const shippingTimeoutRef = useRef<number | null>(null)
+  const { mounted: shippingMounted, progress: shippingOpacity } = usePresenceProgress(shippingLanesVisible)
 
   // One-time discoverability hint for the overlay toggle: the ship glyph is
   // icon-only, and "PCG shipping lane" is not guessable from an icon. Shown
@@ -126,65 +123,10 @@ export function MapPage() {
   })
   useEffect(() => {
     if (!shippingHintOpen) return
-    const timer = window.setTimeout(() => dismissShippingHint(), 9_000)
+    const timer = window.setTimeout(() => dismissShippingHint(), MOTION.time.noticeHold * 1000)
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shippingHintOpen])
-
-  // Fade logic: ON = mount + 0→1 over 200ms, OFF = 1→0 over 150ms then unmount.
-  // Reduced motion skips the fade entirely.
-  useEffect(() => {
-    // Clear any pending unmount timeout
-    if (shippingTimeoutRef.current !== null) {
-      window.clearTimeout(shippingTimeoutRef.current)
-      shippingTimeoutRef.current = null
-    }
-    shippingFadeRef.current?.stop()
-
-    if (shippingLanesVisible) {
-      setShippingMounted(true)
-      if (reduceMotion) {
-        setShippingOpacity(1)
-      } else {
-        setShippingOpacity(0)
-        // Start from 0 so CSS/Leaflet sees the change; next frame animate to 1
-        const controls = animate(0, 1, {
-          duration: 0.2,
-          ease: 'easeOut',
-          onUpdate: (v) => setShippingOpacity(v),
-        })
-        shippingFadeRef.current = controls
-      }
-    } else {
-      if (!shippingMounted) return
-      if (reduceMotion) {
-        setShippingMounted(false)
-        setShippingOpacity(0)
-      } else {
-        const controls = animate(shippingOpacity, 0, {
-          duration: 0.15,
-          ease: 'easeIn',
-          onUpdate: (v) => setShippingOpacity(v),
-        })
-        shippingFadeRef.current = controls
-        shippingTimeoutRef.current = window.setTimeout(() => {
-          setShippingMounted(false)
-          shippingTimeoutRef.current = null
-        }, 160)
-      }
-    }
-
-    return () => {
-      shippingFadeRef.current?.stop()
-      if (shippingTimeoutRef.current !== null) {
-        window.clearTimeout(shippingTimeoutRef.current)
-        shippingTimeoutRef.current = null
-      }
-    }
-    // shippingMounted and shippingOpacity are read to decide whether to animate out,
-    // but we only want to react to intent (shippingLanesVisible) and reducedMotion.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingLanesVisible, reduceMotion])
 
   function dismissShippingHint() {
     setShippingHintOpen(false)
@@ -330,7 +272,7 @@ export function MapPage() {
               {shippingHintOpen && (
                 <span
                   role="status"
-                  className="absolute right-0 top-[calc(100%+10px)] z-[1015] w-max max-w-[240px] rounded-lg border border-line bg-ink-2/92 px-3 py-2 text-left shadow-lg backdrop-blur-md"
+                  className="absolute right-0 top-[calc(100%+10px)] z-[var(--layer-controls)] w-max max-w-[240px] rounded-lg border border-line bg-ink-2/92 px-3 py-2 text-left shadow-lg backdrop-blur-md"
                 >
                   <span className="block font-display text-[11px] font-semibold leading-snug tracking-[0.02em] text-[#9cc4f7]">
                     New: shipping lane lines
@@ -408,7 +350,7 @@ export function MapPage() {
         target="_blank"
         rel="noreferrer"
         data-testid="map-attribution"
-        className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[1015] rounded-md border border-line/70 bg-ink/78 px-2 py-1 font-mono text-[9px] tracking-[0.08em] text-faint backdrop-blur-sm transition-colors hover:text-accent"
+        className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[var(--layer-controls)] rounded-md border border-line/70 bg-ink/78 px-2 py-1 font-mono text-[9px] tracking-[0.08em] text-faint backdrop-blur-sm transition-colors hover:text-accent"
       >
         © OpenStreetMap contributors
       </a>
@@ -417,11 +359,11 @@ export function MapPage() {
         {!zonesReady && (
           <motion.div
             key="map-loading-overlay"
-            className="absolute inset-0 z-[1005]"
+            className="absolute inset-0 z-[var(--layer-loading)]"
             initial={false}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            transition={tween(reduceMotion, MOTION.time.exit)}
           >
             <MapLoadingOverlay />
           </motion.div>
@@ -437,11 +379,11 @@ export function MapPage() {
           zone={heldZone}
           open={Boolean(reportZone)}
           onClose={closeReportForm}
-          onDismissed={() => setHeldZone(null)}
+          onDismissed={() => { if (useAppStore.getState().reportZoneId === null) setHeldZone(null) }}
         />
       )}
 
-      <Notice />
+      <Notice suppressNotice={heldZone ? reportSuccessMessage(heldZone.name) : undefined} />
     </div>
   )
 }

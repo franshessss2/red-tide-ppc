@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react'
-import { animate, motion, motionValue, useReducedMotion, useTransform } from 'motion/react'
+import { useEffect, useId } from 'react'
+import { animate, LayoutGroup, motion, useMotionValue, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { ZONE_STATUS_ORDER } from '../lib/status'
-import { APP_SPRING } from '../motion/mapMotion'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, spring, tween } from '../motion/tokens'
+import { usePulse } from '../motion/usePulse'
 import { resolveActiveStatus } from '../motion/statusKey'
 import { zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { ZoneStatus } from '../types'
@@ -53,12 +55,15 @@ export interface StatusKeyProps {
 export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProps) {
   const reduceMotion = useReducedMotion()
 
-  // Constant visibility when no fade driver is supplied — created once.
-  const fallbackOpacity = useRef<MotionValue<number> | null>(null)
-  if (fallbackOpacity.current === null) {
-    fallbackOpacity.current = motionValue(1)
-  }
-  const opacity = chromeOpacity ?? fallbackOpacity.current
+  const groupId = useId()
+  const fallbackOpacity = useMotionValue(reduceMotion ? 1 : 0)
+  const opacity = chromeOpacity ?? fallbackOpacity
+  useEffect(() => {
+    if (chromeOpacity) return
+    if (reduceMotion) { fallbackOpacity.jump(1); return }
+    const animation = animate(fallbackOpacity, 1, tween(false, MOTION.time.reveal))
+    return () => animation.stop()
+  }, [chromeOpacity, fallbackOpacity, reduceMotion])
 
   // Chips re-enable pointer events only while the chrome is actually
   // visible — invisible chrome must never eat map gestures.
@@ -71,10 +76,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
   return (
     <motion.div
       style={{ opacity }}
-      initial={reduceMotion || chromeOpacity ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeOut' }}
-      className="pointer-events-none absolute left-3 top-[4.5rem] z-[1010] mt-[env(safe-area-inset-top)]"
+      className="pointer-events-none absolute left-3 top-[4.5rem] z-[var(--layer-chrome)] mt-[env(safe-area-inset-top)]"
       data-testid="status-key"
     >
       <motion.div
@@ -83,6 +85,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
         style={{ pointerEvents: chipsPointerEvents as unknown as 'auto' }}
         className="flex select-none flex-wrap items-center gap-1.5"
       >
+        <LayoutGroup id={groupId}>
         {ZONE_STATUS_ORDER.map((status) => (
           <StatusChip
             key={status}
@@ -91,6 +94,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
             active={status === active}
           />
         ))}
+        </LayoutGroup>
       </motion.div>
     </motion.div>
   )
@@ -127,7 +131,7 @@ function StatusChip({
   return (
     <span
       data-status={status}
-      className="relative inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2/88 py-1 pl-2 pr-2 backdrop-blur-md"
+      className="relative isolate inline-flex items-center gap-1.5 rounded-full border border-line bg-ink-2/88 py-1 pl-2 pr-2 backdrop-blur-md"
     >
       {active && (
         <motion.span
@@ -135,7 +139,7 @@ function StatusChip({
           data-testid="status-key-indicator"
           className="absolute inset-0 -z-10 rounded-full"
           style={{ backgroundColor: theme.hex, opacity: 0.16 }}
-          transition={reduceMotion ? { duration: 0 } : APP_SPRING}
+          transition={spring(reduceMotion)}
         />
       )}
       {/* The pip pops whenever the count changes — a legend that only re-colours
@@ -162,27 +166,7 @@ function StatusChip({
  * tiny text shadow) rather than a loop.
  */
 function StatusCount({ count, color }: { count: number; color: string }) {
-  const reduceMotion = useReducedMotion()
-  const ref = useRef<HTMLSpanElement>(null)
-  const previous = useRef(count)
-
-  useEffect(() => {
-    if (previous.current === count) return
-    previous.current = count
-    if (reduceMotion) return
-
-    const node = ref.current
-    if (!node) return
-    const controls = animate(
-      node,
-      {
-        scale: [1, 1.16, 1],
-        textShadow: ['0 0 0 transparent', `0 0 10px ${color}`, '0 0 0 transparent'],
-      },
-      { duration: 0.32, ease: 'easeOut' },
-    )
-    return () => controls.stop()
-  }, [count, color, reduceMotion])
+  const ref = usePulse<HTMLSpanElement>(count)
 
   return (
     <span
@@ -190,7 +174,7 @@ function StatusCount({ count, color }: { count: number; color: string }) {
       className="inline-block origin-center font-mono text-[10px] leading-none"
       style={{ color }}
     >
-      <CountUp to={count} duration={0.9} />
+      <CountUp to={count} duration={MOTION.time.countUpdate} />
     </span>
   )
 }

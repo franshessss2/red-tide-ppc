@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, tween } from '../motion/tokens'
+import { StatusPip } from './StatusPip'
 import { formatDateTime, formatRelative } from '../lib/format'
 import { reportLabel, reportTheme } from '../styles/statusTheme'
 import type { Report } from '../types'
@@ -18,7 +21,7 @@ import type { Report } from '../types'
  *
  * MOTION:
  * - Exit: opacity 1→0, y 0→-8px, height collapses to 0, 220ms ease-in
- * - Approve tick: brief green tick flash before exit (reuses pathLength tick from ReportForm success)
+ * - No success animation before the write completes; the store owns confirmation.
  * - Reduced motion: instant removal
  */
 export function ReportCard({
@@ -31,39 +34,30 @@ export function ReportCard({
   report: Report
   zoneName: string
   busy: boolean
-  onApprove: () => void
-  onReject: () => void
+  onApprove: () => void | Promise<void>
+  onReject: () => void | Promise<void>
 }) {
   const isPending = report.status === 'pending'
   const theme = reportTheme(report.status)
   const reduceMotion = useReducedMotion()
-  const [isApproving, setIsApproving] = useState(false)
-
-  useEffect(() => {
-    if (!isApproving) return
-    const t = window.setTimeout(() => {
-      onApprove()
-    }, reduceMotion ? 0 : 360)
-    return () => window.clearTimeout(t)
-  }, [isApproving, onApprove, reduceMotion])
-
-  function handleApprove() {
-    if (busy || isApproving) return
-    if (reduceMotion) {
-      onApprove()
-      return
-    }
-    setIsApproving(true)
+  const [action, setAction] = useState<'approve' | 'reject' | null>(null)
+  const lock = useRef(false)
+  const alive = useRef(false)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  async function run(kind: 'approve' | 'reject', callback: () => void | Promise<void>) {
+    if (busy || lock.current || !isPending) return
+    lock.current = true
+    setAction(kind)
+    try { await callback() }
+    catch { /* The caller owns the error notice; leave the card retryable. */ }
+    finally { lock.current = false; if (alive.current) setAction(null) }
   }
-
-  function handleReject() {
-    if (busy || isApproving) return
-    onReject()
-  }
+  const waiting = busy || action !== null
 
   return (
     <motion.li
       layout={!reduceMotion}
+      aria-busy={waiting}
       initial={false}
       animate={{ opacity: 1, y: 0, height: 'auto', scale: 1 }}
       exit={
@@ -75,11 +69,11 @@ export function ReportCard({
               height: 0,
               marginBottom: 0,
               scale: 0.98,
-              transition: { duration: 0.22, ease: 'easeIn' },
+              transition: tween(false, MOTION.time.exit),
             }
       }
-      transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: 'easeOut' }}
-      className={`relative min-w-0 overflow-hidden rounded-xl border bg-ink-2 transition-colors duration-200 ${
+      transition={tween(reduceMotion)}
+      className={`relative min-w-0 overflow-hidden rounded-xl border bg-ink-2 transition-colors duration-[var(--motion-base)] ${
         isPending ? 'border-line hover:border-line-soft' : 'border-line/60'
       }`}
     >
@@ -97,21 +91,7 @@ export function ReportCard({
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${theme.pillClass}`}
           >
-            <span
-              className="relative grid h-1.5 w-1.5 shrink-0 place-items-center"
-              aria-hidden="true"
-            >
-              <span
-                className="absolute inset-0 rounded-full"
-                style={{ backgroundColor: theme.hex }}
-              />
-              {isPending && (
-                <span
-                  className="animate-status-pulse absolute inset-0 rounded-full"
-                  style={{ backgroundColor: theme.hex }}
-                />
-              )}
-            </span>
+            <StatusPip size="xs" hex={theme.hex} pulses={isPending} trigger={report.status} />
             {reportLabel(report.status)}
           </span>
           <span className="ml-auto font-mono text-[10px] text-faint">
@@ -134,7 +114,7 @@ export function ReportCard({
               src={report.photoUrl}
               alt="Reported conditions attachment"
               loading="lazy"
-              className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] sm:h-40"
+              className="h-32 w-full object-cover transition-transform duration-[var(--motion-reveal)] motion-safe:group-hover:scale-[1.02] sm:h-40"
             />
           </a>
         )}
@@ -148,28 +128,26 @@ export function ReportCard({
           <div className="mt-3.5 flex gap-2">
             <motion.button
               type="button"
-              onClick={handleApprove}
-              disabled={busy || isApproving}
-              whileTap={reduceMotion || busy || isApproving ? undefined : { scale: 0.975 }}
-              className="group relative flex-1 overflow-hidden rounded-lg bg-advisory px-3 py-2.5 text-sm font-semibold text-ink transition-[filter,transform] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={() => void run('approve', onApprove)}
+              disabled={waiting}
+              className="motion-press group relative flex-1 overflow-hidden rounded-lg bg-advisory px-3 py-2.5 text-sm font-semibold text-ink transition-[filter,transform] duration-[var(--motion-base)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-500 group-hover:translate-x-full"
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-[var(--motion-pulse)] motion-safe:group-hover:translate-x-full"
               />
               <span className="relative">
-                {isApproving ? 'Approved' : 'Approve → advisory'}
+                {action === 'approve' ? 'Approving…' : 'Approve → advisory'}
               </span>
             </motion.button>
 
             <motion.button
               type="button"
-              onClick={handleReject}
-              disabled={busy || isApproving}
-              whileTap={reduceMotion || busy || isApproving ? undefined : { scale: 0.975 }}
-              className="flex-1 rounded-lg border border-line px-3 py-2.5 text-sm font-semibold text-paper/80 transition-colors duration-200 hover:border-line-soft hover:bg-white/5 hover:text-paper disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={() => void run('reject', onReject)}
+              disabled={waiting}
+              className="motion-press flex-1 rounded-lg border border-line px-3 py-2.5 text-sm font-semibold text-paper/80 transition-colors duration-[var(--motion-base)] hover:border-line-soft hover:bg-white/5 hover:text-paper disabled:cursor-not-allowed disabled:opacity-45"
             >
-              Reject
+              {action === 'reject' ? 'Rejecting…' : 'Reject'}
             </motion.button>
           </div>
         ) : (
@@ -179,45 +157,6 @@ export function ReportCard({
         )}
       </div>
 
-      {isApproving && !reduceMotion && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.16, ease: 'easeOut' }}
-          className="pointer-events-none absolute inset-0 grid place-items-center rounded-xl bg-safe/12 ring-1 ring-inset ring-safe/30 backdrop-blur-[1px]"
-          aria-hidden="true"
-        >
-          <motion.span
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 460, damping: 22 }}
-            className="grid h-10 w-10 place-items-center rounded-full bg-safe/15 ring-1 ring-safe/30"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5 text-safe"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <motion.path
-                d="M4 12.5 9.5 18 20 6.5"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 0.32, delay: 0.08, ease: 'easeOut' }}
-              />
-            </svg>
-          </motion.span>
-        </motion.div>
-      )}
-      {isApproving && reduceMotion && (
-        <div
-          className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-safe/50"
-          aria-hidden="true"
-        />
-      )}
     </motion.li>
   )
 }

@@ -1,3 +1,4 @@
+import { StatusPip } from './StatusPip'
 import { formatDateTime, formatRelative } from '../lib/format'
 import { zoneGuidance, zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { Zone } from '../types'
@@ -40,20 +41,7 @@ export function ZonePopup({
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${theme.pillClass}`}
         >
-          <span className="relative grid h-1.5 w-1.5 shrink-0 place-items-center">
-            <span
-              className="absolute inset-0 rounded-full"
-              style={{ backgroundColor: theme.hex }}
-              aria-hidden="true"
-            />
-            {theme.pulses && (
-              <span
-                className="animate-status-pulse absolute inset-0 rounded-full"
-                style={{ backgroundColor: theme.hex }}
-                aria-hidden="true"
-              />
-            )}
-          </span>
+          <StatusPip size="xs" hex={theme.hex} pulses={theme.pulses} trigger={zone.status} />
           {zoneLabel(zone.status)}
         </span>
       </div>
@@ -105,7 +93,7 @@ export function ZonePopup({
         type="button"
         onClick={onReport}
         style={{ ['--i' as string]: pendingCount > 0 ? 5 : 4 }}
-        className="zone-popup-line mt-3 w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="motion-press zone-popup-line mt-3 w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-ink transition-transform duration-[var(--motion-fast)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         Report something here
       </button>

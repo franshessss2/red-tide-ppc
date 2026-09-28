@@ -113,7 +113,7 @@ function AdminDashboard() {
                 aria-selected={isActive}
                 type="button"
                 onClick={() => setTab(entry.id)}
-                className={`flex-1 rounded-lg px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-200 ${
+                className={`flex-1 rounded-lg px-3 py-2 font-mono text-[11px] uppercase tracking-[0.1em] transition-colors duration-[var(--motion-base)] ${
                   isActive
                     ? 'bg-accent text-ink'
                     : 'text-muted hover:bg-white/5 hover:text-paper'
@@ -146,20 +146,20 @@ function AdminDashboard() {
                   immediately. Rejecting dismisses the report and leaves the zone
                   unchanged.
                 </p>
-                <AnimatePresence initial={false}>
-                  <ul className={REPORT_GRID}>
+                <ul className={REPORT_GRID}>
+                  <AnimatePresence initial={false}>
                     {pendingReports.map((report) => (
                       <ReportCard
                         key={report.id}
                         report={report}
                         zoneName={zoneNameFor(zones, report.zoneId)}
-                        busy={busyReportId === report.id}
+                        busy={busyReportId !== null}
                         onApprove={() => approveReport(report.id)}
                         onReject={() => rejectReport(report.id)}
                       />
                     ))}
-                  </ul>
-                </AnimatePresence>
+                  </AnimatePresence>
+                </ul>
               </>
             )}
           </section>
@@ -173,8 +173,8 @@ function AdminDashboard() {
                 body="Reports you approve or reject are archived here."
               />
             ) : (
-              <AnimatePresence initial={false}>
-                <ul className={REPORT_GRID}>
+              <ul className={REPORT_GRID}>
+                <AnimatePresence initial={false}>
                   {reviewedReports.map((report) => (
                     <ReportCard
                       key={report.id}
@@ -185,8 +185,8 @@ function AdminDashboard() {
                       onReject={() => rejectReport(report.id)}
                     />
                   ))}
-                </ul>
-              </AnimatePresence>
+                </AnimatePresence>
+              </ul>
             )}
           </section>
         )}
@@ -232,7 +232,7 @@ function AdminDashboard() {
                             disabled={busy}
                             onClick={() => setZoneStatus(zone.id, status)}
                             aria-pressed={isActive}
-                            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-45 ${
+                            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] transition-all duration-[var(--motion-base)] disabled:cursor-not-allowed disabled:opacity-45 ${
                               isActive
                                 ? theme.solidClass
                                 : 'border border-line text-muted hover:border-accent/40 hover:text-accent'

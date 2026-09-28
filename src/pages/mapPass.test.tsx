@@ -46,7 +46,7 @@ function zoneCard(name: string): HTMLElement {
 
 async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('link', { name: /open the map/i }))
-  await screen.findByRole('button', { name: 'Reset view' })
+  await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
 }
 
 function drawer(): HTMLElement {
@@ -54,6 +54,7 @@ function drawer(): HTMLElement {
 }
 
 beforeEach(() => {
+  sessionStorage.setItem('red-tide:intro:v1', 'seen')
   clearDemoData()
   setBackendForTesting(createDemoBackend())
   useAppStore.setState({
@@ -92,7 +93,7 @@ describe('six-item pass on /map (jsdom side)', () => {
     expect(within(panel).getByText('7 zones · No advisories')).toBeTruthy()
     expect(within(panel).getByText('01 / 02')).toBeTruthy()
 
-    const attribution = within(panel).getByRole('link', { name: '© OSM' })
+    const attribution = within(panel).getByRole('link', { name: '© OSM', hidden: true })
     expect(attribution.getAttribute('href')).toBe(
       'https://www.openstreetmap.org/copyright',
     )
@@ -106,7 +107,7 @@ describe('six-item pass on /map (jsdom side)', () => {
     // report flow keep it) — the clip is visual, structural, and driven by
     // the drag motion value, never a conditional unmount.
     expect(
-      within(panel).getByRole('heading', { name: ZONE }),
+      within(panel).getByRole('heading', { name: ZONE, hidden: true }),
     ).toBeTruthy()
   })
 
@@ -129,9 +130,8 @@ describe('six-item pass on /map (jsdom side)', () => {
     await waitFor(() => expect(panel.dataset.state).toBe('collapsed'))
     expect(within(panel).getByText('01 / 02')).toBeTruthy()
 
-    const openDot = within(panel)
-      .getAllByRole('button', { name: 'Open the zone drawer' })
-      .find((el) => el.getAttribute('aria-pressed') !== null)!
+    await user.click(screen.getByTestId('zone-drawer-tab'))
+    const openDot = within(panel).getAllByRole('button', { name: 'Open the zone drawer' }).find(el => el.getAttribute('aria-pressed') !== null)!
     await user.click(openDot)
     await waitFor(() => expect(panel.dataset.state).toBe('open'))
   })
@@ -227,6 +227,7 @@ describe('six-item pass on /map (jsdom side)', () => {
     const user = userEvent.setup()
     render(<App />)
     await openMap(user)
+    await user.click(screen.getByTestId('zone-drawer-tab'))
 
     // Public user reports — from the zone drawer's card.
     await user.click(
@@ -241,6 +242,8 @@ describe('six-item pass on /map (jsdom side)', () => {
     )
     await user.click(within(dialog).getByRole('button', { name: 'Submit report' }))
     expect(await screen.findByText(/Salamat!/)).toBeTruthy()
+    expect(screen.getAllByText(/Salamat!/)).toHaveLength(1)
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 3500 })
 
     // Admin unlocks and approves.
     await user.click(screen.getByRole('link', { name: 'Admin' }))

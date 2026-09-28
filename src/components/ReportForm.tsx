@@ -1,6 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { createPortal } from 'react-dom'
+import { useReducedMotion } from '../motion/preferences'
+import { createMotionScope } from '../motion/scope'
+import { MOTION, spring, tween } from '../motion/tokens'
+import { useModalFocus } from '../motion/useModalFocus'
 import { formatBytes } from '../lib/format'
 import { MAX_PHOTO_BYTES } from '../lib/image'
 import {
@@ -14,7 +19,7 @@ import { ZoneStatusBadge } from './StatusBadge'
 type Phase = 'idle' | 'submitting' | 'success' | 'closing'
 
 /** How long the success confirmation stays up before the sheet dismisses. */
-const SUCCESS_HOLD_MS = 1600
+const SUCCESS_HOLD_MS = MOTION.time.successHold * 1000
 
 /**
  * Anonymous report form — bottom sheet on phones, centred modal on wider
@@ -34,8 +39,8 @@ const SUCCESS_HOLD_MS = 1600
  *                 holds ~1.6s, then animates out
  *   submit fail → `open` stays true             → form stays, error shows inline
  *
- * While the success state is up the container's role switches from `dialog`
- * to `status`: the form is finished, so it is no longer a dialog.
+ * The dialog retains focus ownership through confirmation and exit. Its
+ * nested status region announces success once.
  */
 export function ReportForm({
   zone,
@@ -60,6 +65,10 @@ export function ReportForm({
   const [localError, setLocalError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
 
+  const alive = useRef(false)
+  const submittingRef = useRef(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaId = useId()
   const characterCount = description.trim().length
@@ -71,28 +80,19 @@ export function ReportForm({
   // between the store closing it and this component learning it succeeded.
   const visible = open || isSubmitting || isSuccess
 
-  // Lock background scrolling and close on Escape while the sheet is open.
-  useEffect(() => {
-    if (!visible) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isSubmitting) onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [visible, isSubmitting, onClose])
+  function dismiss() {
+    if (submittingRef.current) return
+    if (isSuccess) setPhase('closing')
+    onClose()
+  }
+  useModalFocus(panelRef, dismiss)
 
   // Hold the success state briefly, then let it exit.
   useEffect(() => {
     if (!isSuccess) return
-    const timer = setTimeout(() => setPhase('closing'), SUCCESS_HOLD_MS)
-    return () => clearTimeout(timer)
+    const scope = createMotionScope()
+    scope.timeout(() => setPhase('closing'), SUCCESS_HOLD_MS)
+    return () => scope.dispose()
   }, [isSuccess])
 
   useEffect(() => {
@@ -103,8 +103,6 @@ export function ReportForm({
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-
     if (!file) {
       setPhoto(null)
       setPreviewUrl(null)
@@ -131,44 +129,46 @@ export function ReportForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (tooShort || isSubmitting) return
+    if (tooShort || submittingRef.current || !open) return
+    submittingRef.current = true
 
     setPhase('submitting')
     try {
       await submitReport({ zoneId: zone.id, description, photo })
-      setPhase('success')
+      if (alive.current) setPhase('success')
     } catch {
       // store.submitReport already recorded the message in `formError`; the
       // form stays open and shows it inline.
-      setPhase('idle')
+      if (alive.current) setPhase('idle')
+    } finally {
+      submittingRef.current = false
     }
   }
 
-  const sheetTransition = reduceMotion
-    ? { duration: 0.01 }
-    : { type: 'spring' as const, stiffness: 420, damping: 34, mass: 0.9 }
+  const sheetTransition = spring(reduceMotion)
 
-  return (
+  return createPortal(
     <AnimatePresence onExitComplete={onDismissed}>
       {visible && (
-        <div className="fixed inset-0 z-[1030] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[var(--layer-modal)] flex items-end justify-center sm:items-center">
           <motion.button
             type="button"
             aria-label="Close report form"
-            onClick={isSubmitting ? undefined : onClose}
+            onClick={dismiss}
+            tabIndex={-1}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0.01 : 0.22 }}
+            transition={tween(reduceMotion)}
             className="absolute inset-0 h-full w-full cursor-default bg-ink/72 backdrop-blur-[3px]"
           />
 
           <motion.div
-            // The success state is a confirmation, not a form — see the note in
-            // the component doc comment.
-            role={isSuccess ? 'status' : 'dialog'}
-            aria-modal={isSuccess ? undefined : true}
-            aria-live={isSuccess ? 'polite' : undefined}
+            ref={panelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label={isSuccess ? 'Report sent' : undefined}
             aria-labelledby={isSuccess ? undefined : `${textareaId}-title`}
             initial={{ opacity: 0, y: reduceMotion ? 0 : 34 }}
             animate={{ opacity: 1, y: 0 }}
@@ -183,10 +183,11 @@ export function ReportForm({
                 <motion.form
                   key="form"
                   onSubmit={handleSubmit}
+                  aria-busy={isSubmitting}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: reduceMotion ? 0.01 : 0.16 }}
+                  transition={tween(reduceMotion, MOTION.time.fast)}
                   className="p-5"
                 >
                   <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
@@ -223,14 +224,13 @@ export function ReportForm({
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     rows={4}
-                    autoFocus
                     maxLength={MAX_DESCRIPTION_LENGTH}
                     placeholder="e.g. Water turned reddish-brown near the shallows this morning, and there were dead shellfish on the sand."
                     className="mt-1.5 w-full resize-y rounded-xl border border-line bg-ink px-3 py-2.5 text-sm text-paper placeholder:text-faint focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/25"
                   />
                   <div className="mt-1 flex items-center justify-between font-mono text-[10px]">
                     <span
-                      className={`transition-colors duration-200 ${
+                      className={`transition-colors duration-[var(--motion-base)] ${
                         tooShort ? 'text-faint' : 'text-safe'
                       }`}
                     >
@@ -268,7 +268,6 @@ export function ReportForm({
                           <button
                             type="button"
                             onClick={() => {
-                              if (previewUrl) URL.revokeObjectURL(previewUrl)
                               setPhoto(null)
                               setPreviewUrl(null)
                               if (fileInputRef.current) fileInputRef.current.value = ''
@@ -280,7 +279,7 @@ export function ReportForm({
                         </div>
                       </div>
                     ) : (
-                      <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-ink px-3 py-4 text-sm font-medium text-muted transition-colors duration-200 hover:border-accent/50 hover:text-accent">
+                      <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-ink px-3 py-4 text-sm font-medium text-muted transition-colors duration-[var(--motion-base)] hover:border-accent/50 hover:text-accent">
                         <svg
                           className="h-4 w-4"
                           viewBox="0 0 20 20"
@@ -322,8 +321,7 @@ export function ReportForm({
                       type="button"
                       onClick={onClose}
                       disabled={isSubmitting}
-                      whileTap={reduceMotion ? undefined : { scale: 0.975 }}
-                      className="flex-1 rounded-xl border border-line px-4 py-3 text-sm font-semibold text-paper/80 transition-colors duration-200 hover:bg-white/5 disabled:opacity-40"
+                      className="motion-press flex-1 rounded-xl border border-line px-4 py-3 text-sm font-semibold text-paper/80 transition-colors duration-[var(--motion-base)] hover:bg-white/5 disabled:opacity-40"
                     >
                       Cancel
                     </motion.button>
@@ -331,12 +329,7 @@ export function ReportForm({
                     <motion.button
                       type="submit"
                       disabled={tooShort || isSubmitting}
-                      whileTap={
-                        reduceMotion || tooShort || isSubmitting
-                          ? undefined
-                          : { scale: 0.975 }
-                      }
-                      className={`relative flex-[1.4] overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition-colors duration-200 ${
+                      className={`motion-press relative flex-[1.4] overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition-colors duration-[var(--motion-base)] ${
                         tooShort
                           ? 'cursor-not-allowed bg-line text-faint'
                           : 'bg-accent text-ink hover:bg-accent/90'
@@ -371,7 +364,7 @@ export function ReportForm({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>, document.body
   )
 }
 
@@ -393,25 +386,21 @@ function SuccessPanel({
   const reduceMotion = useReducedMotion()
 
   return (
-    <div className="flex flex-col items-center px-6 py-10 text-center">
+    <div role="status" aria-live="polite" className="flex flex-col items-center px-6 py-10 text-center">
       <div className="relative grid h-16 w-16 place-items-center">
         {/* Expanding ring, then the tick draws itself. */}
-        <motion.span
+        {!reduceMotion && <motion.span
           className="absolute inset-0 rounded-full border border-safe/40"
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1.15, opacity: [0, 0.9, 0] }}
-          transition={{ duration: reduceMotion ? 0.01 : 1.1, ease: 'easeOut' }}
+          transition={tween(false, MOTION.time.wash)}
           aria-hidden="true"
-        />
+        />}
         <motion.span
           className="grid h-16 w-16 place-items-center rounded-full bg-safe/12 ring-1 ring-inset ring-safe/30"
           initial={{ scale: reduceMotion ? 1 : 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={
-            reduceMotion
-              ? { duration: 0.01 }
-              : { type: 'spring', stiffness: 460, damping: 22 }
-          }
+          transition={spring(reduceMotion)}
         >
           <svg
             viewBox="0 0 24 24"
@@ -427,11 +416,7 @@ function SuccessPanel({
               d="M4 12.5 9.5 18 20 6.5"
               initial={{ pathLength: reduceMotion ? 1 : 0 }}
               animate={{ pathLength: 1 }}
-              transition={{
-                duration: reduceMotion ? 0.01 : 0.42,
-                delay: reduceMotion ? 0 : 0.14,
-                ease: 'easeOut',
-              }}
+              transition={tween(reduceMotion, MOTION.time.reveal, MOTION.time.fast)}
             />
           </svg>
         </motion.span>
@@ -441,7 +426,7 @@ function SuccessPanel({
         className="font-display mt-5 text-3xl leading-none text-paper"
         initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: reduceMotion ? 0 : 0.12, duration: 0.3 }}
+        transition={tween(reduceMotion, MOTION.time.reveal, MOTION.time.stagger)}
       >
         Salamat!
       </motion.h2>
@@ -450,7 +435,7 @@ function SuccessPanel({
         className="mt-2 max-w-xs text-sm leading-relaxed text-muted"
         initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: reduceMotion ? 0 : 0.2, duration: 0.3 }}
+        transition={tween(reduceMotion, MOTION.time.reveal, MOTION.time.stagger * 2)}
       >
         Your report for <span className="text-paper/90">{zoneName}</span> was sent
         for review.
@@ -461,7 +446,7 @@ function SuccessPanel({
         className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-faint"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: reduceMotion ? 0 : 0.34, duration: 0.3 }}
+        transition={tween(reduceMotion, MOTION.time.reveal, MOTION.time.stagger * 3)}
       >
         An admin will review it shortly
       </motion.p>

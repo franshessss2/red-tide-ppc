@@ -113,3 +113,5 @@ describe('Waves', () => {
     expect(canvas.height).toBe(1200) // 800 * 1.5
   })
 })
+
+vi.mock('../motion/preferences', () => ({ useReducedMotion: () => reduceMotion }))

@@ -1,0 +1,13 @@
+/* Final policy layer, including Leaflet-owned DOM and utility animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; }
+}
+html[data-motion="reduced"] *,html[data-motion="reduced"] *::before,html[data-motion="reduced"] *::after {
+  scroll-behavior:auto!important; animation:none!important; transition:none!important;
+}
+html[data-motion-paused="true"] *,html[data-motion-paused="true"] *::before,html[data-motion-paused="true"] *::after { animation-play-state:paused!important; }
+.motion-press { transition:scale var(--dur-fast,140ms) var(--ease-out-quint),background-color var(--dur-fast,140ms),color var(--dur-fast,140ms); }
+.motion-press:active:not(:disabled) { scale:.97; }
+@media (prefers-reduced-motion: reduce) { .motion-press:active:not(:disabled) { scale:none; } }
+
+html[data-motion="reduced"] .motion-press:active:not(:disabled) { scale:none; }

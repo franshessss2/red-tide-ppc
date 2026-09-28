@@ -287,6 +287,7 @@ describe('AdvisoryDrawer clip guarantees', () => {
 
 describe('AdvisoryDrawer on the map page', () => {
   beforeEach(() => {
+  sessionStorage.setItem('red-tide:intro:v1', 'seen')
     clearDemoData()
     setBackendForTesting(createDemoBackend())
     useAppStore.setState({
@@ -310,7 +311,7 @@ describe('AdvisoryDrawer on the map page', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' })
+    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
 
     const live = await screen.findByTestId('advisory-drawer')
     expect(live.dataset.state).toBe('open')

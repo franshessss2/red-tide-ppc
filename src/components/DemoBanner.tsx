@@ -18,7 +18,7 @@ export function DemoBanner({ variant = 'banner' }: { variant?: 'chip' | 'banner'
     return (
       <span
         className="inline-flex items-center gap-1.5 rounded-full border border-accent/35 bg-accent/12 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-accent backdrop-blur-md"
-        title="No Firebase config found — data is stored in this browser only."
+        title="Demo data is stored in this browser only."
       >
         <span
           className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
@@ -36,11 +36,8 @@ export function DemoBanner({ variant = 'banner' }: { variant?: 'chip' | 'banner'
         Demo mode
       </p>
       <p className="mt-2 text-xs leading-relaxed text-muted">
-        No Firebase keys were found, so data is kept in this browser only —
-        nothing is shared or saved server-side. Copy{' '}
-        <code className="font-mono text-paper/80">.env.example</code> to{' '}
-        <code className="font-mono text-paper/80">.env</code> and add your
-        Firebase config to use Firestore + Storage.
+        This prototype uses demo data stored in this browser. Reports and
+        reviews stay local; nothing is sent to the live advisory service.
       </p>
     </div>
   )

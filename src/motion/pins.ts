@@ -1,3 +1,4 @@
+import { MOTION } from './tokens'
 import type { LatLng } from '../types'
 
 /**
@@ -48,4 +49,4 @@ export const INTRO_GLIDE_SESSION_KEY = 'red-tide-ppc:intro-glide:v1'
 export const INTRO_GLIDE_WIDE_ZOOM = 8
 
 /** The glide itself — long enough to read as an establishing shot. */
-export const INTRO_GLIDE_SECONDS = 2.8
+export const INTRO_GLIDE_SECONDS = MOTION.time.mapIntro

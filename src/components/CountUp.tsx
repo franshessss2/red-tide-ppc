@@ -1,124 +1,50 @@
 import { useEffect, useRef, useState } from 'react'
-import { useReducedMotion } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { createMotionScope } from '../motion/scope'
+import { MOTION, easeOut } from '../motion/tokens'
+import { useReveal } from '../motion/useReveal'
 
-/**
- * Counting figure (reactbits.dev "Counter" pattern, MIT + Commons Clause —
- * see `docs/design-references.md` §14).
- *
- * Counts from the currently shown value to `to` with an ease-out curve,
- * starting when the number first enters the viewport. When `to` changes after
- * the first run (the live feeds move the number), it animates from where it is
- * to the new value — a jump would read as a glitch on a "live" figure.
- *
- * `tabular-nums` keeps the width steady so the digits do not wobble the
- * surrounding layout.
- */
-export function CountUp({
-  to,
-  from = 0,
-  duration = 1.1,
-  decimals = 0,
-  prefix = '',
-  suffix = '',
-  className = '',
-  onComplete,
-}: {
-  to: number
-  /**
-   * First-run start. Later updates still continue from the value on screen,
-   * so a live feed does not jump back to `from`.
-   */
-  from?: number
-  /** Count duration in seconds for the first run; shorter for updates. */
-  duration?: number
-  decimals?: number
-  prefix?: string
-  suffix?: string
-  className?: string
-  /** Fires when a run settles. Held in a ref so an inline callback cannot restart the tween. */
-  onComplete?: () => void
-}) {
-  const reduceMotion = useReducedMotion()
-  const [inView, setInView] = useState(false)
-  const [value, setValue] = useState(from)
-  const shownRef = useRef(from)
-  const startedRef = useRef(false)
-  const frameRef = useRef<number | undefined>(undefined)
-  const spanRef = useRef<HTMLSpanElement | null>(null)
-  const onCompleteRef = useRef(onComplete)
-  onCompleteRef.current = onComplete
-  const completedToRef = useRef<number | null>(null)
-
-  // Start when the figure becomes visible. jsdom has no IntersectionObserver,
-  // so fall straight through there (and in any environment without it).
+export function CountUp({ to, from = 0, duration = MOTION.time.count, decimals = 0,
+  prefix = '', suffix = '', className = '', onComplete,
+}: { to: number; from?: number; duration?: number; decimals?: number; prefix?: string; suffix?: string; className?: string; onComplete?: () => void }) {
+  const reduce = useReducedMotion()
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useReveal(ref, { threshold: 0.3 })
+  const target = Number.isFinite(to) ? to : 0
+  const [value, setValue] = useState(Number.isFinite(from) ? from : 0)
+  const shown = useRef(value)
+  const started = useRef(false)
+  const completed = useRef<number | null>(null)
+  const callback = useRef(onComplete)
+  callback.current = onComplete
   useEffect(() => {
-    const el = spanRef.current
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setInView(true)
-      return
+    if (!inView && !reduce) return
+    const scope = createMotionScope()
+    const startValue = shown.current
+    const ms = Math.max(0, Number.isFinite(duration) ? duration : 0) * 1000
+    const length = started.current ? Math.min(ms, MOTION.time.countUpdate * 1000) : ms
+    started.current = true
+    const finish = () => {
+      shown.current = target
+      setValue(target)
+      if (completed.current !== target) { completed.current = target; callback.current?.() }
     }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setInView(true)
-          io.disconnect()
-        }
-      },
-      { threshold: 0.3 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (!inView) return
-    if (reduceMotion) {
-      shownRef.current = to
-      setValue(to)
-      if (completedToRef.current !== to) {
-        completedToRef.current = to
-        onCompleteRef.current?.()
-      }
-      return
-    }
-
-    const firstRun = !startedRef.current
-    startedRef.current = true
-    const startValue = shownRef.current
-    const ms = (firstRun ? duration : Math.min(duration, 0.6)) * 1000
+    if (reduce || length === 0 || startValue === target) { finish(); return }
     const start = performance.now()
-
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / ms)
-      const eased = 1 - Math.pow(1 - t, 3)
-      const next = startValue + (to - startValue) * eased
-      shownRef.current = next
-      setValue(next)
-      if (t < 1) {
-        frameRef.current = requestAnimationFrame(tick)
-      } else if (completedToRef.current !== to) {
-        completedToRef.current = to
-        onCompleteRef.current?.()
-      }
+      const progress = Math.min(1, Math.max(0, (now - start) / length))
+      shown.current = startValue + (target - startValue) * easeOut(progress)
+      setValue(shown.current)
+      if (progress < 1) scope.frame(tick)
+      else finish()
     }
-
-    frameRef.current = requestAnimationFrame(tick)
-    return () => {
-      if (frameRef.current !== undefined) cancelAnimationFrame(frameRef.current)
-    }
-  }, [to, inView, reduceMotion, duration])
-
-  const formatValue = (number: number) => prefix + number.toLocaleString('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    scope.frame(tick)
+    return () => scope.dispose()
+  }, [target, duration, inView, reduce])
+  const format = (v: number) => prefix + v.toLocaleString('en-US', {
+    minimumFractionDigits: Math.max(0, Math.min(20, decimals)), maximumFractionDigits: Math.max(0, Math.min(20, decimals)),
   }) + suffix
-
-  return (
-    <span ref={spanRef} className={`tabular-nums ${className}`}>
-      {/* Assistive tech gets the source value, never a stream of tween frames.
-          LiveDataStatus owns update announcements for the page. */}
-      <span aria-hidden="true">{formatValue(value)}</span>
-      <span className="sr-only">{formatValue(to)}</span>
-    </span>
-  )
+  return <span ref={ref} className={`tabular-nums ${className}`}>
+    <span aria-hidden="true">{format(reduce ? target : value)}</span><span className="sr-only">{format(target)}</span>
+  </span>
 }

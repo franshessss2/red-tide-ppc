@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { AnimatePresence, motion, useAnimationControls, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { MOTION, tween } from '../motion/tokens'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../store'
 import { Header } from './Header'
@@ -22,6 +24,11 @@ export function AdminGate() {
   const [passcode, setPasscode] = useState('')
   const shake = useAnimationControls()
 
+  useEffect(() => {
+    if (reduceMotion) { shake.stop(); shake.set({ x: 0 }) }
+    return () => shake.stop()
+  }, [shake, reduceMotion])
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     if (tryUnlockAdmin(passcode)) {
@@ -31,9 +38,10 @@ export function AdminGate() {
     // Wrong passcode. A short horizontal shake says "no" faster than the error
     // text is read, and it does not move focus away from the field.
     if (!reduceMotion) {
+      shake.stop()
       void shake.start({
         x: [0, -8, 8, -5, 5, 0],
-        transition: { duration: 0.36, ease: 'easeInOut' },
+        transition: tween(false, MOTION.time.reveal),
       })
     }
   }
@@ -55,13 +63,7 @@ export function AdminGate() {
 
       <main className="mx-auto flex max-w-md flex-col px-4 py-10 sm:py-16">
         <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            reduceMotion
-              ? { duration: 0.01 }
-              : { type: 'spring', stiffness: 380, damping: 30 }
-          }
+          initial={false}
           className="rounded-2xl border border-line bg-ink-2 p-6"
         >
           <span
@@ -113,7 +115,7 @@ export function AdminGate() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: reduceMotion ? 0.01 : 0.2 }}
+                  transition={tween(reduceMotion)}
                   className="overflow-hidden"
                 >
                   <p
@@ -133,7 +135,7 @@ export function AdminGate() {
               whileTap={
                 passcode.length === 0 || reduceMotion ? undefined : { scale: 0.98 }
               }
-              className="mt-4 w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-line disabled:text-faint"
+              className="mt-4 w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-ink transition-colors duration-[var(--motion-base)] hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-line disabled:text-faint"
             >
               Unlock
             </motion.button>

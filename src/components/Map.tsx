@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Map as LeafletMap, Polygon as LeafletPolygon } from 'leaflet'
-import { useReducedMotion } from 'motion/react'
+import { useReducedMotion } from '../motion/preferences'
+import { cameraFor } from '../motion/camera'
+import { createMotionScope } from '../motion/scope'
+import { MOTION } from '../motion/tokens'
+import { MapMotionPolicy } from './MapMotionPolicy'
 import { MapContainer, Pane, Polygon, Popup, TileLayer, useMap } from 'react-leaflet'
 import { MAP_CENTER, MAP_DEFAULT_ZOOM, MAP_MAX_BOUNDS, zonesBoundingBox } from '../data/zones'
 import {
   FOCUS_FLIGHT_SECONDS,
+  ZONE_LOAD_DURATION_MS,
   focusPaddingFor,
   zoneLoadDelayMs,
 } from '../motion/mapMotion'
@@ -63,7 +68,7 @@ const ZONE_CASING_PANE = 'zoneCasingPane'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 /** Matches `@keyframes zone-ping` (600ms) plus a little slack for cleanup. */
-const ZONE_PING_MS = 680
+const ZONE_PING_MS = MOTION.time.pulse * 1000 + 80
 /**
  * Status-change fill wash. ~0.6 is above every resting fill (0.34–0.42) and
  * under the advisory selected step (0.64), so the flash reads without
@@ -71,7 +76,7 @@ const ZONE_PING_MS = 680
  * fill-opacity ramp, which would otherwise swallow it.
  */
 const STATUS_WASH_FILL = 0.6
-const STATUS_WASH_MS = 800
+const STATUS_WASH_MS = MOTION.time.wash * 1000
 
 /** Fires a one-shot sonar ring for a tapped zone. No-op under reduced motion. */
 type ZonePing = (layer: LeafletPolygon, status: ZoneStatus) => void
@@ -116,18 +121,9 @@ function zoneRendererRoot(layer: LeafletPolygon): Element | null {
 function ZonePingBridge({ fireRef }: { fireRef: { current: ZonePing } }) {
   const map = useMap()
   const reduceMotion = useReducedMotion()
-  const activeRef = useRef<SVGCircleElement | null>(null)
-  const timerRef = useRef<number | undefined>(undefined)
-
   useEffect(() => {
-    const cancel = () => {
-      if (timerRef.current !== undefined) {
-        window.clearTimeout(timerRef.current)
-        timerRef.current = undefined
-      }
-      activeRef.current?.remove()
-      activeRef.current = null
-    }
+    let active: ReturnType<typeof createMotionScope> | null = null
+    const cancel = () => { active?.dispose(); active = null }
 
     fireRef.current = (layer, status) => {
       if (reduceMotion) return
@@ -149,18 +145,14 @@ function ZonePingBridge({ fireRef }: { fireRef: { current: ZonePing } }) {
       circle.setAttribute('opacity', '0.7')
       circle.setAttribute('pointer-events', 'none')
       root.appendChild(circle)
-      activeRef.current = circle
+      const scope = createMotionScope()
+      active = scope
+      scope.own(() => circle.remove())
 
-      const cleanup = () => {
-        if (activeRef.current === circle) activeRef.current = null
-        if (timerRef.current !== undefined) {
-          window.clearTimeout(timerRef.current)
-          timerRef.current = undefined
-        }
-        circle.remove()
-      }
-      circle.addEventListener('animationend', cleanup, { once: true })
-      timerRef.current = window.setTimeout(cleanup, ZONE_PING_MS)
+      const cleanup = () => scope.dispose()
+      circle.addEventListener('animationend', cleanup)
+      scope.own(() => circle.removeEventListener('animationend', cleanup))
+      scope.timeout(cleanup, ZONE_PING_MS)
     }
 
     return () => {
@@ -196,14 +188,20 @@ function FitToBounds({
   resetToken: number
 }) {
   const map = useMap()
-  const hasFitted = useRef(false)
+  const lastReset = useRef<number | null>(null)
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => {
     if (!box) return
-    if (hasFitted.current && resetToken === 0) return
-    hasFitted.current = true
-    map.fitBounds(box, { padding: [28, 28], maxZoom: 12 })
-  }, [box, map, resetToken])
+    if (lastReset.current === resetToken) return
+    const initial = lastReset.current === null
+    lastReset.current = resetToken
+    const settle = () => map.fitBounds(box, { padding: [28, 28], maxZoom: 12, animate: false })
+    cameraFor(map).run(
+      () => map.fitBounds(box, { padding: [28, 28], maxZoom: 12, animate: !reduceMotion && !initial, duration: MOTION.time.camera }),
+      settle, !reduceMotion && !initial,
+    )
+  }, [box, map, resetToken, reduceMotion])
 
   return null
 }
@@ -255,14 +253,11 @@ function FocusZone({
       paddingBottomRight,
       maxZoom: 13,
     }
-    if (reduceMotion) {
-      map.fitBounds(focusBox, fitOptions)
-    } else {
-      map.flyToBounds(focusBox, {
-        ...fitOptions,
-        duration: FOCUS_FLIGHT_SECONDS,
-      })
-    }
+    const settle = () => map.fitBounds(focusBox, { ...fitOptions, animate: false })
+    cameraFor(map).run(
+      reduceMotion ? settle : () => map.flyToBounds(focusBox, { ...fitOptions, animate: true, duration: FOCUS_FLIGHT_SECONDS }),
+      settle, !reduceMotion,
+    )
   }, [zone, token, map, reserveRightPx, reduceMotion])
 
   return null
@@ -284,29 +279,25 @@ function MapLoopGate() {
 
   useEffect(() => {
     const container = map.getContainer()
-    const pause = () => {
-      container.classList.add('map-motion-paused')
-      // Chrome loops (the legend pips' pulse, the advisory drawer's tide
-      // trace) live OUTSIDE the Leaflet container, so they key off the same
-      // class mirrored on <body> — one gate, every loop.
-      document.body.classList.add('map-motion-paused')
+    let moving = false
+    let zooming = false
+    const sync = () => {
+      const paused = moving || zooming || document.hidden
+      container.classList.toggle('map-motion-paused', paused)
+      document.body.classList.toggle('map-motion-paused', paused)
     }
-    const resume = () => {
+    const moveStart = () => { moving = true; sync() }
+    const moveEnd = () => { moving = false; sync() }
+    const zoomStart = () => { zooming = true; sync() }
+    const zoomEnd = () => { zooming = false; sync() }
+    map.on('movestart', moveStart).on('moveend', moveEnd).on('zoomstart', zoomStart).on('zoomend', zoomEnd)
+    document.addEventListener('visibilitychange', sync)
+    sync()
+    return () => {
+      map.off('movestart', moveStart).off('moveend', moveEnd).off('zoomstart', zoomStart).off('zoomend', zoomEnd)
+      document.removeEventListener('visibilitychange', sync)
       container.classList.remove('map-motion-paused')
       document.body.classList.remove('map-motion-paused')
-    }
-
-    map.on('movestart', pause)
-    map.on('zoomstart', pause)
-    map.on('moveend', resume)
-    map.on('zoomend', resume)
-
-    return () => {
-      map.off('movestart', pause)
-      map.off('zoomstart', pause)
-      map.off('moveend', resume)
-      map.off('zoomend', resume)
-      resume()
     }
   }, [map])
 
@@ -635,34 +626,30 @@ function ZonePolygon({
     syncModifierClasses()
   }, [isSelected, isDimmed, zone.status])
 
-  // One-shot load-in fade, staggered per zone. Applied on the layer's `add`
-  // (fresh path node) as well as first mount, for the same StrictMode-remount
-  // reason as the modifiers above.
+  // One owner for the listener and fallback. Reduced motion also clears a
+  // partially completed fade; animationend is not guaranteed to fire.
   useEffect(() => {
     const layer = layerRef.current
     if (!layer) return
-
+    let active: ReturnType<typeof createMotionScope> | null = null
     const applyLoadIn = () => {
-      // Leaflet types the element as the DOM `Element`; zone paths are
-      // always SVG `<path>` nodes created by the SVG renderer.
+      active?.dispose()
       const el = layer.getElement() as SVGPathElement | undefined
-      if (!el || el.classList.contains('zone-path--loading')) return
-      el.style.setProperty('--zone-delay', `${zoneLoadDelayMs(staggerIndex)}ms`)
+      if (!el || reduceMotion) return
+      const scope = createMotionScope()
+      active = scope
+      const delay = zoneLoadDelayMs(staggerIndex)
+      el.style.setProperty('--zone-delay', `${delay}ms`)
       el.classList.add('zone-path--loading')
-      el.addEventListener(
-        'animationend',
-        () => el.classList.remove('zone-path--loading'),
-        { once: true },
-      )
+      const done = (event: AnimationEvent) => { if (event.animationName === 'zone-load-in') scope.dispose() }
+      el.addEventListener('animationend', done)
+      scope.own(() => { el.classList.remove('zone-path--loading'); el.removeEventListener('animationend', done) })
+      scope.timeout(() => scope.dispose(), delay + ZONE_LOAD_DURATION_MS + 80)
     }
-
     applyLoadIn()
     layer.on('add', applyLoadIn)
-    return () => {
-      layer.off('add', applyLoadIn)
-    }
-    // The stagger index is fixed for the life of a zone layer.
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { layer.off('add', applyLoadIn); active?.dispose() }
+  }, [reduceMotion, staggerIndex])
 
   // Status colour-wash. Mount does not flash — `prevStatusRef` starts at the
   // current status. A later change snaps fill-opacity to 0.6 (new colour) and
@@ -700,9 +687,9 @@ function ZonePolygon({
 
     const el = layer.getElement() as SVGPathElement | undefined
     const colour =
-      'fill 400ms var(--ease-out-quint), stroke 400ms var(--ease-out-quint)'
+      'fill var(--motion-reveal) var(--ease-out-quint), stroke var(--motion-reveal) var(--ease-out-quint)'
     const rest =
-      'stroke-width 200ms var(--ease-out-quint), stroke-opacity 200ms var(--ease-out-quint), opacity 200ms var(--ease-out-quint)'
+      'stroke-width var(--motion-base) var(--ease-out-quint), stroke-opacity var(--motion-base) var(--ease-out-quint), opacity var(--motion-base) var(--ease-out-quint)'
 
     if (el) el.style.transition = `${colour}, fill-opacity 0s, ${rest}`
     layer.setStyle({
@@ -730,9 +717,6 @@ function ZonePolygon({
         fillColor: paintNow.hex,
         fillOpacity: restingFill(),
       })
-      // StrictMode replays this effect. Revert so the replay still sees a
-      // change; a finished wash has already painted the resting fill.
-      prevStatusRef.current = previous
     }
   }, [zone.status, reduceMotion])
 
@@ -800,6 +784,7 @@ function ZonePolygon({
         maxWidth={340}
         minWidth={260}
         autoPanPadding={[16, 16]}
+        autoPan={!reduceMotion}
       >
         <ZonePopup
           zone={zone}
@@ -854,6 +839,7 @@ export function Map({
   onSelectZone,
   onReport,
 }: MapProps) {
+  const reduceMotion = useReducedMotion()
   const box = useMemo(
     () => zonesBoundingBox(zones.map((zone) => zone.polygon)),
     [zones],
@@ -888,6 +874,9 @@ export function Map({
       // with its fade disabled and tiles fade via CSS instead
       // (`map-motion.css`, 0.3s opacity on `.leaflet-tile-loaded`).
       fadeAnimation={false}
+      zoomAnimation={false}
+      markerZoomAnimation={!reduceMotion}
+      inertia={!reduceMotion}
       className="h-full w-full"
     >
       <TileLayer
@@ -895,6 +884,7 @@ export function Map({
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      <MapMotionPolicy />
       <MapReadyBridge onMapReady={onMapReady} />
       <FitToBounds box={box} resetToken={resetToken} />
       {/* After FitToBounds: on a session's first load the glide overrides the

@@ -39,7 +39,7 @@
    class would stick). When the fade ends the class is removed and the
    pulse/dash take over. */
 .leaflet-overlay-pane path.zone-path.zone-path--loading {
-  animation: zone-load-in 500ms var(--ease-out-quint) both;
+  animation: zone-load-in var(--motion-reveal, 380ms) var(--ease-out-quint) both;
   animation-delay: var(--zone-delay, 0ms);
   /* The load-in must not ride the fill-opacity transition too. */
   transition: none;
@@ -65,7 +65,7 @@
 .leaflet-overlay-pane .zone-ping {
   pointer-events: none;
   fill: none;
-  animation: zone-ping 600ms var(--ease-out-quint) forwards;
+  animation: zone-ping var(--motion-pulse, 550ms) var(--ease-out-quint) forwards;
 }
 
 /* --- 2. Advisory zones: stroke pulse + marching dash ----------------------
@@ -101,8 +101,8 @@
 .leaflet-overlay-pane path.zone-path--advisory {
   stroke-dasharray: 10 7;
   animation:
-    zone-advisory-pulse 3.5s ease-in-out infinite,
-    zone-advisory-dash 7s linear infinite;
+    zone-advisory-pulse var(--motion-advisory-loop, 3500ms) ease-in-out infinite,
+    zone-advisory-dash calc(var(--motion-advisory-loop, 3500ms) * 2) linear infinite;
 }
 
 /* --- Advisory fill breathe ------------------------------------------------
@@ -127,9 +127,9 @@
 
 .leaflet-overlay-pane path.zone-path--advisory.zone-path--advisory-breathe:not(.zone-path--loading):not(.zone-path--selected):not(.zone-path--pressed) {
   animation:
-    zone-advisory-pulse 3.5s ease-in-out infinite,
-    zone-advisory-dash 7s linear infinite,
-    zone-advisory-breathe 4s ease-in-out infinite;
+    zone-advisory-pulse var(--motion-advisory-loop, 3500ms) ease-in-out infinite,
+    zone-advisory-dash calc(var(--motion-advisory-loop, 3500ms) * 2) linear infinite,
+    zone-advisory-breathe var(--motion-advisory-loop, 3500ms) ease-in-out infinite;
 }
 
 /* --- Zone hover cursor glow ------------------------------------------------
@@ -153,7 +153,7 @@
       color-mix(in srgb, var(--map-hover-color, var(--color-accent)) 10%, transparent) 38%,
       transparent 72%
     );
-    transition: opacity 140ms var(--ease-out-quint);
+    transition: opacity var(--motion-fast, 140ms) var(--ease-out-quint);
   }
 
   .leaflet-container.map-zone-hover-glow.map-zone-hover-glow-active::after {
@@ -173,25 +173,17 @@
    colour crossfade, then clears it. */
 .leaflet-overlay-pane path.zone-path {
   transition:
-    fill-opacity 200ms var(--ease-out-quint),
-    stroke-width 200ms var(--ease-out-quint),
-    stroke-opacity 200ms var(--ease-out-quint),
-    opacity 200ms var(--ease-out-quint),
-    fill 400ms var(--ease-out-quint),
-    stroke 400ms var(--ease-out-quint);
+    fill-opacity var(--motion-base, 220ms) var(--ease-out-quint),
+    stroke-width var(--motion-base, 220ms) var(--ease-out-quint),
+    stroke-opacity var(--motion-base, 220ms) var(--ease-out-quint),
+    opacity var(--motion-base, 220ms) var(--ease-out-quint),
+    fill var(--motion-reveal, 380ms) var(--ease-out-quint),
+    stroke var(--motion-reveal, 380ms) var(--ease-out-quint);
 }
 
-/* Shipping layer fade — secondary chart furniture, must not snap.
-   Uses same compositor-friendly opacity properties as zones, so JS-driven
-   opacity changes (0→1 over 200ms, 1→0 over 150ms) are interpolated smoothly.
-   Reduced motion disables via the global rule + explicit none below. */
-.leaflet-overlay-pane path.shipping-path,
-.leaflet-overlay-pane circle.shipping-path {
-  transition:
-    stroke-opacity 200ms var(--ease-out-quint),
-    fill-opacity 200ms var(--ease-out-quint),
-    opacity 200ms var(--ease-out-quint);
-}
+/* Leaflet paint opacity is owned by usePresenceProgress. A second CSS
+   transition would trail the JS value and leave a ghost on reversal. */
+.leaflet-overlay-pane .shipping-path { transition: none; }
 
 /* --- 4. Selection: dim the rest ------------------------------------------
    The selected polygon's stroke thickening already comes from pathOptions
@@ -209,7 +201,7 @@
    brings new tiles in softly instead of popping them. */
 .leaflet-map-pane .leaflet-tile {
   opacity: 0;
-  transition: opacity 0.3s var(--ease-out-quint);
+  transition: opacity var(--motion-base, 220ms) var(--ease-out-quint);
 }
 
 .leaflet-map-pane .leaflet-tile.leaflet-tile-loaded {
@@ -301,7 +293,7 @@ body.map-motion-paused .animate-tide-scan {
 }
 
 .report-pin--fresh .report-pin-body {
-  animation: pin-drop 0.55s var(--ease-out-quint) both;
+  animation: pin-drop var(--motion-pulse, 550ms) var(--ease-out-quint) both;
 }
 
 @keyframes pin-drop {
@@ -318,7 +310,7 @@ body.map-motion-paused .animate-tide-scan {
   border: 2px solid currentColor;
   opacity: 0;
   transform: scale(0.4);
-  animation: pin-ring 0.8s var(--ease-out-quint) 0.12s 1 both;
+  animation: pin-ring var(--motion-wash, 800ms) var(--ease-out-quint) var(--motion-fast, 140ms) 1 both;
 }
 
 @keyframes pin-ring {
@@ -350,7 +342,7 @@ body.map-motion-paused .animate-tide-scan {
   inset: -9px;
   border-radius: 9999px;
   background: rgba(77, 163, 255, 0.35);
-  animation: loc-halo 2.4s var(--ease-out-quint) infinite;
+  animation: loc-halo var(--motion-status-loop, 2400ms) var(--ease-out-quint) infinite;
 }
 
 @keyframes loc-halo {
@@ -367,7 +359,6 @@ body.map-motion-paused .animate-tide-scan {
   position: absolute;
   border-radius: 9999px;
   pointer-events: none;
-  will-change: transform;
 }
 
 .orb--header-a {
@@ -376,7 +367,7 @@ body.map-motion-paused .animate-tide-scan {
   left: -60px;
   top: -140px;
   background: radial-gradient(closest-side, rgba(74, 138, 117, 0.28), transparent 72%);
-  animation: orb-drift-a 44s ease-in-out infinite alternate;
+  animation: orb-drift-a 4var(--motion-advisory-loop, 3500ms) ease-in-out infinite alternate;
 }
 
 .orb--header-b {
@@ -385,7 +376,7 @@ body.map-motion-paused .animate-tide-scan {
   right: 8%;
   top: -120px;
   background: radial-gradient(closest-side, rgba(240, 165, 0, 0.16), transparent 72%);
-  animation: orb-drift-b 52s ease-in-out infinite alternate;
+  animation: orb-drift-b var(--motion-ambient-second, 52000ms) ease-in-out infinite alternate;
 }
 
 .orb--panel {
@@ -394,7 +385,7 @@ body.map-motion-paused .animate-tide-scan {
   right: -120px;
   top: -120px;
   background: radial-gradient(closest-side, rgba(255, 82, 82, 0.10), transparent 72%);
-  animation: orb-drift-a 60s ease-in-out infinite alternate-reverse;
+  animation: orb-drift-a var(--motion-ambient-panel, 60000ms) ease-in-out infinite alternate-reverse;
 }
 
 @keyframes orb-drift-a {

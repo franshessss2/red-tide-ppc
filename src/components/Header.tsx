@@ -73,7 +73,7 @@ export function Header({
 
   if (overlay) {
     return (
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-[1010]">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-[var(--layer-chrome)]">
         {/* Scrim: keeps the brand legible over bright map tiles without
             drawing a hard panel across the top of the photo. */}
         <div className="bg-gradient-to-b from-ink via-ink/85 to-transparent pb-8">
