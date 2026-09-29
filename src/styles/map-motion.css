@@ -367,7 +367,7 @@ body.map-motion-paused .animate-tide-scan {
   left: -60px;
   top: -140px;
   background: radial-gradient(closest-side, rgba(74, 138, 117, 0.28), transparent 72%);
-  animation: orb-drift-a 4var(--motion-advisory-loop, 3500ms) ease-in-out infinite alternate;
+  animation: orb-drift-a var(--motion-ambient, 44000ms) ease-in-out infinite alternate;
 }
 
 .orb--header-b {

@@ -80,6 +80,12 @@ describe('BlurText', () => {
     expect(screen.getByLabelText('How it works')).toBeTruthy()
   })
 
+  it('starts mount-triggered text without waiting for an observer', () => {
+    render(<BlurText text="Community early warning" trigger="mount" />)
+    expect(observeCount).toBe(0)
+    expect(screen.getByLabelText('Community early warning')).toBeTruthy()
+  })
+
   it('waits for its own scroll intersection before revealing', () => {
     const { container } = render(<BlurText text="Watch the water" />)
 

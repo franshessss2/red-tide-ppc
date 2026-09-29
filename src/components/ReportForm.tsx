@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, animate, motion, useMotionValue } from 'motion/react'
 import { createPortal } from 'react-dom'
 import { useReducedMotion } from '../motion/preferences'
 import { createMotionScope } from '../motion/scope'
@@ -64,12 +64,28 @@ export function ReportForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
+  const [failedAttempt, setFailedAttempt] = useState(0)
+  const shakeX = useMotionValue(0)
+  const acknowledgedFailure = useRef(0)
+  useEffect(() => {
+    shakeX.jump(0)
+    const freshFailure = acknowledgedFailure.current !== failedAttempt
+    acknowledgedFailure.current = failedAttempt
+    if (!freshFailure || reduceMotion) return
+    const animation = animate(shakeX, [0, -8, 8, -5, 5, 0], tween(false, MOTION.time.errorShake))
+    return () => { animation.stop(); shakeX.jump(0) }
+  }, [failedAttempt, reduceMotion, shakeX])
 
   const alive = useRef(false)
   const submittingRef = useRef(false)
   const panelRef = useRef<HTMLDivElement>(null)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const retiredPhotoUrls = useRef(new Set<string>())
+  function releaseRetiredPhotos() {
+    for (const url of retiredPhotoUrls.current) URL.revokeObjectURL(url)
+    retiredPhotoUrls.current.clear()
+  }
   const textareaId = useId()
   const characterCount = description.trim().length
   const tooShort = characterCount < MIN_DESCRIPTION_LENGTH
@@ -97,9 +113,10 @@ export function ReportForm({
 
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      if (previewUrl) retiredPhotoUrls.current.add(previewUrl)
     }
   }, [previewUrl])
+  useEffect(() => () => releaseRetiredPhotos(), [])
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
@@ -139,7 +156,7 @@ export function ReportForm({
     } catch {
       // store.submitReport already recorded the message in `formError`; the
       // form stays open and shows it inline.
-      if (alive.current) setPhase('idle')
+      if (alive.current) { setPhase('idle'); setFailedAttempt(attempt => attempt + 1) }
     } finally {
       submittingRef.current = false
     }
@@ -165,6 +182,7 @@ export function ReportForm({
 
           <motion.div
             ref={panelRef}
+            style={{ x: shakeX }}
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
@@ -251,8 +269,14 @@ export function ReportForm({
                       </span>
                     </span>
 
+                    <div className="relative">
+                    <AnimatePresence mode="popLayout" initial={false} onExitComplete={releaseRetiredPhotos}>
                     {previewUrl ? (
-                      <div className="mt-2 flex items-center gap-3 rounded-xl border border-line p-2">
+                      <motion.div key={previewUrl}
+                        initial={{ scale: reduceMotion ? 1 : 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ scale: spring(reduceMotion), opacity: tween(reduceMotion, MOTION.time.photoSwap) }}
+                        className="mt-2 flex items-center gap-3 rounded-xl border border-line p-2">
                         <img
                           src={previewUrl}
                           alt="Selected report attachment"
@@ -277,9 +301,10 @@ export function ReportForm({
                             Remove photo
                           </button>
                         </div>
-                      </div>
+                      </motion.div>
                     ) : (
-                      <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-ink px-3 py-4 text-sm font-medium text-muted transition-colors duration-[var(--motion-base)] hover:border-accent/50 hover:text-accent">
+                      <motion.label key="picker" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        transition={tween(reduceMotion, MOTION.time.photoSwap)} className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-ink px-3 py-4 text-sm font-medium text-muted transition-colors duration-[var(--motion-base)] hover:border-accent/50 hover:text-accent">
                         <svg
                           className="h-4 w-4"
                           viewBox="0 0 20 20"
@@ -303,18 +328,28 @@ export function ReportForm({
                           onChange={handleFileChange}
                           className="sr-only"
                         />
-                      </label>
+                      </motion.label>
                     )}
+                    </AnimatePresence>
+                    </div>
                   </div>
 
+                  <AnimatePresence initial={false}>
                   {(localError || formError) && (
+                    <motion.div key="error"
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }} transition={tween(reduceMotion, MOTION.time.errorExpand)}
+                      className="overflow-hidden"
+                    >
                     <p
                       role="alert"
                       className="mt-3 rounded-lg border border-advisory/30 bg-advisory/10 px-3 py-2 text-xs font-medium text-advisory"
                     >
                       {localError ?? formError}
                     </p>
+                    </motion.div>
                   )}
+                  </AnimatePresence>
 
                   <div className="mt-5 flex gap-2">
                     <motion.button

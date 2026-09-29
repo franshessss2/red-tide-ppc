@@ -101,6 +101,27 @@ describe('landing page (/)', () => {
   })
 })
 
+describe('backend indicators', () => {
+  it('shows no demo labels on the landing, header, map or admin dashboard', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const expectNoIndicator = () => {
+      expect(document.body.textContent).not.toMatch(/\bdemo(?:nstration)?\b/i)
+      expect(document.querySelector('[title*="Demo"], [aria-label*="Demo"]')).toBeNull()
+    }
+    expectNoIndicator()
+    await openMap(user)
+    expectNoIndicator()
+    await user.click(screen.getByRole('link', { name: 'Admin' }))
+    await screen.findByLabelText('Passcode')
+    expectNoIndicator()
+    await user.type(screen.getByLabelText('Passcode'), PASSCODE)
+    await user.click(screen.getByRole('button', { name: 'Unlock' }))
+    await screen.findByRole('tab', { name: 'Pending' })
+    expectNoIndicator()
+  })
+})
+
 describe('route transition', () => {
   it('shows nothing at all while the map chunk is loading', () => {
     // The fallback is only on screen inside a route dissolve, where the caller

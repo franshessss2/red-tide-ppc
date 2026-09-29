@@ -1,10 +1,14 @@
 /** Shared seconds, physics, easing and layer order. CSS receives these from MotionProvider. */
 export const MOTION = {
   time: {
+    canvasFade: 0.7, readySwap: 0.3, errorExpand: 0.2, errorShake: 0.36,
+    photoSwap: 0.25, statAck: 0.32, hintExit: 0.15, emptyDelay: 0.24,
     instant: 0, fast: 0.14, base: 0.22, reveal: 0.38, exit: 0.22,
     routeOut: 0.35, routeIn: 0.4, pulse: 0.55, count: 0.9, countUpdate: 0.6,
     stagger: 0.065, staggerLimit: 0.32, wash: 0.8,
     camera: 0.9, mapIntro: 2.8, introHold: 2.6, introExit: 1.05,
+    introRippleStart: 0.18, introRipple: 0.65,
+    introWordStart: 0.42, introWord: 0.58, introCopyStart: 0.85,
     successHold: 1.6, noticeHold: 7, advisoryLoop: 3.5, statusLoop: 2.4,
     waveTint: 1.5, observerFallback: 0.7, idle: 1.2, sheen: 1.1,
     tideDrift: 9, scan: 14, ambient: 44, ambientSecond: 52, ambientPanel: 60,

@@ -1,3 +1,4 @@
+import { motion } from 'motion/react'
 import { usePageVisible, useReducedMotion } from '../motion/preferences'
 import { Component, Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
@@ -41,7 +42,7 @@ import { Component, Suspense, lazy, useEffect, useRef, useState, type CSSPropert
  */
 
 import { createMotionScope } from '../motion/scope'
-import { MOTION } from '../motion/tokens'
+import { MOTION, tween } from '../motion/tokens'
 
 class BackdropBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
@@ -112,6 +113,7 @@ const featherStyle: CSSProperties = {
 export function HeroBackdrop({ className = '' }: { className?: string }) {
   const reduceMotion = useReducedMotion()
   const ref = useRef<HTMLDivElement | null>(null)
+  const fadePlayed = useRef(false)
 
   // Has the hero ever been on screen, and is the tab in front? Both must hold
   // for a frame to be drawn.
@@ -205,7 +207,12 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
 
       {mountCanvas ? (
         <BackdropBoundary><Suspense fallback={null}>
-          <div className="absolute inset-0 opacity-70">
+          <motion.div className="absolute inset-0"
+            initial={fadePlayed.current ? false : { opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            transition={tween(reduceMotion, MOTION.time.canvasFade)}
+            onAnimationStart={() => { fadePlayed.current = true }}
+          >
             <Ferrofluid
               // Capped hard at 1: the dominant cost of a full-bleed shader is
               // fragments, and fragments scale with the square of the DPR.
@@ -228,7 +235,7 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
               // A landing-page glance, not an interactive demo.
               mouseInteraction={false}
             />
-          </div>
+          </motion.div>
         </Suspense></BackdropBoundary>
       ) : null}
 

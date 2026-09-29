@@ -1,14 +1,13 @@
-import { MOTION } from '../motion/tokens'
+import { MOTION, tween } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useScroll, useSpring } from 'motion/react'
+import { AnimatePresence, motion, useScroll, useSpring } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
 import { DecryptedText } from '../components/DecryptedText'
-import { DemoBanner } from '../components/DemoBanner'
 import { Header } from '../components/Header'
 import { HeroBackdrop } from '../components/HeroBackdrop'
 import { StatusPip } from '../components/StatusPip'
@@ -51,7 +50,7 @@ import type { ZoneStatus } from '../types'
  *
  * WHAT IS DELIBERATELY NOT ANIMATED
  * ---------------------------------
- * The secondary CTA, the "what is red tide" primer, the `DemoBanner` and the
+ * The secondary CTA, the "what is red tide" primer and the
  * "not an official BFAR advisory" disclaimer are plain DOM. The primary
  * "Open the map" link has a CSS hover only (`landing-motion.css`) — present
  * and clickable on the first frame; reduced motion keeps brightness without
@@ -191,7 +190,6 @@ export function Landing() {
           title="Red Tide"
           right={
             <>
-              <DemoBanner variant="chip" />
               <Link
                 to="/admin"
                 className="rounded-md border border-line bg-ink-2/85 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
@@ -247,6 +245,7 @@ export function Landing() {
                   <BlurText
                     as="p"
                     text="Community early warning"
+                    trigger="mount"
                     animateBy="letters"
                     direction="top"
                     delay={14}
@@ -264,7 +263,7 @@ export function Landing() {
                   >
                     <DecryptedText
                       text="RED TIDE"
-
+                      delay={0}
                     />
                   </h1>
 
@@ -308,9 +307,13 @@ export function Landing() {
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
                 {/* -------------------------------------------------- live status */}
-                <motion.section variants={overviewChildVariants} aria-label="Live status">
+                <motion.section variants={overviewChildVariants} aria-label="Live status" className="relative">
+                  <AnimatePresence mode="popLayout" initial={false}>
                   {zonesReady ? (
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
+                    <motion.div key="ready" initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
+                      animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
+                      transition={tween(reduceMotion, MOTION.time.readySwap)}
+                      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
                       <StatusPip
                         hex={dominantTheme.hex}
                         pulses={dominantTheme.pulses}
@@ -325,15 +328,18 @@ export function Landing() {
                       <span className="ml-auto text-paper/80">
                         {pendingTotal} pending report{pendingTotal === 1 ? '' : 's'}
                       </span>
-                    </div>
+                    </motion.div>
                   ) : (
-                    <p
+                    <motion.p key="loading"
+                      initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }} transition={tween(reduceMotion, MOTION.time.readySwap)}
                       role="status"
                       className="animate-pulse rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] text-faint"
                     >
                       Reading the water…
-                    </p>
+                    </motion.p>
                   )}
+                  </AnimatePresence>
                 </motion.section>
 
                 {/* ------------------------------------------------------ figures */}
@@ -438,10 +444,6 @@ export function Landing() {
             )}
           </div>
 
-          <div className="mt-14 sm:mt-12">
-            <DemoBanner />
-          </div>
-
           <footer className="mt-10 flex flex-col gap-2 border-t border-line py-7 text-xs text-faint sm:mt-8 sm:gap-1.5 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
             <p>Community early warning — not an official BFAR advisory</p>
             <p>
@@ -505,7 +507,7 @@ function Figure({
       <p
         className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
-        {ready ? <CountUp to={value} from={0} duration={MOTION.time.count} /> : <span aria-hidden="true">·</span>}
+        <CountUp to={ready ? value : 0} from={0} duration={MOTION.time.count} />
       </p>
       <p className="mt-1.5 text-[11px] leading-snug text-faint lg:mt-2 lg:text-xs">{label}</p>
     </div>

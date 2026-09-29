@@ -21,7 +21,7 @@ export function DecryptedText({ text, delay = 0, className = '', onComplete }: {
     const finish = () => { setDisplay(text); if (complete.current !== text) { complete.current = text; callback.current?.() } }
     if (skip || complete.current === text) { finish(); return }
     setDisplay(scramble(text))
-    scope.timeout(() => {
+    const startScramble = () => {
       const start = performance.now()
       let painted = -Infinity
       const tick = (now: number) => {
@@ -35,7 +35,9 @@ export function DecryptedText({ text, delay = 0, className = '', onComplete }: {
         scope.frame(tick)
       }
       scope.frame(tick)
-    }, Math.max(0, delay))
+    }
+    if (delay > 0) scope.timeout(startScramble, delay)
+    else startScramble()
     return () => scope.dispose()
   }, [text, delay, skip])
   return <span className={`relative inline-block ${className}`} aria-label={text}>

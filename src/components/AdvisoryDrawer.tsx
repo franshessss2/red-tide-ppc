@@ -2,10 +2,10 @@ import { useCallback } from 'react'
 import { motion, useTransform } from 'motion/react'
 import { useReducedMotion } from '../motion/preferences'
 import { MOTION, tween } from '../motion/tokens'
+import { CountUp } from './CountUp'
 import { MorphChevronIcon } from './MorphChevron'
 import {
   advisoryShare,
-  formatPercent,
   tideBaselinePath,
   tideWavePath,
 } from '../motion/readouts'
@@ -277,7 +277,7 @@ function AdvisoryGauge({
           Advisory signal
         </span>
         <span className="font-mono text-[10px] leading-none tabular-nums text-accent">
-          {formatPercent(share)}
+          <CountUp to={Math.round(share * 100)} duration={MOTION.time.count} suffix="%" />
         </span>
       </div>
 
