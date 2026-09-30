@@ -91,7 +91,8 @@ async function captureFrames(name, width, height) {
   assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
   const started = await page.evaluate(() => performance.now())
-  const exitMetricsPromise = page.evaluate(() => new Promise(resolve => {
+  await page.evaluate(() => {
+    window.__pr56ExitMetrics = null
     const deadline = performance.now() + 3600
     let exitStart = null
     let baseCurtain = 0
@@ -111,17 +112,17 @@ async function captureFrames(name, width, height) {
         maxDrift = Math.max(maxDrift, Math.abs((curtain.getBoundingClientRect().top - baseCurtain) - (surface.getBoundingClientRect().top - baseSurface)))
       }
       if (exitStart !== null && now - exitStart >= 800) {
-        resolve({ exitObserved: true, maxDrift })
+        window.__pr56ExitMetrics = { exitObserved: true, maxDrift }
         return
       }
       if (!intro || now >= deadline) {
-        resolve({ exitObserved: exitStart !== null, maxDrift })
+        window.__pr56ExitMetrics = { exitObserved: exitStart !== null, maxDrift }
         return
       }
       requestAnimationFrame(sample)
     }
     requestAnimationFrame(sample)
-  }))
+  })
   const frameMeta = []
   await fs.mkdir(OUT + '/' + name, { recursive: true })
 
@@ -154,7 +155,8 @@ async function captureFrames(name, width, height) {
     if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': visible RED TIDE count ' + state.visibleHeadlines + ' at ' + target + 'ms')
   }
 
-  const exitMetrics = await exitMetricsPromise
+  await page.waitForTimeout(60)
+  const exitMetrics = await page.evaluate(() => window.__pr56ExitMetrics || ({ exitObserved: false, maxDrift: 0 }))
   assert(exitMetrics.exitObserved, name + ': exit state was not observed')
   assert(exitMetrics.maxDrift < 2, name + ': surface/curtain drift ' + exitMetrics.maxDrift + 'px')
   await page.waitForTimeout(120)
