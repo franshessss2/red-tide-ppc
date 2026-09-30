@@ -135,7 +135,7 @@ async function captureFrames(name, width, height) {
   for (const target of FRAMES) {
     const elapsed = await page.evaluate(startTime => performance.now() - startTime, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
-    await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
+    await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png' })
     const state = await page.evaluate(targetValue => {
       const visible = node => {
         if (!node) return false
