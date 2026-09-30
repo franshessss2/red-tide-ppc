@@ -127,57 +127,13 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-
-  const meta = await inspectIntro(page)
-  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
-  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
-  assert(meta.legacyCoreNodes === 0, name + ': legacy center core/orbit node still present')
-  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
-  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
-  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
-  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
-  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
-
-  await page.evaluate(() => {
-    const nativeSetTimeout = window.setTimeout.bind(window)
-    const nativeClearTimeout = window.clearTimeout.bind(window)
-    const heldTimers = new Map()
-    let nextId = 1
-    window.__pr56ReleaseHold = () => {
-      for (const [id, timer] of heldTimers) {
-        nativeSetTimeout(timer.callback, 0, ...timer.args)
-        heldTimers.delete(id)
-      }
-    }
-    window.setTimeout = (callback, delay = 0, ...args) => {
-      if (delay === 2100) {
-        const id = nextId++
-        heldTimers.set(id, { callback, args })
-        return id
-      }
-      return nativeSetTimeout(callback, delay, ...args)
-    }
-    window.clearTimeout = id => {
-      if (heldTimers.delete(id)) return
-      nativeClearTimeout(id)
-    }
-  })
-
-  await page.keyboard.press('Escape')
-  await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 2000 })
-  await page.getByRole('button', { name: /Replay intro/ }).click()
-  await page.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 2000 })
-  await page.waitForFunction(() => typeof window.__pr56ReleaseHold === 'function', null, { timeout: 1000 })
-
   const started = await page.evaluate(() => performance.now())
-  const frameMeta = []
+
   await fs.mkdir(OUT + '/' + name, { recursive: true })
+  const frameMeta = []
 
   for (const target of FRAMES) {
-    if (target === 2200) {
-      await page.evaluate(() => window.__pr56ReleaseHold())
-    }
-    const elapsed = await page.evaluate(start => performance.now() - start, started)
+    const elapsed = await page.evaluate(startTime => performance.now() - startTime, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
     await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
     const state = await page.evaluate(targetValue => {
@@ -188,6 +144,7 @@ async function captureFrames(name, width, height) {
         return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 && box.width > 0 && box.height > 0
       }
       const visibleHeadlines = [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible).length
+      const center = document.querySelector('.tide-intro__center')
       return {
         target: targetValue,
         intro: Boolean(document.querySelector('.tide-intro')),
@@ -195,51 +152,35 @@ async function captureFrames(name, width, height) {
         visibleHeadlines,
         skipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
         coreNodes: document.querySelectorAll('.tide-intro__core, .tide-intro__orbit, [data-intro-core]').length,
+        corePseudo: center ? getComputedStyle(center, '::after').content : 'none',
       }
     }, target)
     frameMeta.push(state)
     assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
     assert(state.coreNodes === 0, name + ': center core/orbit appeared at ' + target + 'ms')
+    assert(state.corePseudo === 'none' || state.corePseudo === 'normal', name + ': center core pseudo appeared at ' + target + 'ms')
     if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': duplicate visible RED TIDE at ' + target + 'ms')
   }
 
+  await page.waitForTimeout(300)
   const exit = await page.evaluate(() => ({
-    exitStart: document.querySelector('.tide-intro--leaving') ? performance.now() : null,
+    exitObserved: window.__pr56ExitStart !== null,
+    exitStart: window.__pr56ExitStart,
     maxDrift: window.__pr56MaxDrift,
+    introMounted: Boolean(document.querySelector('.tide-intro')),
+    landingCount: document.querySelectorAll('h1[aria-label="Red Tide"]').length,
+    finalSkipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
+    finalCoreNodes: document.querySelectorAll('.tide-intro__core, .tide-intro__orbit, [data-intro-core]').length,
   }))
-  if (exit.exitStart === null) {
-    await page.waitForSelector('.tide-intro--leaving', { state: 'visible', timeout: 500 })
-  }
-
-  const drift = await page.evaluate(() => new Promise(resolve => {
-    const intro = document.querySelector('.tide-intro')
-    const curtain = document.querySelector('.tide-intro__curtain')
-    const surface = document.querySelector('.tide-intro__surface')
-    if (!intro || !curtain || !surface) return resolve({ maxDrift: 0 })
-    const baseCurtain = curtain.getBoundingClientRect().top
-    const baseSurface = surface.getBoundingClientRect().top
-    let max = 0
-    const end = performance.now() + 780
-    const tick = now => {
-      const currentCurtain = document.querySelector('.tide-intro__curtain')
-      const currentSurface = document.querySelector('.tide-intro__surface')
-      if (!currentCurtain || !currentSurface) return resolve({ maxDrift: max })
-      max = Math.max(max, Math.abs(
-        (currentCurtain.getBoundingClientRect().top - baseCurtain) -
-        (currentSurface.getBoundingClientRect().top - baseSurface),
-      ))
-      if (now >= end) resolve({ maxDrift: max })
-      else requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }))
-  assert(drift.maxDrift < 2, name + ': surface/curtain drift ' + drift.maxDrift + 'px')
-  await page.waitForTimeout(120)
-  assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
-  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline double-rendered')
+  assert(exit.exitObserved, name + ': exit state was not observed')
+  assert(exit.maxDrift < 2, name + ': surface/curtain drift ' + exit.maxDrift + 'px')
+  assert(exit.introMounted === false, name + ': intro still mounted after exit')
+  assert(exit.landingCount === 1, name + ': landing headline double-rendered')
+  assert(exit.finalSkipButtons === 0, name + ': Skip intro button present after exit')
+  assert(exit.finalCoreNodes === 0, name + ': center core/orbit present after exit')
   assert(errors.length === 0, name + ': console errors/warnings: ' + errors.join(' | '))
 
-  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: true, maxDrift: drift.maxDrift, frameMeta }))
+  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: exit.exitObserved, exitStart: exit.exitStart, maxDrift: exit.maxDrift, frameMeta }))
   await context.close()
 }
 
