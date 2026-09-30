@@ -186,15 +186,17 @@ async function exerciseViewport(browser, vp) {
     return { duration }
   })
   await page.waitForTimeout(40)
-  const seamStartFrame = await capture(page, `${vp.name}_seam_start_0000ms`)
+  const seamStartPath = `${OUT}/${vp.name}_seam_front_start_0000ms.png`
+  const seamStartFrame = await front.screenshot({ path: seamStartPath, animations: 'allow' })
   await front.evaluate((el, duration) => {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
     if (!animation) throw new Error('front wave animation missing')
     animation.currentTime = duration
   }, seamMeta.duration)
   await page.waitForTimeout(40)
-  const seamPeriodFrame = await capture(page, `${vp.name}_seam_period_10000ms`)
-  const seamFrameComparison = comparePng(await fs.readFile(seamStartFrame), await fs.readFile(seamPeriodFrame))
+  const seamPeriodPath = `${OUT}/${vp.name}_seam_front_period_10000ms.png`
+  const seamPeriodFrame = await front.screenshot({ path: seamPeriodPath, animations: 'allow' })
+  const seamFrameComparison = comparePng(seamStartFrame, seamPeriodFrame)
   const seamGeometry = await front.evaluate(el => {
     const stroke = el.querySelector('path[stroke]')
     const gradient = el.querySelector('linearGradient')
@@ -312,6 +314,7 @@ async function exerciseViewport(browser, vp) {
     idleFrames,
     seam,
     seamMatch,
+    seamFrameComparison,
     seamTransformA: transformA,
     seamTransformB: transformB,
     exitFrames,
