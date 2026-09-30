@@ -190,8 +190,8 @@ async function exerciseViewport(browser, vp) {
   const seamBob = front.locator('.tide-intro__wave-bob--front')
   await seamBob.evaluate(el => {
     el.setAttribute('data-pr57-seam-bob', 'frozen')
-    ;(el as HTMLElement).style.animation = 'none'
-    ;(el as HTMLElement).style.transform = 'translate3d(0,0,0)'
+    el.style.animation = 'none'
+    el.style.transform = 'translate3d(0,0,0)'
   })
   const seamStartFrame = await front.screenshot({ path: seamStartPath, animations: 'allow' })
   await front.evaluate((el, duration) => {
@@ -204,9 +204,8 @@ async function exerciseViewport(browser, vp) {
   const seamPeriodFrame = await front.screenshot({ path: seamPeriodPath, animations: 'allow' })
   const seamFrameComparison = comparePng(await fs.readFile(seamStartPath), await fs.readFile(seamPeriodPath))
   await seamBob.evaluate(el => {
-    const node = el as HTMLElement
-    node.style.animation = ''
-    node.style.transform = ''
+    el.style.animation = ''
+    el.style.transform = ''
     node.removeAttribute('data-pr57-seam-bob')
   })
   const seamGeometry = await front.evaluate(el => {
