@@ -164,7 +164,7 @@ async function captureFrames(name, width, height) {
   assert(landingBox && landingBox.width > 0 && landingBox.height > 0, name + ': landing headline missing after exit')
   assert(await page.locator('canvas').count() >= 2, name + ': expected Waves + HeroBackdrop canvases')
   assert(errors.length === 0, name + ': console errors/warnings: ' + errors.join(' | '))
-  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: true, maxDrift, frameMeta }))
+  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: exitMetrics.exitObserved, maxDrift: exitMetrics.maxDrift, frameMeta }))
   await context.close()
 }
 
