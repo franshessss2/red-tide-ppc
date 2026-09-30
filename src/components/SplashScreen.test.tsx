@@ -120,8 +120,9 @@ describe('cinematic entrance', () => {
   it('preserves the Escape path and marks the session seen', () => {
     const button = splash()
     fireEvent.keyDown(button, { key: 'Escape' })
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
     expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
-    act(() => vi.advanceTimersByTime(10000))
     cleanup()
     render(<SplashScreen />)
     expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
@@ -154,6 +155,8 @@ describe('cinematic entrance', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     const button = splash()
     fireEvent.keyDown(button, { key: 'Escape' })
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
     expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
 
@@ -273,12 +276,17 @@ describe('First Ripple handoff', () => {
   it('keeps repeated replay and Escape independent under StrictMode', () => {
     render(<StrictMode><SplashScreen /></StrictMode>)
     for (let i = 0; i < 3; i++) {
-      fireEvent.keyDown(window, { key: 'Escape' })
+      const intro = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+      intro.focus()
+      fireEvent.keyDown(intro, { key: 'Escape' })
+      act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
       fireEvent.click(screen.getByRole('button', { name: 'Replay intro' }))
       expect(screen.getAllByRole('button', { name: 'Enter Red Tide PPC' })).toHaveLength(1)
     }
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Enter Red Tide PPC' }), { key: 'Escape' })
-    act(() => vi.advanceTimersByTime(10000))
+    const intro = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+    intro.focus()
+    fireEvent.keyDown(intro, { key: 'Escape' })
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
     expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Replay intro' }))
   })
