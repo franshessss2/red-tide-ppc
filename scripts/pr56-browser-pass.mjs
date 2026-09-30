@@ -34,7 +34,7 @@ async function waitForApp(page) {
       if (window.__pr56IntroStartedAt !== undefined) return
       if (document.querySelector('.tide-intro')) window.__pr56IntroStartedAt = performance.now()
     }
-    new MutationObserver(mark).observe(document.documentElement, { childList: true, subtree: true })
+    new MutationObserver(mark).observe(document, { childList: true, subtree: true })
     mark()
   })
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
