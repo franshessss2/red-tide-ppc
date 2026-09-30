@@ -13,6 +13,7 @@ server.stderr.on('data', chunk => process.stderr.write('[server:err] ' + chunk))
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const assert = (condition, message) => { if (!condition) throw new Error(message) }
+const ms = value => value.endsWith('ms') ? Number.parseFloat(value) : value.endsWith('s') ? Number.parseFloat(value) * 1000 : Number.NaN
 
 async function waitForServer() {
   const deadline = Date.now() + 15000
@@ -161,11 +162,11 @@ try {
     const meta = await animationMetadata(page)
     console.log(JSON.stringify({ viewport: name, meta }))
 
-    assert(meta.orbit.name.includes('tide-orbit-in') && meta.orbit.duration === '520ms' && meta.orbit.delay === '140ms', 'orbit timing mismatch')
-    assert(meta.core.name.includes('tide-core-in') && meta.core.duration === '200ms' && meta.core.delay === '400ms', 'core timing mismatch')
-    assert(meta.word.name.includes('tide-word-in') && meta.word.duration.split(',')[0].trim() === '500ms' && meta.word.delay.split(',')[0].trim() === '500ms', 'wordmark timing mismatch')
-    assert(meta.eyebrow.name.includes('tide-copy-in') && meta.eyebrow.duration === '380ms' && meta.eyebrow.delay === '950ms', 'copy timing mismatch')
-    assert(meta.marker.name.includes('tide-marker-in') && meta.marker.duration === '360ms' && meta.marker.delay === '900ms', 'marker timing mismatch')
+    assert(meta.orbit.name.includes('tide-orbit-in') && ms(meta.orbit.duration) === 520 && ms(meta.orbit.delay) === 140, 'orbit timing mismatch')
+    assert(meta.core.name.includes('tide-core-in') && ms(meta.core.duration) === 200 && ms(meta.core.delay) === 400, 'core timing mismatch')
+    assert(meta.word.name.includes('tide-word-in') && ms(meta.word.duration.split(',')[0].trim()) === 500 && ms(meta.word.delay.split(',')[0].trim()) === 500, 'wordmark timing mismatch')
+    assert(meta.eyebrow.name.includes('tide-copy-in') && ms(meta.eyebrow.duration) === 380 && ms(meta.eyebrow.delay) === 950, 'copy timing mismatch')
+    assert(meta.marker.name.includes('tide-marker-in') && ms(meta.marker.duration) === 360 && ms(meta.marker.delay) === 900, 'marker timing mismatch')
     assert(Math.abs(meta.introHeight - height) < 2, `intro height mismatch at ${name}: ${meta.introHeight}`)
 
     await sampleExit(page, name, { width, height })
