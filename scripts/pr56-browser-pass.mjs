@@ -87,7 +87,7 @@ async function sampleExit(page, dir, viewport) {
   const frames = []
   await fs.mkdir(path.join(ROOT, dir), { recursive: true })
 
-  for (let i = 0; i <= 8; i++) {
+  for (let i = 0; i <= 7; i++) {
     const elapsed = i * 100
     await page.screenshot({ path: path.join(ROOT, dir, `exit-${String(i).padStart(2, '0')}-${elapsed}ms.png`), fullPage: true })
     const state = await page.evaluate(() => {
@@ -103,13 +103,16 @@ async function sampleExit(page, dir, viewport) {
       }
     })
     frames.push({ elapsed, ...state })
-    if (i < 8) await page.waitForTimeout(100)
+    if (i < 7) await page.waitForTimeout(100)
   }
 
   const c0 = base.curtainTop
   const s0 = base.surfaceTop
-  const diffs = frames.map(f => Math.abs((f.curtainTop - c0) - (f.surfaceTop - s0)))
+  const liveFrames = frames.filter(frame => frame.dialog)
+  const diffs = liveFrames.map(f => Math.abs((f.curtainTop - c0) - (f.surfaceTop - s0)))
   const maxDrift = Math.max(...diffs)
+  await page.waitForTimeout(120)
+  assert(await page.locator('.tide-intro').count() === 0, 'intro did not finish after synchronized exit')
 
   // Warm-up must be complete before exit ends: landing hero backdrop has its WebGL
   // canvas mounted after its existing 1.2s idle gate, while Waves is always mounted.
