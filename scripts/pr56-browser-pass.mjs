@@ -91,6 +91,37 @@ async function captureFrames(name, width, height) {
   assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
   const started = await page.evaluate(() => performance.now())
+  const exitMetricsPromise = page.evaluate(() => new Promise(resolve => {
+    const deadline = performance.now() + 3600
+    let exitStart = null
+    let baseCurtain = 0
+    let baseSurface = 0
+    let maxDrift = 0
+    const sample = now => {
+      const intro = document.querySelector('.tide-intro')
+      const curtain = document.querySelector('.tide-intro__curtain')
+      const surface = document.querySelector('.tide-intro__surface')
+      const leaving = Boolean(document.querySelector('.tide-intro--leaving'))
+      if (leaving && exitStart === null && curtain && surface) {
+        exitStart = now
+        baseCurtain = curtain.getBoundingClientRect().top
+        baseSurface = surface.getBoundingClientRect().top
+      }
+      if (exitStart !== null && curtain && surface) {
+        maxDrift = Math.max(maxDrift, Math.abs((curtain.getBoundingClientRect().top - baseCurtain) - (surface.getBoundingClientRect().top - baseSurface)))
+      }
+      if (exitStart !== null && now - exitStart >= 800) {
+        resolve({ exitObserved: true, maxDrift })
+        return
+      }
+      if (!intro || now >= deadline) {
+        resolve({ exitObserved: exitStart !== null, maxDrift })
+        return
+      }
+      requestAnimationFrame(sample)
+    }
+    requestAnimationFrame(sample)
+  }))
   const frameMeta = []
   await fs.mkdir(OUT + '/' + name, { recursive: true })
 
@@ -123,32 +154,9 @@ async function captureFrames(name, width, height) {
     if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': visible RED TIDE count ' + state.visibleHeadlines + ' at ' + target + 'ms')
   }
 
-  const leaveDeadline = Date.now() + 3000
-  while (Date.now() < leaveDeadline && !(await page.locator('.tide-intro--leaving').count())) {
-    await page.waitForTimeout(10)
-  }
-  assert(await page.locator('.tide-intro--leaving').count() === 1, name + ': exit state was not observed')
-
-  const base = await page.evaluate(() => {
-    const curtain = document.querySelector('.tide-intro__curtain')
-    const surface = document.querySelector('.tide-intro__surface')
-    return { curtainTop: curtain.getBoundingClientRect().top, surfaceTop: surface.getBoundingClientRect().top }
-  })
-  let maxDrift = 0
-  const exitStart = Date.now()
-  while (Date.now() - exitStart <= 760) {
-    const sample = await page.evaluate(() => {
-      const curtain = document.querySelector('.tide-intro__curtain')
-      const surface = document.querySelector('.tide-intro__surface')
-      if (!curtain || !surface) return null
-      return { curtainTop: curtain.getBoundingClientRect().top, surfaceTop: surface.getBoundingClientRect().top }
-    })
-    if (sample) {
-      maxDrift = Math.max(maxDrift, Math.abs((sample.curtainTop - base.curtainTop) - (sample.surfaceTop - base.surfaceTop)))
-    }
-    await page.waitForTimeout(25)
-  }
-  assert(maxDrift < 2, name + ': surface/curtain drift ' + maxDrift + 'px')
+  const exitMetrics = await exitMetricsPromise
+  assert(exitMetrics.exitObserved, name + ': exit state was not observed')
+  assert(exitMetrics.maxDrift < 2, name + ': surface/curtain drift ' + exitMetrics.maxDrift + 'px')
   await page.waitForTimeout(120)
   assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
   assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline double-rendered')
