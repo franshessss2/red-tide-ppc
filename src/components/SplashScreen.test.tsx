@@ -2,7 +2,13 @@
 import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { INTRO_EXIT_MS, INTRO_HOLD_MS, SplashScreen } from './SplashScreen'
+import {
+  INTRO_EXIT_MS,
+  INTRO_HOLD_MS,
+  INTRO_TITLE_HANDOFF_DELAY_MS,
+  INTRO_TITLE_HANDOFF_MS,
+  SplashScreen,
+} from './SplashScreen'
 
 vi.mock('../pages/Landing', () => ({ Landing: () => <main><h1 aria-label="Red Tide">RED TIDE</h1><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
@@ -28,6 +34,11 @@ describe('cinematic entrance', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /Skip intro/ }))
     expect(container.querySelector('[inert]')).toBeTruthy()
+    // Landing stays mounted beneath the intro so the hero can warm up before reveal.
+    expect(container.querySelector('[inert] main')).toBeTruthy()
+    const curtain = document.querySelector<HTMLElement>('.tide-intro__curtain')!
+    const surface = document.querySelector<HTMLElement>('.tide-intro__surface')!
+    expect(curtain.dataset.introExitDuration).toBe(surface.dataset.introExitDuration)
     act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
     expect(document.querySelector('.tide-intro--leaving')).toBeTruthy()
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
@@ -106,14 +117,22 @@ function measuredIntro() {
 }
 
 describe('First Ripple handoff', () => {
+  it('starts the title handoff before the synchronized surface reveal completes', () => {
+    expect(INTRO_TITLE_HANDOFF_DELAY_MS).toBeGreaterThanOrEqual(0)
+    expect(INTRO_TITLE_HANDOFF_DELAY_MS + INTRO_TITLE_HANDOFF_MS).toBeLessThan(INTRO_EXIT_MS)
+  })
   it('measures the wordmark and restores the underlying heading after skip', () => {
     const { heading, animate, cancel } = measuredIntro()
     act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
     expect(document.querySelector('[data-handoff="measured"]')).toBeTruthy()
     expect(animate.mock.calls[0]).toEqual([
       [{ transform: 'translate(0, 0) scale(1, 1)' }, { transform: 'translate(-260px, -80px) scale(0.4, 0.4)' }],
-      expect.objectContaining({ duration: INTRO_EXIT_MS }),
+      expect.objectContaining({
+        duration: INTRO_TITLE_HANDOFF_MS,
+        delay: INTRO_TITLE_HANDOFF_DELAY_MS,
+      }),
     ])
+    expect(INTRO_TITLE_HANDOFF_MS + INTRO_TITLE_HANDOFF_DELAY_MS).toBeLessThan(INTRO_EXIT_MS)
     expect(heading.style.visibility).toBe('hidden')
     fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
     expect(heading.style.visibility).toBe('')
