@@ -4,7 +4,6 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   INTRO_EXIT_MS,
-  INTRO_HOLD_MS,
   INTRO_TITLE_HANDOFF_DELAY_MS,
   INTRO_TITLE_HANDOFF_MS,
   SplashScreen,
@@ -14,93 +13,173 @@ vi.mock('../pages/Landing', () => ({ Landing: () => <main><h1 aria-label="Red Ti
 const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
 let reduced = false
 let listener: (() => void) | undefined
+
 beforeEach(() => {
   vi.useFakeTimers()
   sessionStorage.clear()
   reduced = false
   listener = undefined
-  vi.stubGlobal('matchMedia', () => ({ get matches() { return reduced }, addEventListener: (_: string, fn: () => void) => { listener = fn }, removeEventListener: vi.fn() }))
+  vi.stubGlobal('matchMedia', () => ({
+    get matches() { return reduced },
+    addEventListener: (_: string, fn: () => void) => { listener = fn },
+    removeEventListener: vi.fn(),
+  }))
   window.scrollTo = vi.fn()
 })
+
 afterEach(() => {
   if (originalFonts) Object.defineProperty(document, 'fonts', originalFonts)
   else Reflect.deleteProperty(document, 'fonts')
-  cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+  cleanup()
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
+
+function splash() {
+  render(<SplashScreen />)
+  return screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+}
+
+function enterIdle() {
+  const button = splash()
+  const line = document.querySelector<HTMLElement>('.tide-intro__line')!
+  fireEvent.animationEnd(line, { animationName: 'tide-copy-in' })
+  expect(document.querySelector('.tide-experience--idle')).toBeTruthy()
+  expect(document.querySelector('[data-hint-state="visible"]')).toBeTruthy()
+  return button
+}
+
+function triggerExitByEscape() {
+  const button = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+  fireEvent.keyDown(button, { key: 'Escape' })
+  return button
+}
 
 describe('cinematic entrance', () => {
-  it('finishes on time without waiting for data and restores focus and scrolling', () => {
-    document.body.style.overflow = 'auto'
-    const { container } = render(<SplashScreen />)
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(document.activeElement).toBe(screen.getByRole('dialog'))
-    expect(container.querySelector('[inert]')).toBeTruthy()
-    // Landing stays mounted beneath the intro so the hero can warm up before reveal.
-    expect(container.querySelector('[inert] main')).toBeTruthy()
-    const curtain = document.querySelector<HTMLElement>('.tide-intro__curtain')!
-    const surface = document.querySelector<HTMLElement>('.tide-intro__surface')!
-    expect(curtain.dataset.introExitDuration).toBe(surface.dataset.introExitDuration)
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
-    expect(document.querySelector('.tide-intro--leaving')).toBeTruthy()
-    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(container.querySelector('[inert]')).toBeNull()
-    expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Open the map' }))
-    expect(document.body.style.overflow).toBe('auto')
+  it('does not auto-exit after 30s without input', () => {
+    const button = splash()
+    act(() => vi.advanceTimersByTime(30000))
+    expect(document.querySelector('.tide-experience--entrance')).toBeTruthy()
+    expect(button).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enter Red Tide PPC' })).toBe(button)
   })
-  it('Escape is immediate, cancels pending timers, and marks the session seen', () => {
-    render(<SplashScreen />)
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
+
+  it('click exits immediately and completes the existing 800ms exit', () => {
+    const button = splash()
+    fireEvent.click(button)
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('pointer/tap exits through the same handler', () => {
+    const button = splash()
+    fireEvent.pointerUp(button)
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+  })
+
+  it('Enter, Space and Escape all dismiss', () => {
+    for (const key of ['Enter', ' ', 'Escape']) {
+      sessionStorage.clear()
+      const button = splash()
+      fireEvent.keyDown(button, { key })
+      expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+      cleanup()
+    }
+  })
+
+  it('Space prevents page scrolling while dismissing', () => {
+    const button = splash()
+    fireEvent.keyDown(button, { key: ' ' })
+    expect(window.scrollTo).not.toHaveBeenCalled()
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+  })
+
+  it('double trigger starts the exit only once', () => {
+    const { unmount } = render(<SplashScreen />)
+    const button = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+    const title = document.querySelector<HTMLElement>('.tide-intro__title')!
+    vi.spyOn(title, 'getBoundingClientRect').mockReturnValue({
+      x: 100, y: 100, left: 100, top: 100, right: 700, bottom: 280, width: 600, height: 180, toJSON: () => ({})
+    })
+    const heading = document.querySelector('h1')!
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue({
+      x: 20, y: 20, left: 20, top: 20, right: 260, bottom: 92, width: 240, height: 72, toJSON: () => ({})
+    })
+    const cancel = vi.fn()
+    const animate = vi.fn(() => ({ cancel }))
+    title.animate = animate as unknown as typeof title.animate
+    fireEvent.pointerUp(button)
+    fireEvent.click(button)
+    expect(animate).toHaveBeenCalledOnce()
+    unmount()
+  })
+
+  it('preserves the Escape path and marks the session seen', () => {
+    const button = splash()
+    fireEvent.keyDown(button, { key: 'Escape' })
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     act(() => vi.advanceTimersByTime(10000))
-    expect(screen.queryByRole('dialog')).toBeNull()
     cleanup()
     render(<SplashScreen />)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
-  it('supports Escape and replay, with focus returned to replay afterward', () => {
-    render(<SplashScreen />)
-    fireEvent.keyDown(window, { key: 'Escape' })
-    const replay = screen.getByRole('button', { name: 'Replay intro' })
-    fireEvent.click(replay)
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(replay)
-  })
+
   it('bypasses the entrance entirely under reduced motion', () => {
     reduced = true
     const { container } = render(<SplashScreen />)
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(container.querySelector('[inert]')).toBeNull()
     expect(screen.getByRole('button', { name: 'Intro motion off' }).hasAttribute('disabled')).toBe(true)
   })
+
   it('immediately releases the page if motion preference changes during the intro', () => {
     const { container } = render(<SplashScreen />)
     act(() => { reduced = true; listener?.() })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(container.querySelector('[inert]')).toBeNull()
   })
-  it('still completes when browser storage is unavailable', () => {
+
+  it('keeps sessionStorage red-tide-ppc:splash:v1 from replaying', () => {
+    sessionStorage.setItem('red-tide-ppc:splash:v1', 'seen')
+    const { container } = render(<SplashScreen />)
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
+    expect(container.querySelector('[inert]')).toBeNull()
+  })
+
+  it('still dismisses when browser storage is unavailable', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
-    render(<SplashScreen />)
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    const button = splash()
+    fireEvent.keyDown(button, { key: 'Escape' })
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
-  it('cleans up the body scroll lock when unmounted during playback', () => {
+
+  it('cleans up the body scroll lock when unmounted during the entrance', () => {
     document.body.style.overflow = ''
-    const scheduled = vi.spyOn(window, 'setTimeout')
-    const cancelled = vi.spyOn(window, 'clearTimeout')
     const { unmount } = render(<SplashScreen />)
-    const introCall = scheduled.mock.calls.findIndex(call => call[1] === INTRO_HOLD_MS)
-    const introTimer = scheduled.mock.results[introCall].value
     expect(document.body.style.overflow).toBe('hidden')
     unmount()
     expect(document.body.style.overflow).toBe('')
-    expect(cancelled).toHaveBeenCalledWith(introTimer)
+  })
+
+  it('exposes a focused, focusable role=button with the expected accessible name', () => {
+    const button = splash()
+    expect(button).toHaveAttribute('role', 'button')
+    expect(button).toHaveAttribute('aria-label', 'Enter Red Tide PPC')
+    expect(button).toHaveAttribute('tabindex', '0')
+    expect(document.activeElement).toBe(button)
+  })
+
+  it('shows the hint after entrance and changes it to exiting on dismiss', () => {
+    const button = enterIdle()
+    expect(document.querySelector('[data-hint-state="visible"]')).toBeTruthy()
+    fireEvent.click(button)
+    expect(document.querySelector('[data-hint-state="exiting"]')).toBeTruthy()
   })
 })
-
 
 function measuredIntro() {
   const view = render(<SplashScreen />)
@@ -121,9 +200,10 @@ describe('First Ripple handoff', () => {
     expect(INTRO_TITLE_HANDOFF_DELAY_MS).toBeGreaterThanOrEqual(0)
     expect(INTRO_TITLE_HANDOFF_DELAY_MS + INTRO_TITLE_HANDOFF_MS).toBeLessThan(INTRO_EXIT_MS)
   })
-  it('measures the wordmark and restores the underlying heading after skip', () => {
+
+  it('measures the wordmark and restores the underlying heading after Escape', () => {
     const { heading, animate, cancel } = measuredIntro()
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     expect(document.querySelector('[data-handoff="measured"]')).toBeTruthy()
     expect(animate.mock.calls[0]).toEqual([
       [{ transform: 'translate(0, 0) scale(1, 1)' }, { transform: 'translate(-260px, -80px) scale(0.4, 0.4)' }],
@@ -134,58 +214,60 @@ describe('First Ripple handoff', () => {
     ])
     expect(INTRO_TITLE_HANDOFF_MS + INTRO_TITLE_HANDOFF_DELAY_MS).toBeLessThan(INTRO_EXIT_MS)
     expect(heading.style.visibility).toBe('hidden')
-    fireEvent.keyDown(window, { key: 'Escape' })
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(heading.style.visibility).toBe('')
     expect(cancel).toHaveBeenCalledOnce()
-    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
-    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('uses an on-time dissolve when fonts are still loading', () => {
     Object.defineProperty(document, 'fonts', { configurable: true, value: { status: 'loading' } })
     const { heading, animate } = measuredIntro()
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     expect(animate).not.toHaveBeenCalled()
     expect(heading.style.visibility).toBe('')
     expect(document.querySelector('[data-handoff="fade"]')).toBeTruthy()
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
 
   it('does not hide the landing heading if the animation API throws', () => {
     const { heading, animate } = measuredIntro()
     animate.mockImplementation(() => { throw new Error('unsupported') })
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     expect(document.querySelector('[data-handoff="fade"]')).toBeTruthy()
     expect(heading.style.visibility).toBe('')
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
 
   it('finishes immediately on resize during the measured handoff', () => {
     const { heading, cancel } = measuredIntro()
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     fireEvent(window, new Event('resize'))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(heading.style.visibility).toBe('')
     expect(cancel).toHaveBeenCalledOnce()
   })
 
   it('cancels the measured handoff when reduced motion changes live', () => {
     const { heading, cancel } = measuredIntro()
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     act(() => { reduced = true; listener?.() })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(heading.style.visibility).toBe('')
     expect(cancel).toHaveBeenCalledOnce()
   })
 
-  it('finishes instead of leaving paused animation when the tab is hidden', () => {
+  it('pauses loops on visibilitychange and resumes them when visible', () => {
     render(<SplashScreen />)
+    const overlay = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
     fireEvent(document, new Event('visibilitychange'))
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.querySelector('[inert]')).toBeNull()
+    expect(overlay.classList.contains('tide-intro--hidden')).toBe(true)
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    fireEvent(document, new Event('visibilitychange'))
+    expect(overlay.classList.contains('tide-intro--hidden')).toBe(false)
   })
 
   it('keeps repeated replay and Escape independent under StrictMode', () => {
@@ -193,18 +275,17 @@ describe('First Ripple handoff', () => {
     for (let i = 0; i < 3; i++) {
       fireEvent.keyDown(window, { key: 'Escape' })
       fireEvent.click(screen.getByRole('button', { name: 'Replay intro' }))
-      act(() => vi.advanceTimersByTime(200))
-      expect(screen.getAllByRole('dialog')).toHaveLength(1)
+      expect(screen.getAllByRole('button', { name: 'Enter Red Tide PPC' })).toHaveLength(1)
     }
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Enter Red Tide PPC' }), { key: 'Escape' })
     act(() => vi.advanceTimersByTime(10000))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Replay intro' }))
   })
 
   it('cancels and restores the title when unmounted during the handoff', () => {
     const { unmount, heading, cancel } = measuredIntro()
-    act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
+    triggerExitByEscape()
     unmount()
     expect(cancel).toHaveBeenCalledOnce()
     expect(heading.style.visibility).toBe('')
