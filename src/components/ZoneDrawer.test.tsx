@@ -344,7 +344,7 @@ describe('ZoneDrawer content parity with the sheet', () => {
 
 describe('ZoneDrawer on the map page', () => {
   beforeEach(() => {
-  sessionStorage.setItem('red-tide:intro:v1', 'seen')
+  sessionStorage.setItem('red-tide-ppc:splash:v1', 'seen')
     clearDemoData()
     setBackendForTesting(createDemoBackend())
     useAppStore.setState({
