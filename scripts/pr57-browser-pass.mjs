@@ -246,14 +246,15 @@ async function exerciseViewport(browser, vp) {
   const handoffAt400 = { state: null }
   for (const mark of [100, 400, 800]) {
     await page.waitForTimeout(Math.max(0, mark - (Date.now() - exitStart)))
-    exitFrames[mark] = await capture(page, `${vp.name}_exit_${String(mark).padStart(4, '0')}ms`)
     if (mark === 400) {
+      // Sample handoff geometry before the screenshot can consume the remaining exit time.
       handoffAt400.state = await handoffState(page)
       const curtainY = await computedY(page, '.tide-intro__curtain').catch(() => null)
       const surfaceY = await computedY(page, '.tide-intro__surface').catch(() => null)
       handoffAt400.curtainY = curtainY
       handoffAt400.surfaceY = surfaceY
     }
+    exitFrames[mark] = await capture(page, `${vp.name}_exit_${String(mark).padStart(4, '0')}ms`)
   }
 
   if (handoffAt400.state.redTideTextCount !== 1 || handoffAt400.state.skipButtons !== 0) {
