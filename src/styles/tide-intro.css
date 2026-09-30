@@ -4,7 +4,7 @@
   overflow: hidden; color: var(--color-paper); height: 100dvh; min-height: 20rem;
 }
 .tide-intro__curtain {
-  position: absolute; inset: 0; z-index: -1; background: var(--color-ink);
+  position: absolute; inset: 0; z-index: 0; background: var(--color-ink);
   color: var(--color-ink); will-change: transform;
 }
 .tide-intro__curtain-edge { position: absolute; top: -12vh; left: 0; width: 100%; height: calc(12vh + 1px); }
