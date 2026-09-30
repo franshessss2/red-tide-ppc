@@ -147,7 +147,7 @@ async function cleanVisit(page, viewport, reducedMotion = 'no-preference') {
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
 }
 
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
 try {
   for (const { name, width, height } of [
     { name: '390x844', width: 390, height: 844 },
@@ -175,6 +175,31 @@ try {
     await sampleExit(page, name, { width, height })
     assert(logs.length === 0, `console warnings/errors on ${name}: ${logs.join(' | ')}`)
     await context.close()
+  }
+
+  // Unit/reference audit at 360x740: intro and curtain share the same
+  // dynamic viewport reference, and both exit animations use 115dvh.
+  {
+    const c = await browser.newContext({ viewport: { width: 360, height: 740 } })
+    const p = await c.newPage()
+    await p.emulateMedia({ reducedMotion: 'no-preference' })
+    await p.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
+    const audit = await p.evaluate(() => {
+      const intro = document.querySelector('.tide-intro')
+      const curtain = document.querySelector('.tide-intro__curtain')
+      const surface = document.querySelector('.tide-intro__surface')
+      return {
+        introHeight: intro?.getBoundingClientRect().height ?? 0,
+        curtainHeight: curtain?.getBoundingClientRect().height ?? 0,
+        curtainAnimation: getComputedStyle(curtain, '::before').animationName,
+        surfaceAnimation: getComputedStyle(surface).animationName,
+        curtainBox: curtain?.getBoundingClientRect().height ?? 0,
+      }
+    })
+    console.log(JSON.stringify({ unitAudit: '360x740', audit }))
+    assert(Math.abs(audit.introHeight - 740) < 2, `360x740 intro height mismatch: ${audit.introHeight}`)
+    assert(Math.abs(audit.curtainHeight - 740) < 2, `360x740 curtain height mismatch: ${audit.curtainHeight}`)
+    await c.close()
   }
 
   // Behavior suite at 390x844.
