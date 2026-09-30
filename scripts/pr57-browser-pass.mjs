@@ -140,33 +140,31 @@ async function exerciseViewport(browser, vp) {
   const idleAt30 = await page.locator('.tide-intro').count() === 1
   if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  // Seam check: freeze only the vertical bob, then advance the front layer's
-  // horizontal CSS animation by exactly one computed animation duration via WAAPI.
-  const bob = page.locator('.tide-intro__wave-bob--front')
+  // Seam check: freeze every splash wave animation, then compare the front layer
+  // at the two endpoints of one complete horizontal period (0ms and 10,000ms).
+  const waveStack = page.locator('.tide-intro__wave-stack')
+  const allWaveParts = page.locator('.tide-intro__wave-layer, .tide-intro__wave-bob')
+  await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.animationPlayState = 'paused' }))
   const front = page.locator('.tide-intro__wave-layer--front')
-  await bob.evaluate(el => { el.style.animationPlayState = 'paused' })
   const seamMeta = await front.evaluate(el => {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
     const duration = Number(animation?.effect?.getComputedTiming().duration ?? 0)
-    const currentTime = Number(animation?.currentTime ?? 0)
-    return { duration, currentTime }
+    if (!animation || duration !== 10000) throw new Error(`front wave animation missing or wrong duration: ${duration}`)
+    animation.currentTime = 0
+    return { duration }
   })
-  if (seamMeta.duration !== FRONT_PERIOD_MS) {
-    throw new Error(`${vp.name}: expected 10s front horizontal period, got ${seamMeta.duration}ms`)
-  }
-  const seamA = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
+  await page.waitForTimeout(40)
+  const seamA = await waveStack.screenshot()
   await fs.writeFile(`${OUT}/${vp.name}_front_period_a.png`, seamA)
   await front.evaluate((el, duration) => {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
     if (!animation) throw new Error('front wave animation missing')
-    animation.currentTime = Number(animation.currentTime ?? 0) + duration
+    animation.currentTime = duration
   }, seamMeta.duration)
-  await page.waitForTimeout(50)
-  const seamB = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
+  await page.waitForTimeout(40)
+  const seamB = await waveStack.screenshot()
   await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, seamB)
-  const transformA = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
-  const transformB = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
-  await bob.evaluate(el => { el.style.removeProperty('animation-play-state') })
+  await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.removeProperty('animation-play-state') }))
   const seam = comparePng(seamA, seamB)
   if (!seam.equal) {
     throw new Error(`${vp.name}: front wave seam mismatch after one full period: ${JSON.stringify(seam)}`)
