@@ -42,7 +42,6 @@ jobs:
           exit 1
       - name: Browser verification
         id: browser
-        continue-on-error: true
         run: node scripts/pr57-browser-pass.mjs
         env:
           GITHUB_SHA: ${{ github.sha }}
@@ -60,9 +59,3 @@ jobs:
             pr57-standalone-preview.html
           retention-days: 7
           if-no-files-found: warn
-
-      - name: Fail when browser verification failed
-        if: always() && steps.browser.outcome != 'success'
-        run: |
-          echo "PR57 browser verification failed; see pr57-artifacts and the browser step output."
-          exit 1
