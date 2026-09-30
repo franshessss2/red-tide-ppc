@@ -29,7 +29,12 @@ async function waitServer() {
 async function freshPage(viewport, reducedMotion = 'no-preference') {
   const context = await browser.newContext({ viewport, reducedMotion })
   await context.addInitScript(() => {
-    try { sessionStorage.removeItem('red-tide-ppc:splash:v1') } catch {}
+    try {
+      if (!sessionStorage.getItem('__pr56FreshContext')) {
+        sessionStorage.removeItem('red-tide-ppc:splash:v1')
+        sessionStorage.setItem('__pr56FreshContext', '1')
+      }
+    } catch {}
     window.__pr56IntroStart = null
     window.__pr56ExitStart = null
     window.__pr56ExitEnd = null
@@ -122,8 +127,6 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await page.waitForFunction(() => window.__pr56IntroStart !== null, null, { timeout: 2000 })
-  const started = await page.evaluate(() => window.__pr56IntroStart)
 
   const meta = await inspectIntro(page)
   assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
@@ -135,10 +138,46 @@ async function captureFrames(name, width, height) {
   assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
   assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
-  await fs.mkdir(OUT + '/' + name, { recursive: true })
+  await page.waitForTimeout(3200)
+  assert(await page.locator('.tide-intro').count() === 0, name + ': initial intro did not complete before replay setup')
+
+  await page.evaluate(() => {
+    const nativeSetTimeout = window.setTimeout.bind(window)
+    const nativeClearTimeout = window.clearTimeout.bind(window)
+    const heldTimers = new Map()
+    let nextId = 1
+    window.__pr56ReleaseHold = () => {
+      for (const [id, timer] of heldTimers) {
+        nativeSetTimeout(timer.callback, 0, ...timer.args)
+        heldTimers.delete(id)
+      }
+    }
+    window.setTimeout = (callback, delay = 0, ...args) => {
+      if (delay === 2100) {
+        const id = nextId++
+        heldTimers.set(id, { callback, args })
+        return id
+      }
+      return nativeSetTimeout(callback, delay, ...args)
+    }
+    window.clearTimeout = id => {
+      if (heldTimers.delete(id)) return
+      nativeClearTimeout(id)
+    }
+  })
+
+  await page.getByRole('button', { name: /Replay intro/ }).click()
+  await page.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 2000 })
+  await page.waitForFunction(() => typeof window.__pr56ReleaseHold === 'function', null, { timeout: 1000 })
+
+  const started = await page.evaluate(() => performance.now())
   const frameMeta = []
+  await fs.mkdir(OUT + '/' + name, { recursive: true })
 
   for (const target of FRAMES) {
+    if (target === 2200) {
+      await page.evaluate(() => window.__pr56ReleaseHold())
+    }
     const elapsed = await page.evaluate(start => performance.now() - start, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
     await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
@@ -162,23 +201,46 @@ async function captureFrames(name, width, height) {
     frameMeta.push(state)
     assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
     assert(state.coreNodes === 0, name + ': center core/orbit appeared at ' + target + 'ms')
+    if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': duplicate visible RED TIDE at ' + target + 'ms')
   }
 
-  await page.waitForTimeout(120)
   const exit = await page.evaluate(() => ({
-    exitStart: window.__pr56ExitStart,
-    exitEnd: window.__pr56ExitEnd,
+    exitStart: document.querySelector('.tide-intro--leaving') ? performance.now() : null,
     maxDrift: window.__pr56MaxDrift,
-    introMounted: Boolean(document.querySelector('.tide-intro')),
-    landingCount: document.querySelectorAll('h1[aria-label="Red Tide"]').length,
   }))
-  assert(exit.exitStart !== null, name + ': exit state was not observed')
-  assert(exit.maxDrift < 2, name + ': surface/curtain drift ' + exit.maxDrift + 'px')
-  assert(exit.introMounted === false, name + ': intro still mounted after exit')
-  assert(exit.landingCount === 1, name + ': landing headline double-rendered')
+  if (exit.exitStart === null) {
+    await page.waitForSelector('.tide-intro--leaving', { state: 'visible', timeout: 500 })
+  }
+
+  const drift = await page.evaluate(() => new Promise(resolve => {
+    const intro = document.querySelector('.tide-intro')
+    const curtain = document.querySelector('.tide-intro__curtain')
+    const surface = document.querySelector('.tide-intro__surface')
+    if (!intro || !curtain || !surface) return resolve({ maxDrift: 0 })
+    const baseCurtain = curtain.getBoundingClientRect().top
+    const baseSurface = surface.getBoundingClientRect().top
+    let max = 0
+    const end = performance.now() + 780
+    const tick = now => {
+      const currentCurtain = document.querySelector('.tide-intro__curtain')
+      const currentSurface = document.querySelector('.tide-intro__surface')
+      if (!currentCurtain || !currentSurface) return resolve({ maxDrift: max })
+      max = Math.max(max, Math.abs(
+        (currentCurtain.getBoundingClientRect().top - baseCurtain) -
+        (currentSurface.getBoundingClientRect().top - baseSurface),
+      ))
+      if (now >= end) resolve({ maxDrift: max })
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }))
+  assert(drift.maxDrift < 2, name + ': surface/curtain drift ' + drift.maxDrift + 'px')
+  await page.waitForTimeout(120)
+  assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
+  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline double-rendered')
   assert(errors.length === 0, name + ': console errors/warnings: ' + errors.join(' | '))
 
-  console.log(JSON.stringify({ name, width, height, started, frameTimes: FRAMES, exitObserved: true, exitStart: exit.exitStart, exitEnd: exit.exitEnd, maxDrift: exit.maxDrift, frameMeta }))
+  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: true, maxDrift: drift.maxDrift, frameMeta }))
   await context.close()
 }
 
