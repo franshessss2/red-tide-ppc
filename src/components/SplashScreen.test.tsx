@@ -84,7 +84,7 @@ describe('cinematic entrance', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     render(<SplashScreen />)
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
   it('cleans up the body scroll lock when unmounted during playback', () => {
@@ -188,7 +188,7 @@ describe('First Ripple handoff', () => {
     expect(document.querySelector('[inert]')).toBeNull()
   })
 
-  it('keeps repeated replay and skip independent under StrictMode', () => {
+  it('keeps repeated replay and Escape independent under StrictMode', () => {
     render(<StrictMode><SplashScreen /></StrictMode>)
     for (let i = 0; i < 3; i++) {
       fireEvent.keyDown(window, { key: 'Escape' })
@@ -196,7 +196,7 @@ describe('First Ripple handoff', () => {
       act(() => vi.advanceTimersByTime(200))
       expect(screen.getAllByRole('dialog')).toHaveLength(1)
     }
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     act(() => vi.advanceTimersByTime(10000))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Replay intro' }))
