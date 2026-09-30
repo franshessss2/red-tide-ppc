@@ -1,9 +1,9 @@
 import { MOTION, tween } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, useScroll, useSpring } from 'motion/react'
+import { AnimatePresence, motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
@@ -105,6 +105,23 @@ export function Landing() {
 
   const dominant = dominantZoneStatus(counts)
   const dominantTheme = zoneTheme(dominant)
+
+  // A small scroll-linked depth shift keeps the hero feeling dimensional without
+  // adding another animation loop. Motion values update outside React render;
+  // reduced motion collapses the range to a static frame.
+  const heroRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress: heroScrollProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  })
+  const heroScroll = useSpring(heroScrollProgress, {
+    stiffness: 120,
+    damping: 30,
+    mass: 0.7,
+  })
+  const heroContentY = useTransform(heroScroll, [0, 1], [0, reduceMotion ? 0 : -28])
+  const heroContentOpacity = useTransform(heroScroll, [0, 0.85], [1, reduceMotion ? 1 : 0.9])
+  const heroContentScale = useTransform(heroScroll, [0, 1], [1, reduceMotion ? 1 : 0.985])
 
   const overviewContainerVariants: Variants = useMemo(
     () => ({
@@ -224,7 +241,7 @@ export function Landing() {
           <main> used to start, so every rect the spacing/responsive passes
           measured is unchanged — only the backdrop's bounds grew.
         */}
-        <div className="relative">
+        <div ref={heroRef} className="relative">
           {/* Keep one lazy, reduced-motion-safe animation scoped to the hero.
               No map bundle or second canvas is needed for the wider layout.
               Being the band's first child is what sizes it: the hero's full
@@ -236,7 +253,10 @@ export function Landing() {
               after the absolutely-positioned backdrop above it, so the whole
               content column — headline, CTAs, live overview — sits on top of
               the texture rather than under it. */}
-          <div className={`relative mx-auto ${LANDING_CONTAINER}`}>
+          <motion.div
+            className={`relative mx-auto ${LANDING_CONTAINER}`}
+            style={{ y: heroContentY, opacity: heroContentOpacity, scale: heroContentScale }}
+          >
             {/* Stack on phones/tablets; use the right half for live information
                 on laptops instead of stretching the hero paragraph across it. */}
             <div className="lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12 lg:pt-20 xl:gap-20 2xl:gap-24">
@@ -291,9 +311,10 @@ export function Landing() {
                     <Link
                       to="/map"
                       {...MAP_CTA_PREFETCH}
-                      className="landing-map-cta rounded-lg bg-accent px-6 py-3 text-base font-semibold text-ink"
+                      className="landing-map-cta inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-base font-semibold text-ink"
                     >
-                      Open the map
+                      <span>Open the map</span>
+                      <span aria-hidden="true" className="landing-map-cta__arrow">→</span>
                     </Link>
                     <Link
                       to="/map"
@@ -366,7 +387,7 @@ export function Landing() {
                 </motion.section>
               </motion.div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         <main className={`mx-auto flex-1 ${LANDING_CONTAINER}`}>

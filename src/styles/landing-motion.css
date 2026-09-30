@@ -28,3 +28,26 @@
     display: none !important;
   }
 }
+
+
+/* The hero uses a single compositor-friendly depth cue: the arrow responds
+   only to an actual pointer hover/focus, while the content itself follows
+   scroll through MotionValues in Landing.tsx. */
+.landing-map-cta__arrow {
+  display: inline-block;
+  transition: translate var(--dur-fast) var(--ease-out-quint);
+}
+.landing-map-cta:hover .landing-map-cta__arrow,
+.landing-map-cta:focus-visible .landing-map-cta__arrow {
+  translate: 3px 0;
+}
+.landing-map-cta:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-map-cta:hover .landing-map-cta__arrow,
+  .landing-map-cta:focus-visible .landing-map-cta__arrow {
+    translate: none;
+  }
+}
