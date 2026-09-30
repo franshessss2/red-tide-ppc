@@ -2,7 +2,13 @@
 import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { INTRO_EXIT_MS, INTRO_HOLD_MS, SplashScreen } from './SplashScreen'
+import {
+  INTRO_EXIT_MS,
+  INTRO_HOLD_MS,
+  INTRO_TITLE_HANDOFF_DELAY_MS,
+  INTRO_TITLE_HANDOFF_MS,
+  SplashScreen,
+} from './SplashScreen'
 
 vi.mock('../pages/Landing', () => ({ Landing: () => <main><h1 aria-label="Red Tide">RED TIDE</h1><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts')
@@ -26,8 +32,13 @@ describe('cinematic entrance', () => {
     document.body.style.overflow = 'auto'
     const { container } = render(<SplashScreen />)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Skip intro/ }))
+    expect(document.activeElement).toBe(screen.getByRole('dialog'))
     expect(container.querySelector('[inert]')).toBeTruthy()
+    // Landing stays mounted beneath the intro so the hero can warm up before reveal.
+    expect(container.querySelector('[inert] main')).toBeTruthy()
+    const curtain = document.querySelector<HTMLElement>('.tide-intro__curtain')!
+    const surface = document.querySelector<HTMLElement>('.tide-intro__surface')!
+    expect(curtain.dataset.introExitDuration).toBe(surface.dataset.introExitDuration)
     act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
     expect(document.querySelector('.tide-intro--leaving')).toBeTruthy()
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
@@ -36,9 +47,9 @@ describe('cinematic entrance', () => {
     expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Open the map' }))
     expect(document.body.style.overflow).toBe('auto')
   })
-  it('skip is immediate, cancels pending timers, and marks the session seen', () => {
+  it('Escape is immediate, cancels pending timers, and marks the session seen', () => {
     render(<SplashScreen />)
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
     act(() => vi.advanceTimersByTime(10000))
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -73,7 +84,7 @@ describe('cinematic entrance', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     render(<SplashScreen />)
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
   it('cleans up the body scroll lock when unmounted during playback', () => {
@@ -106,16 +117,24 @@ function measuredIntro() {
 }
 
 describe('First Ripple handoff', () => {
+  it('starts the title handoff before the synchronized surface reveal completes', () => {
+    expect(INTRO_TITLE_HANDOFF_DELAY_MS).toBeGreaterThanOrEqual(0)
+    expect(INTRO_TITLE_HANDOFF_DELAY_MS + INTRO_TITLE_HANDOFF_MS).toBeLessThan(INTRO_EXIT_MS)
+  })
   it('measures the wordmark and restores the underlying heading after skip', () => {
     const { heading, animate, cancel } = measuredIntro()
     act(() => vi.advanceTimersByTime(INTRO_HOLD_MS))
     expect(document.querySelector('[data-handoff="measured"]')).toBeTruthy()
     expect(animate.mock.calls[0]).toEqual([
       [{ transform: 'translate(0, 0) scale(1, 1)' }, { transform: 'translate(-260px, -80px) scale(0.4, 0.4)' }],
-      expect.objectContaining({ duration: INTRO_EXIT_MS }),
+      expect.objectContaining({
+        duration: INTRO_TITLE_HANDOFF_MS,
+        delay: INTRO_TITLE_HANDOFF_DELAY_MS,
+      }),
     ])
+    expect(INTRO_TITLE_HANDOFF_MS + INTRO_TITLE_HANDOFF_DELAY_MS).toBeLessThan(INTRO_EXIT_MS)
     expect(heading.style.visibility).toBe('hidden')
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(heading.style.visibility).toBe('')
     expect(cancel).toHaveBeenCalledOnce()
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
@@ -169,15 +188,15 @@ describe('First Ripple handoff', () => {
     expect(document.querySelector('[inert]')).toBeNull()
   })
 
-  it('keeps repeated replay and skip independent under StrictMode', () => {
+  it('keeps repeated replay and Escape independent under StrictMode', () => {
     render(<StrictMode><SplashScreen /></StrictMode>)
     for (let i = 0; i < 3; i++) {
-      fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+      fireEvent.keyDown(window, { key: 'Escape' })
       fireEvent.click(screen.getByRole('button', { name: 'Replay intro' }))
       act(() => vi.advanceTimersByTime(200))
       expect(screen.getAllByRole('dialog')).toHaveLength(1)
     }
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     act(() => vi.advanceTimersByTime(10000))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Replay intro' }))

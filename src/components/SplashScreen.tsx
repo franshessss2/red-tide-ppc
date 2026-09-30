@@ -6,9 +6,11 @@ import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
 import '../styles/tide-intro.css'
 
-const SEEN_KEY = 'red-tide:intro:v1'
+const SEEN_KEY = 'red-tide-ppc:splash:v1'
 export const INTRO_HOLD_MS = MOTION.time.introHold * 1000
 export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
+export const INTRO_TITLE_HANDOFF_MS = 700
+export const INTRO_TITLE_HANDOFF_DELAY_MS = 80
 
 type Phase = 'playing' | 'leaving' | 'done'
 
@@ -26,7 +28,6 @@ export function SplashScreen() {
   const pageRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
-  const skipRef = useRef<HTMLButtonElement>(null)
   const replayRef = useRef<HTMLButtonElement>(null)
   const replaying = useRef(false)
   const active = phase !== 'done' && !reduce
@@ -44,11 +45,9 @@ export function SplashScreen() {
     if (!active) return
     const oldOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    skipRef.current?.focus({ preventScroll: true })
+    overlayRef.current?.focus({ preventScroll: true })
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); finish() }
-      // Only the skip control is reachable while the underlying page is inert.
-      if (event.key === 'Tab') { event.preventDefault(); skipRef.current?.focus() }
     }
     const visibility = () => { if (document.hidden) finish() }
     window.addEventListener('keydown', keydown)
@@ -89,7 +88,12 @@ export function SplashScreen() {
           animation = title.animate([
             { transform: 'translate(0, 0) scale(1, 1)' },
             { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})` },
-          ], { duration: INTRO_EXIT_MS, easing: `cubic-bezier(${MOTION.ease.tide.join(',')})`, fill: 'forwards' })
+          ], {
+            duration: INTRO_TITLE_HANDOFF_MS,
+            delay: INTRO_TITLE_HANDOFF_DELAY_MS,
+            easing: `cubic-bezier(${MOTION.ease.tide.join(',')})`,
+            fill: 'forwards',
+          })
           heading.style.visibility = 'hidden'
           hidingTwin = true
           overlay?.setAttribute('data-handoff', 'measured')
@@ -139,8 +143,8 @@ export function SplashScreen() {
         </div>
       </div>
       {active && createPortal(
-        <div ref={overlayRef} key={run} className={`tide-intro tide-intro--${phase}`} role="dialog" aria-modal="true" aria-labelledby="tide-intro-label">
-          <div className="tide-intro__curtain" aria-hidden="true">
+        <div ref={overlayRef} key={run} className={`tide-intro tide-intro--${phase}`} role="dialog" aria-modal="true" aria-labelledby="tide-intro-label" tabIndex={-1}>
+          <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
             <svg className="tide-intro__curtain-edge" viewBox="0 0 1600 160" preserveAspectRatio="none">
               <path d="M0 82C320 150 540 10 820 62S1290 150 1600 50V160H0Z" fill="currentColor" />
             </svg>
@@ -148,12 +152,14 @@ export function SplashScreen() {
           </div>
           <div className="tide-intro__top tide-intro__chrome">
             <span className="tide-intro__location">PUERTO PRINCESA <span>/</span> PALAWAN</span>
-            <button ref={skipRef} className="tide-intro__skip" onClick={finish}>Skip intro <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M3 10h13m-5-5 5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
           </div>
           <div className="tide-intro__center">
-            <div className="tide-intro__surface" aria-hidden="true">
+            <div className="tide-intro__depth tide-intro__depth--far" aria-hidden="true" />
+            <div className="tide-intro__depth tide-intro__depth--near" aria-hidden="true" />
+            <div className="tide-intro__surface" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
               <div className="tide-intro__horizon" />
               <div className="tide-intro__ripple"><span /></div>
+              <div className="tide-intro__surface-glow" aria-hidden="true" />
               <svg className="tide-intro__water" viewBox="0 0 1600 400" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="first-ripple-fill" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#ff5252" stopOpacity=".09"/><stop offset="1" stopColor="#0a0a0a" stopOpacity="0"/></linearGradient>
