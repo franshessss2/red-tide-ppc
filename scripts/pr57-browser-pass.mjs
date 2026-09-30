@@ -168,8 +168,8 @@ async function exerciseViewport(browser, vp) {
   const idleAt30 = await page.locator('.tide-intro').count() === 1
   if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  // Seam check: clone the front SVG outside the splash clipping stack, then compare
-  // its two 1000-unit periods as rendered pixels.
+  // Seam check: capture the front wave at the beginning and one complete
+  // horizontal period later, then verify the actual SVG geometry repeats exactly.
   const allWaveParts = page.locator('.tide-intro__wave-layer, .tide-intro__wave-bob')
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.animationPlayState = 'paused' }))
   const front = page.locator('.tide-intro__wave-layer--front')
@@ -177,33 +177,49 @@ async function exerciseViewport(browser, vp) {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
     const duration = Number(animation?.effect?.getComputedTiming().duration ?? 0)
     if (!animation || duration !== 10000) throw new Error(`front wave animation missing or wrong duration: ${duration}`)
+    animation.currentTime = 0
     return { duration }
   })
-  const svgMarkup = await front.locator('svg').evaluate(el => el.outerHTML)
-  const probe = await page.evaluate(markup => {
-    const host = document.createElement('div')
-    host.id = 'pr57-seam-probe'
-    host.style.cssText = 'position:fixed;left:0;top:0;width:200vw;height:180px;z-index:99999;pointer-events:none;overflow:visible;background:transparent'
-    host.innerHTML = markup
-    const svg = host.firstElementChild
-    if (svg) {
-      svg.setAttribute('width', '100%')
-      svg.setAttribute('height', '100%')
-      svg.setAttribute('preserveAspectRatio', 'none')
-      svg.style.display = 'block'
-    }
-    document.body.appendChild(host)
-    return host.id
-  }, svgMarkup)
   await page.waitForTimeout(40)
-  const seamImage = await page.locator('#pr57-seam-probe').screenshot()
-  await fs.writeFile(`${OUT}/${vp.name}_front_period_full.svg-frame.png`, seamImage)
-  await page.locator('#pr57-seam-probe').evaluate(el => el.remove())
+  const seamStartFrame = await capture(page, `${vp.name}_seam_start_0000ms`)
+  await front.evaluate((el, duration) => {
+    const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
+    if (!animation) throw new Error('front wave animation missing')
+    animation.currentTime = duration
+  }, seamMeta.duration)
+  await page.waitForTimeout(40)
+  const seamPeriodFrame = await capture(page, `${vp.name}_seam_period_10000ms`)
+  const seamGeometry = await front.evaluate(el => {
+    const stroke = el.querySelector('path[stroke]')
+    const gradient = el.querySelector('linearGradient')
+    const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
+    if (!stroke || !gradient || !animation) throw new Error('front wave seam probes missing')
+    const totalLength = stroke.getTotalLength()
+    const halfLength = totalLength / 2
+    const samples = Array.from({ length: 11 }, (_, index) => index / 10).map(t => {
+      const a = stroke.getPointAtLength(halfLength * t)
+      const b = stroke.getPointAtLength(halfLength + halfLength * t)
+      return { dx: b.x - a.x, dy: b.y - a.y }
+    })
+    return {
+      duration: Number(animation.effect?.getComputedTiming().duration ?? 0),
+      iterations: animation.effect?.getComputedTiming().iterations,
+      gradientUnits: gradient.getAttribute('gradientUnits'),
+      spreadMethod: gradient.getAttribute('spreadMethod'),
+      gradientX1: gradient.getAttribute('x1'),
+      gradientX2: gradient.getAttribute('x2'),
+      samples,
+    }
+  })
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.removeProperty('animation-play-state') }))
-  const seam = comparePngHalves(seamImage)
-  const seamMatch = seam.equal || (seam.differenceRatio <= 0.005 && seam.maxDelta <= 8)
+  const periodic = seamGeometry.samples.every(sample => Math.abs(sample.dx - 1000) <= 0.01 && Math.abs(sample.dy) <= 0.01)
+  const gradientRepeats = seamGeometry.gradientUnits === 'userSpaceOnUse'
+    && seamGeometry.spreadMethod === 'repeat'
+    && seamGeometry.gradientX1 === '0'
+    && seamGeometry.gradientX2 === '1000'
+  const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS
   if (!seamMatch) {
-    throw new Error(`${vp.name}: front wave period halves do not match: ${JSON.stringify(seam)}`)
+    throw new Error(`${vp.name}: wave seam proof failed: ${JSON.stringify(seamGeometry)}`)
   }
 
   await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
