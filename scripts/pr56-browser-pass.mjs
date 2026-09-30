@@ -77,9 +77,8 @@ async function captureFrames(name, width, height) {
   })
   page.on('pageerror', error => errors.push('pageerror: ' + error.message))
 
-  await boot(page)
-  await page.evaluate(() => sessionStorage.clear())
-  await page.reload({ waitUntil: 'domcontentloaded' })
+  await context.addInitScript(() => sessionStorage.removeItem('red-tide-ppc:splash:v1'))
+  await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
 
   const meta = await inspectIntro(page)
