@@ -22,7 +22,7 @@ export function TextPressure({ text, className = '' }: { text: string; className
   }, [])
 
   if (reduce || coarse) {
-    return <span className={`inline-block ${className}`}>{text}</span>
+    return <span data-text-pressure-target className={`inline-block ${className}`}>{text}</span>
   }
 
   return (
@@ -37,6 +37,7 @@ export function TextPressure({ text, className = '' }: { text: string; className
         pointerY.set(-10000)
       }}
       aria-hidden="true"
+      data-text-pressure-target
     >
       {Array.from(text).map((char, index) => (
         <PressureLetterLive
