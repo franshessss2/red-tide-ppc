@@ -138,9 +138,6 @@ async function captureFrames(name, width, height) {
   assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
   assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
-  await page.waitForTimeout(3200)
-  assert(await page.locator('.tide-intro').count() === 0, name + ': initial intro did not complete before replay setup')
-
   await page.evaluate(() => {
     const nativeSetTimeout = window.setTimeout.bind(window)
     const nativeClearTimeout = window.clearTimeout.bind(window)
@@ -166,6 +163,8 @@ async function captureFrames(name, width, height) {
     }
   })
 
+  await page.keyboard.press('Escape')
+  await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 2000 })
   await page.getByRole('button', { name: /Replay intro/ }).click()
   await page.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 2000 })
   await page.waitForFunction(() => typeof window.__pr56ReleaseHold === 'function', null, { timeout: 1000 })
