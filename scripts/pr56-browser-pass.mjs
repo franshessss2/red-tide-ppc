@@ -64,6 +64,7 @@ async function animationMetadata(page) {
 }
 
 async function sampleExit(page, dir, viewport) {
+  await page.waitForSelector('h1[aria-label="Red Tide"]', { state: 'attached', timeout: 2000 })
   await page.waitForTimeout(2150)
   await page.waitForSelector('.tide-intro--leaving', { state: 'attached', timeout: 1000 })
   await page.waitForTimeout(20)
