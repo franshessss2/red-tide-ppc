@@ -67,26 +67,9 @@ async function inspectIntro(page) {
 
 async function captureFrames(name, width, height) {
   const context = await browser.newContext({ viewport: { width, height } })
-  await context.addInitScript(() => {
-    sessionStorage.removeItem('red-tide-ppc:splash:v1')
-    window.__pr56IntroStart = null
-    const markIntroStart = () => {
-      if (window.__pr56IntroStart === null && document.querySelector('.tide-intro')) {
-        window.__pr56IntroStart = performance.now()
-      }
-    }
-    const observeRoot = () => {
-      if (document.documentElement) {
-        new MutationObserver(markIntroStart).observe(document.documentElement, { childList: true, subtree: true })
-        markIntroStart()
-      } else {
-        setTimeout(observeRoot, 0)
-      }
-    }
-    observeRoot()
-  })
-
   const page = await context.newPage()
+  await page.clock.install()
+
   const errors = []
   page.on('console', message => {
     if (message.type() === 'error' || message.type() === 'warning') {
@@ -98,7 +81,12 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  const started = await page.evaluate(() => window.__pr56IntroStart ?? performance.now())
+  await page.clock.runFor(3500)
+  await page.waitForSelector('button', { state: 'visible', timeout: 2000 })
+  await page.getByRole('button', { name: /Replay intro/ }).click()
+  await page.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 2000 })
+  const replayStart = await page.evaluate(() => Date.now())
+  await page.clock.pauseAt(replayStart)
 
   const meta = await inspectIntro(page)
   assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
@@ -144,10 +132,11 @@ async function captureFrames(name, width, height) {
 
   const frameMeta = []
   await fs.mkdir(OUT + '/' + name, { recursive: true })
+  let previousTarget = 0
 
   for (const target of FRAMES) {
-    const elapsed = await page.evaluate(startTime => performance.now() - startTime, started)
-    await page.waitForTimeout(Math.max(0, target - elapsed))
+    await page.clock.runFor(target - previousTarget)
+    previousTarget = target
     await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
     const state = await page.evaluate(targetValue => {
       const curtain = document.querySelector('.tide-intro__curtain')
@@ -173,11 +162,11 @@ async function captureFrames(name, width, height) {
     assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
   }
 
-  await page.waitForTimeout(60)
+  await page.clock.runFor(60)
   const exitMetrics = await page.evaluate(() => window.__pr56ExitMetrics || ({ exitObserved: false, maxDrift: 0 }))
   assert(exitMetrics.exitObserved, name + ': exit state was not observed')
   assert(exitMetrics.maxDrift < 2, name + ': surface/curtain drift ' + exitMetrics.maxDrift + 'px')
-  await page.waitForTimeout(120)
+  await page.clock.runFor(120)
   assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
   assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline double-rendered')
   const landingBox = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
