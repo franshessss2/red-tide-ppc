@@ -80,21 +80,9 @@ async function captureFrames(name, width, height) {
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
   await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 6000 })
-  await page.getByRole('button', { name: /Replay intro/ }).click()
-  const started = await page.evaluate(() => performance.now())
-
-  const meta = await inspectIntro(page)
-  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
-  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
-  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
-  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
-  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
-  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
-  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
-
   await page.evaluate(() => {
     window.__pr56ExitMetrics = null
-    const deadline = performance.now() + 3600
+    const deadline = performance.now() + 4200
     let exitStart = null
     let baseCurtain = 0
     let baseSurface = 0
@@ -122,8 +110,22 @@ async function captureFrames(name, width, height) {
       }
       requestAnimationFrame(sample)
     }
+    const observer = new MutationObserver(() => sample(performance.now()))
+    if (document.documentElement) observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true })
     requestAnimationFrame(sample)
   })
+  await page.getByRole('button', { name: /Replay intro/ }).click()
+  const started = await page.evaluate(() => performance.now())
+
+  const meta = await inspectIntro(page)
+  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
+  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
+  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
+  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
+  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
+  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
+  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
+
   const frameMeta = []
   await fs.mkdir(OUT + '/' + name, { recursive: true })
 
