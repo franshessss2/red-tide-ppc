@@ -27,11 +27,15 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
       - name: Start preview server
         run: |
           nohup npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/pr57-vite.log 2>&1 &
           for i in $(seq 1 30); do
-            curl -fsS http://127.0.0.1:4173 >/dev/null && exit 0
+            if curl -fsS http://127.0.0.1:4173 >/dev/null; then
+              exit 0
+            fi
             sleep 1
           done
           cat /tmp/pr57-vite.log
