@@ -228,11 +228,17 @@ async function exerciseViewport(browser, vp) {
   const shown = await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false })
     document.dispatchEvent(new Event('visibilitychange'))
-    const front = document.querySelector('.tide-intro__wave-layer--front')
-    return {
-      rootPaused: document.querySelector('.tide-intro')?.classList.contains('tide-intro--hidden'),
-      wavePaused: front ? getComputedStyle(front).animationPlayState : null,
-    }
+  }).then(async () => {
+    await page.waitForTimeout(100)
+    return page.evaluate(() => {
+      const front = document.querySelector('.tide-intro__wave-layer--front')
+      const animations = front?.getAnimations().map(animation => animation.playState) ?? []
+      return {
+        rootPaused: document.querySelector('.tide-intro')?.classList.contains('tide-intro--hidden'),
+        wavePaused: front ? getComputedStyle(front).animationPlayState : null,
+        animationStates: animations,
+      }
+    })
   })
   if (!hidden.rootPaused || hidden.wavePaused !== 'paused' || shown.rootPaused || shown.wavePaused !== 'running') {
     throw new Error(`${vp.name}: visibility pause/resume failed ${JSON.stringify({ hidden, shown })}`)
