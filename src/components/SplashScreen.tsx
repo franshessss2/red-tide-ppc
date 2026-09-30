@@ -195,33 +195,59 @@ export function SplashScreen() {
           <div className="tide-intro__center">
             <div className="tide-intro__depth tide-intro__depth--far" aria-hidden="true" />
             <div className="tide-intro__depth tide-intro__depth--near" aria-hidden="true" />
+            <div className="tide-intro__loop-ripple" aria-hidden="true" />
             <div className="tide-intro__surface" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
               <div className="tide-intro__horizon" />
               <div className="tide-intro__ripple"><span /></div>
-              <div className="tide-intro__surface-glow" aria-hidden="true" />
-              <svg className="tide-intro__water" viewBox="0 0 1600 400" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="first-ripple-fill" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#ff5252" stopOpacity=".09"/><stop offset="1" stopColor="#0a0a0a" stopOpacity="0"/></linearGradient>
-                  <linearGradient id="first-ripple-edge"><stop stopColor="#f0a500" stopOpacity="0"/><stop offset=".48" stopColor="#f0a500" stopOpacity=".7"/><stop offset=".72" stopColor="#ff5252" stopOpacity=".38"/><stop offset="1" stopColor="#ff5252" stopOpacity="0"/></linearGradient>
-                </defs>
-                <path d="M0 0C320 68 540 -72 820 -20S1290 68 1600 -32V400H0Z" fill="url(#first-ripple-fill)" />
-                <path d="M0 0C320 68 540 -72 820 -20S1290 68 1600 -32" fill="none" stroke="url(#first-ripple-edge)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-              </svg>
+              <div className="tide-intro__surface-glow" />
+              <div className="tide-intro__wave-stack" aria-hidden="true">
+                <div className="tide-intro__wave-layer tide-intro__wave-layer--back">
+                  <div className="tide-intro__wave-bob tide-intro__wave-bob--back">
+                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
+                      <path d="M0 130 C125 70 250 190 375 130 S625 70 750 130 S875 190 1000 130 C1125 70 1250 190 1375 130 S1625 70 1750 130 S1875 190 2000 130 L2000 360 L0 360 Z" fill="#ff525209" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="tide-intro__wave-layer tide-intro__wave-layer--mid">
+                  <div className="tide-intro__wave-bob tide-intro__wave-bob--mid">
+                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
+                      <path d="M0 110 C125 42 250 178 375 110 S625 42 750 110 S875 178 1000 110 C1125 42 1250 178 1375 110 S1625 42 1750 110 S1875 178 2000 110 L2000 360 L0 360 Z" fill="#ff525213" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="tide-intro__wave-layer tide-intro__wave-layer--front">
+                  <div className="tide-intro__wave-bob tide-intro__wave-bob--front">
+                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="tide-front-crest" x1="0" x2="1">
+                          <stop offset="0" stopColor="#f0a50000" />
+                          <stop offset=".46" stopColor="#f0a500" stopOpacity=".88" />
+                          <stop offset=".72" stopColor="#ff5252" stopOpacity=".74" />
+                          <stop offset="1" stopColor="#ff525200" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M0 92 C125 48 250 136 375 92 S625 48 750 92 S875 136 1000 92 C1125 48 1250 136 1375 92 S1625 48 1750 92 S1875 136 2000 92 L2000 360 L0 360 Z" fill="#f0a5000f" />
+                      <path d="M0 92 C125 48 250 136 375 92 S625 48 750 92 S875 136 1000 92 C1125 48 1250 136 1375 92 S1625 48 1750 92 S1875 136 2000 92" fill="none" stroke="url(#tide-front-crest)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="tide-intro__title-clip">
-                <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" aria-label="Red Tide"><span aria-hidden="true">RED TIDE</span></div>
+              <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" aria-label="Red Tide">
+                <span aria-hidden="true">RED TIDE</span>
+              </div>
             </div>
-              <div className="tide-intro__copy tide-intro__chrome">
-                <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
-                <p className="tide-intro__line" onAnimationEnd={handleEntranceComplete}>One coast. A shared watch.</p>
-              </div>
-              <div
-                className="tide-intro__hint"
-                data-hint-state={phase === 'idle' ? 'visible' : phase === 'leaving' ? 'exiting' : 'hidden'}
-                aria-hidden="true"
-              >
-                TAP TO ENTER
-              </div>
+            <div className="tide-intro__copy tide-intro__chrome">
+              <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
+              <p className="tide-intro__line" onAnimationEnd={handleEntranceComplete}>One coast. A shared watch.</p>
+            </div>
+            <div
+              className="tide-intro__hint"
+              data-hint-state={phase === 'idle' ? 'visible' : phase === 'leaving' ? 'exiting' : 'hidden'}
+              aria-hidden="true"
+            >
+              TAP TO ENTER
             </div>
           </div>
           <div className="tide-intro__bottom tide-intro__chrome"><span>WATCH THE WATER.</span><span>PROTECT THE COAST.</span></div>
