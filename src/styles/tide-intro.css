@@ -124,3 +124,212 @@
   .tide-intro * { animation: none !important; transition: none !important; }
   .tide-replay { transition: none; }
 }
+
+
+/* ---------------------------------------------------------------------------
+   Intro motion pass — layered choreography.
+   The existing handoff remains untouched; these layers give the opening a
+   stronger sense of depth without adding JS work or layout animation.
+   --------------------------------------------------------------------------- */
+
+.tide-intro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, transparent 0 49.8%, #f0a5000d 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 0 49.8%, #f0a5000a 50%, transparent 50.2%);
+  background-size: 100% 100%, 100% 100%;
+  animation: tide-grid-in 900ms var(--ease-out-quint) 120ms both;
+}
+
+.tide-intro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 43%, transparent 0 16%, #f0a5000b 16.2%, transparent 34%),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 3px,
+      #ffffff04 4px,
+      transparent 5px
+    );
+  mix-blend-mode: screen;
+  animation: tide-atmosphere-in 1600ms var(--ease-out-quint) 300ms both;
+}
+
+.tide-intro__top,
+.tide-intro__center,
+.tide-intro__bottom {
+  z-index: 2;
+}
+
+.tide-intro__center::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(18rem, 42vw, 42rem);
+  height: clamp(18rem, 42vw, 42rem);
+  transform: translate(-50%, -50%) scale(.72);
+  border: 1px solid #f0a50012;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: tide-orbit-in 1400ms var(--ease-out-quint) 220ms both;
+}
+
+.tide-intro__center::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 1px #f0a50038,
+    0 0 22px #f0a50055;
+  opacity: 0;
+  pointer-events: none;
+  animation: tide-core-in 650ms var(--ease-spring) 520ms both;
+}
+
+.tide-intro__title span {
+  text-shadow:
+    0 0 0 transparent,
+    0 18px 50px #00000066;
+  animation:
+    tide-word-in var(--motion-intro-word, 580ms) var(--ease-out-quint)
+      var(--motion-intro-word-start, 420ms) both,
+    tide-word-glow 1800ms var(--ease-out-quint) 520ms both;
+}
+
+.tide-intro__eyebrow::before {
+  content: "///";
+  display: inline-block;
+  margin-right: .7rem;
+  color: #ff5252;
+  opacity: 0;
+  transform: translateX(-8px);
+  animation: tide-marker-in 420ms var(--ease-out-quint) 760ms both;
+}
+
+.tide-intro__horizon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 18%;
+  height: 5px;
+  border-radius: 50%;
+  background: #f0a50055;
+  filter: blur(5px);
+  opacity: 0;
+  animation: tide-horizon-spark 1200ms var(--ease-out-quint) 420ms both;
+}
+
+.tide-intro__ripple::before,
+.tide-intro__ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid #ff525220;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(.1);
+  animation: tide-ripple-secondary 1100ms var(--ease-out-quint) 340ms both;
+}
+
+.tide-intro__ripple::after {
+  animation-delay: 520ms;
+}
+
+.tide-intro--leaving .tide-intro::before,
+.tide-intro--leaving .tide-intro::after {
+  animation: tide-atmosphere-out 260ms ease-in both;
+}
+
+.tide-intro--leaving .tide-intro__center::before {
+  animation: tide-orbit-out 260ms ease-in both;
+}
+
+@keyframes tide-grid-in {
+  from { opacity: 0; transform: scale(1.08); }
+  to { opacity: .32; transform: scale(1); }
+}
+
+@keyframes tide-atmosphere-in {
+  from { opacity: 0; transform: scale(1.06); }
+  to { opacity: .24; transform: scale(1); }
+}
+
+@keyframes tide-atmosphere-out {
+  from { opacity: .24; }
+  to { opacity: 0; }
+}
+
+@keyframes tide-orbit-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+}
+
+@keyframes tide-orbit-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+@keyframes tide-core-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  65% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
+  100% { opacity: .72; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes tide-word-glow {
+  0% { filter: blur(5px); text-shadow: 0 0 24px #f0a50035; }
+  55% { filter: blur(0); text-shadow: 0 0 30px #f0a50018, 0 18px 50px #00000066; }
+  100% { filter: none; text-shadow: 0 18px 50px #00000066; }
+}
+
+@keyframes tide-marker-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: .9; transform: translateX(0); }
+}
+
+@keyframes tide-horizon-spark {
+  0% { opacity: 0; transform: translateX(-140%); }
+  25% { opacity: .9; }
+  100% { opacity: 0; transform: translateX(650%); }
+}
+
+@keyframes tide-ripple-secondary {
+  0% { opacity: 0; transform: scale(.1); }
+  18% { opacity: .5; }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tide-intro::before,
+  .tide-intro::after,
+  .tide-intro__center::before,
+  .tide-intro__center::after,
+  .tide-intro__title span,
+  .tide-intro__eyebrow::before,
+  .tide-intro__horizon::after,
+  .tide-intro__ripple::before,
+  .tide-intro__ripple::after {
+    animation: none !important;
+    opacity: 0 !important;
+    filter: none !important;
+  }
+}
