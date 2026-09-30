@@ -187,6 +187,12 @@ async function exerciseViewport(browser, vp) {
   })
   await page.waitForTimeout(40)
   const seamStartPath = `${OUT}/${vp.name}_seam_front_start_0000ms.png`
+  const seamBob = front.locator('.tide-intro__wave-bob--front')
+  await seamBob.evaluate(el => {
+    el.setAttribute('data-pr57-seam-bob', 'frozen')
+    ;(el as HTMLElement).style.animation = 'none'
+    ;(el as HTMLElement).style.transform = 'translate3d(0,0,0)'
+  })
   const seamStartFrame = await front.screenshot({ path: seamStartPath, animations: 'allow' })
   await front.evaluate((el, duration) => {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
@@ -196,7 +202,13 @@ async function exerciseViewport(browser, vp) {
   await page.waitForTimeout(40)
   const seamPeriodPath = `${OUT}/${vp.name}_seam_front_period_10000ms.png`
   const seamPeriodFrame = await front.screenshot({ path: seamPeriodPath, animations: 'allow' })
-  const seamFrameComparison = comparePng(seamStartFrame, seamPeriodFrame)
+  const seamFrameComparison = comparePng(await fs.readFile(seamStartPath), await fs.readFile(seamPeriodPath))
+  await seamBob.evaluate(el => {
+    const node = el as HTMLElement
+    node.style.animation = ''
+    node.style.transform = ''
+    node.removeAttribute('data-pr57-seam-bob')
+  })
   const seamGeometry = await front.evaluate(el => {
     const stroke = el.querySelector('path[stroke]')
     const gradient = el.querySelector('linearGradient')
@@ -225,9 +237,13 @@ async function exerciseViewport(browser, vp) {
     && seamGeometry.spreadMethod === 'repeat'
     && seamGeometry.gradientX1 === '0'
     && seamGeometry.gradientX2 === '1000'
-  const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS
+  const seamFrameMatches = seamFrameComparison.equal || (
+    seamFrameComparison.differenceRatio <= 0.001
+    && seamFrameComparison.maxDelta <= 2
+  )
+  const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS && seamFrameMatches
   if (!seamMatch) {
-    throw new Error(`${vp.name}: wave seam structural proof failed: ${JSON.stringify({ seamGeometry, seamFrameComparison })}`)
+    throw new Error(`${vp.name}: wave seam proof failed: ${JSON.stringify({ seamGeometry, seamFrameComparison })}`)
   }
 
   await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
