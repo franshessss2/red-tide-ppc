@@ -140,22 +140,36 @@ async function exerciseViewport(browser, vp) {
   const idleAt30 = await page.locator('.tide-intro').count() === 1
   if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  // Seam check: freeze only the vertical bob, then compare the same front SVG
-  // one complete 10s horizontal period apart.
+  // Seam check: freeze only the vertical bob, then advance the front layer's
+  // horizontal CSS animation by exactly one computed animation duration via WAAPI.
   const bob = page.locator('.tide-intro__wave-bob--front')
+  const front = page.locator('.tide-intro__wave-layer--front')
   await bob.evaluate(el => { el.style.animationPlayState = 'paused' })
-  await page.waitForTimeout(100)
+  const seamMeta = await front.evaluate(el => {
+    const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
+    const duration = Number(animation?.effect?.getComputedTiming().duration ?? 0)
+    const currentTime = Number(animation?.currentTime ?? 0)
+    return { duration, currentTime }
+  })
+  if (seamMeta.duration !== FRONT_PERIOD_MS) {
+    throw new Error(`${vp.name}: expected 10s front horizontal period, got ${seamMeta.duration}ms`)
+  }
   const seamA = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
   await fs.writeFile(`${OUT}/${vp.name}_front_period_a.png`, seamA)
-  const transformA = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
-  await page.waitForTimeout(FRONT_PERIOD_MS)
+  await front.evaluate((el, duration) => {
+    const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
+    if (!animation) throw new Error('front wave animation missing')
+    animation.currentTime = Number(animation.currentTime ?? 0) + duration
+  }, seamMeta.duration)
+  await page.waitForTimeout(50)
   const seamB = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
   await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, seamB)
+  const transformA = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
   const transformB = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
   await bob.evaluate(el => { el.style.removeProperty('animation-play-state') })
   const seam = comparePng(seamA, seamB)
-  if (transformA !== transformB || !seam.equal) {
-    throw new Error(`${vp.name}: front wave seam mismatch: transforms ${transformA} vs ${transformB}, image ${JSON.stringify(seam)}`)
+  if (!seam.equal) {
+    throw new Error(`${vp.name}: front wave seam mismatch after one full period: ${JSON.stringify(seam)}`)
   }
 
   await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
