@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, 'arena/motion-enchant-02']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
