@@ -117,11 +117,18 @@ async function sampleExit(page, dir, viewport) {
   assert(await page.locator('.tide-intro').count() === 0, 'intro did not finish after synchronized exit')
   const endRect = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
   assert(endRect, 'landing heading missing after exit')
-  assert(Math.abs(endRect.left - base.landingHeadingRect.left) < 1 &&
-    Math.abs(endRect.top - base.landingHeadingRect.top) < 1 &&
-    Math.abs(endRect.width - base.landingHeadingRect.width) < 1 &&
-    Math.abs(endRect.height - base.landingHeadingRect.height) < 1,
-    'landing headline moved or resized during handoff')
+  const rectDelta = {
+    left: endRect.left - base.landingHeadingRect.left,
+    top: endRect.top - base.landingHeadingRect.top,
+    width: endRect.width - base.landingHeadingRect.width,
+    height: endRect.height - base.landingHeadingRect.height,
+  }
+  console.log(JSON.stringify({ viewport, landingHeadlineRectBase: base.landingHeadingRect, landingHeadlineRectEnd: endRect, rectDelta }))
+  assert(Math.abs(rectDelta.left) < 1 &&
+    Math.abs(rectDelta.top) < 1 &&
+    Math.abs(rectDelta.width) < 1 &&
+    Math.abs(rectDelta.height) < 1,
+    `landing headline moved or resized during handoff: ${JSON.stringify(rectDelta)}`)
   assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, 'landing headline double-rendered')
 
   // Warm-up must be complete before exit ends: landing hero backdrop has its WebGL
