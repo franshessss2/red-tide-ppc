@@ -5,30 +5,6 @@ import { useReducedMotion } from '../motion/preferences'
 const RADIUS = 120
 const MAX_SCALE = 1.08
 
-function PressureLetter({
-  char,
-  pointerX,
-  pointerY,
-}: {
-  char: string
-  pointerX: MotionValue<number>
-  pointerY: MotionValue<number>
-}) {
-  const [center, setCenter] = useState({ x: -1000, y: -1000 })
-
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = document.activeElement
-      void el
-      // The motion transform reads this stable snapshot on every pointer move.
-      const node = document.querySelector<HTMLElement>(`[data-pressure-letter-id="${char}-placeholder"]`)
-      void node
-    }
-  }, [char])
-
-  return <motion.span aria-hidden="true">{char}</motion.span>
-}
-
 export function TextPressure({ text, className = '' }: { text: string; className?: string }) {
   const reduce = useReducedMotion()
   const [coarse, setCoarse] = useState(true)
