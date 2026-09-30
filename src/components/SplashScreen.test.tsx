@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  INTRO_ENTRANCE_MS,
   INTRO_EXIT_MS,
   INTRO_TITLE_HANDOFF_DELAY_MS,
   INTRO_TITLE_HANDOFF_MS,
@@ -43,8 +44,7 @@ function splash() {
 
 function enterIdle() {
   const button = splash()
-  const line = document.querySelector<HTMLElement>('.tide-intro__line')!
-  fireEvent.animationEnd(line, { animationName: 'tide-copy-in' })
+  act(() => vi.advanceTimersByTime(INTRO_ENTRANCE_MS))
   expect(document.querySelector('.tide-experience--idle')).toBeTruthy()
   expect(document.querySelector('[data-hint-state="visible"]')).toBeTruthy()
   return button
@@ -60,7 +60,8 @@ describe('cinematic entrance', () => {
   it('does not auto-exit after 30s without input', () => {
     const button = splash()
     act(() => vi.advanceTimersByTime(30000))
-    expect(document.querySelector('.tide-experience--entrance')).toBeTruthy()
+    expect(document.querySelector('.tide-intro')).toBeTruthy()
+    expect(document.querySelector('.tide-experience--idle')).toBeTruthy()
     expect(button).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Enter Red Tide PPC' })).toBe(button)
   })
