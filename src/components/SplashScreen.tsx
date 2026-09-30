@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent, AnimationEvent } from 'react'
+import type { KeyboardEvent, PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Landing } from '../pages/Landing'
 import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
@@ -53,8 +53,7 @@ export function SplashScreen() {
     setPhase('leaving')
   }, [])
 
-  const handleEntranceComplete = useCallback((event: AnimationEvent<HTMLParagraphElement>) => {
-    if (event.animationName !== 'tide-copy-in') return
+  const handleEntranceComplete = useCallback(() => {
     setPhase((current) => {
       if (current !== 'entrance') return current
       phaseRef.current = 'idle'
