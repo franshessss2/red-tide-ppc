@@ -41,12 +41,18 @@ jobs:
           cat /tmp/pr57-vite.log
           exit 1
       - name: Browser verification
+        id: browser
+        continue-on-error: true
         run: node scripts/pr57-browser-pass.mjs
         env:
           GITHUB_SHA: ${{ github.sha }}
       - name: Build standalone preview
+        if: always()
         run: node scripts/pr57-standalone-preview.mjs
+
       - name: Upload PR57 verification artifacts
+      - name: Upload PR57 verification artifacts
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: pr57-verification-${{ github.sha }}
@@ -54,4 +60,10 @@ jobs:
             pr57-artifacts
             pr57-standalone-preview.html
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Fail when browser verification failed
+        if: always() && steps.browser.outcome != 'success'
+        run: |
+          echo "PR57 browser verification failed; see pr57-artifacts and the browser step output."
+          exit 1
