@@ -375,8 +375,29 @@ await fs.writeFile(`${OUT}/run-metadata.json`, JSON.stringify({
 
 const browser = await chromium.launch({ headless: true })
 try {
-  for (const vp of viewports) await exerciseViewport(browser, vp)
+  for (const vp of viewports) {
+    try {
+      await exerciseViewport(browser, vp)
+      await fs.writeFile(`${OUT}/checkpoint-${vp.name}-complete.json`, JSON.stringify({
+        viewport: vp.name,
+        status: 'complete',
+        resultsCount: results.length,
+      }, null, 2))
+    } catch (error) {
+      await fs.writeFile(`${OUT}/checkpoint-${vp.name}-failure.json`, JSON.stringify({
+        viewport: vp.name,
+        status: 'failure',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : null,
+        resultsCount: results.length,
+      }, null, 2))
+      throw error
+    }
+  }
   await measureCost(browser)
+  await fs.writeFile(`${OUT}/checkpoint-cost-complete.json`, JSON.stringify({
+    status: 'complete',
+  }, null, 2))
 } finally {
   await browser.close()
 }
