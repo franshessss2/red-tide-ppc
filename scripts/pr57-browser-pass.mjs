@@ -137,8 +137,13 @@ async function exerciseViewport(browser, vp) {
   const consoleMessages = []
   const pageErrors = []
   page.on('console', msg => {
-    if (msg.type() === 'error' || msg.type() === 'warning') {
-      consoleMessages.push(`${msg.type()}: ${msg.text()}`)
+    if (msg.type() !== 'error' && msg.type() !== 'warning') return
+    const text = msg.text()
+    const isChromiumGpuDiagnostic =
+      msg.type() === 'warning'
+      && /\[\.WebGL-[^\]]+\].*GPU stall due to ReadPixels/.test(text)
+    if (!isChromiumGpuDiagnostic) {
+      consoleMessages.push(`${msg.type()}: ${text}`)
     }
   })
   page.on('pageerror', error => pageErrors.push(String(error)))
@@ -316,6 +321,7 @@ async function exerciseViewport(browser, vp) {
     focusedOnMount,
     consoleMessages,
     pageErrors,
+    ignoredChromiumDiagnostics: 'GPU stall due to ReadPixels warnings are headless Chromium diagnostics, not application console output.',
   })
   await context.close()
 }
