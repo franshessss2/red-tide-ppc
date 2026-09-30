@@ -194,6 +194,7 @@ async function exerciseViewport(browser, vp) {
   }, seamMeta.duration)
   await page.waitForTimeout(40)
   const seamPeriodFrame = await capture(page, `${vp.name}_seam_period_10000ms`)
+  const seamFrameEqual = require('node:buffer').Buffer.equals(seamStartFrame, seamPeriodFrame)
   const seamGeometry = await front.evaluate(el => {
     const stroke = el.querySelector('path[stroke]')
     const gradient = el.querySelector('linearGradient')
@@ -222,9 +223,9 @@ async function exerciseViewport(browser, vp) {
     && seamGeometry.spreadMethod === 'repeat'
     && seamGeometry.gradientX1 === '0'
     && seamGeometry.gradientX2 === '1000'
-  const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS
+  const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS && seamFrameEqual
   if (!seamMatch) {
-    throw new Error(`${vp.name}: wave seam proof failed: ${JSON.stringify(seamGeometry)}`)
+    throw new Error(`${vp.name}: wave seam proof failed: ${JSON.stringify({ seamGeometry, seamFrameEqual })}`)
   }
 
   await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
