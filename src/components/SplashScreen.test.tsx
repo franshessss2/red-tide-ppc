@@ -32,7 +32,7 @@ describe('cinematic entrance', () => {
     document.body.style.overflow = 'auto'
     const { container } = render(<SplashScreen />)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Skip intro/ }))
+    expect(document.activeElement).toBe(screen.getByRole('dialog'))
     expect(container.querySelector('[inert]')).toBeTruthy()
     // Landing stays mounted beneath the intro so the hero can warm up before reveal.
     expect(container.querySelector('[inert] main')).toBeTruthy()
@@ -47,9 +47,9 @@ describe('cinematic entrance', () => {
     expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Open the map' }))
     expect(document.body.style.overflow).toBe('auto')
   })
-  it('skip is immediate, cancels pending timers, and marks the session seen', () => {
+  it('Escape is immediate, cancels pending timers, and marks the session seen', () => {
     render(<SplashScreen />)
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByRole('dialog')).toBeNull()
     act(() => vi.advanceTimersByTime(10000))
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -134,7 +134,7 @@ describe('First Ripple handoff', () => {
     ])
     expect(INTRO_TITLE_HANDOFF_MS + INTRO_TITLE_HANDOFF_DELAY_MS).toBeLessThan(INTRO_EXIT_MS)
     expect(heading.style.visibility).toBe('hidden')
-    fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+    fireEvent.keyDown(window, { key: 'Escape' })
     expect(heading.style.visibility).toBe('')
     expect(cancel).toHaveBeenCalledOnce()
     act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
@@ -191,7 +191,7 @@ describe('First Ripple handoff', () => {
   it('keeps repeated replay and skip independent under StrictMode', () => {
     render(<StrictMode><SplashScreen /></StrictMode>)
     for (let i = 0; i < 3; i++) {
-      fireEvent.click(screen.getByRole('button', { name: /Skip intro/ }))
+      fireEvent.keyDown(window, { key: 'Escape' })
       fireEvent.click(screen.getByRole('button', { name: 'Replay intro' }))
       act(() => vi.advanceTimersByTime(200))
       expect(screen.getAllByRole('dialog')).toHaveLength(1)
