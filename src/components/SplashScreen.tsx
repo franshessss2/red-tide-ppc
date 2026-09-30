@@ -9,6 +9,8 @@ import '../styles/tide-intro.css'
 const SEEN_KEY = 'red-tide:intro:v1'
 export const INTRO_HOLD_MS = MOTION.time.introHold * 1000
 export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
+export const INTRO_TITLE_HANDOFF_MS = 700
+export const INTRO_TITLE_HANDOFF_DELAY_MS = 80
 
 type Phase = 'playing' | 'leaving' | 'done'
 
@@ -89,7 +91,12 @@ export function SplashScreen() {
           animation = title.animate([
             { transform: 'translate(0, 0) scale(1, 1)' },
             { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})` },
-          ], { duration: INTRO_EXIT_MS, easing: `cubic-bezier(${MOTION.ease.tide.join(',')})`, fill: 'forwards' })
+          ], {
+            duration: INTRO_TITLE_HANDOFF_MS,
+            delay: INTRO_TITLE_HANDOFF_DELAY_MS,
+            easing: `cubic-bezier(${MOTION.ease.tide.join(',')})`,
+            fill: 'forwards',
+          })
           heading.style.visibility = 'hidden'
           hidingTwin = true
           overlay?.setAttribute('data-handoff', 'measured')
@@ -140,7 +147,7 @@ export function SplashScreen() {
       </div>
       {active && createPortal(
         <div ref={overlayRef} key={run} className={`tide-intro tide-intro--${phase}`} role="dialog" aria-modal="true" aria-labelledby="tide-intro-label">
-          <div className="tide-intro__curtain" aria-hidden="true">
+          <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
             <svg className="tide-intro__curtain-edge" viewBox="0 0 1600 160" preserveAspectRatio="none">
               <path d="M0 82C320 150 540 10 820 62S1290 150 1600 50V160H0Z" fill="currentColor" />
             </svg>
@@ -151,7 +158,7 @@ export function SplashScreen() {
             <button ref={skipRef} className="tide-intro__skip" onClick={finish}>Skip intro <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M3 10h13m-5-5 5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
           </div>
           <div className="tide-intro__center">
-            <div className="tide-intro__surface" aria-hidden="true">
+            <div className="tide-intro__surface" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
               <div className="tide-intro__horizon" />
               <div className="tide-intro__ripple"><span /></div>
               <svg className="tide-intro__water" viewBox="0 0 1600 400" preserveAspectRatio="none">
