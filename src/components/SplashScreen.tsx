@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent, PointerEvent, AnimationEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Landing } from '../pages/Landing'
 import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
@@ -7,12 +8,11 @@ import { MOTION } from '../motion/tokens'
 import '../styles/tide-intro.css'
 
 const SEEN_KEY = 'red-tide-ppc:splash:v1'
-export const INTRO_HOLD_MS = MOTION.time.introHold * 1000
 export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
 export const INTRO_TITLE_HANDOFF_MS = 700
 export const INTRO_TITLE_HANDOFF_DELAY_MS = 80
 
-type Phase = 'playing' | 'leaving' | 'done'
+type Phase = 'entrance' | 'idle' | 'leaving' | 'done'
 
 function initialPhase(): Phase {
   if (prefersReducedMotion() || window.location.hash) return 'done'
@@ -20,7 +20,7 @@ function initialPhase(): Phase {
   return 'playing'
 }
 
-/** A finite brand entrance. Data fetching never controls its duration. */
+/** Brand entrance -> looping idle -> explicit user-driven exit. Data fetching never controls it. */
 export function SplashScreen() {
   const [phase, setPhase] = useState<Phase>(initialPhase)
   const reduce = useReducedMotion()
@@ -30,12 +30,47 @@ export function SplashScreen() {
   const overlayRef = useRef<HTMLDivElement>(null)
   const replayRef = useRef<HTMLButtonElement>(null)
   const replaying = useRef(false)
+  const dismissedRef = useRef(false)
+  const phaseRef = useRef<Phase>(phase)
   const active = phase !== 'done' && !reduce
 
+  useEffect(() => {
+    phaseRef.current = phase
+  }, [phase])
+
   const finish = useCallback(() => {
+    phaseRef.current = 'done'
     try { sessionStorage.setItem(SEEN_KEY, 'seen') } catch { /* Private browsing still works. */ }
     setPhase('done')
   }, [])
+
+  const dismiss = useCallback(() => {
+    if (dismissedRef.current || phaseRef.current === 'leaving' || phaseRef.current === 'done') return
+    dismissedRef.current = true
+    overlayRef.current?.classList.remove('tide-intro--hidden')
+    try { sessionStorage.setItem(SEEN_KEY, 'seen') } catch { /* Private browsing still works. */ }
+    phaseRef.current = 'leaving'
+    setPhase('leaving')
+  }, [])
+
+  const handleEntranceComplete = useCallback((event: AnimationEvent<HTMLParagraphElement>) => {
+    if (event.animationName !== 'tide-copy-in') return
+    setPhase((current) => {
+      if (current !== 'entrance') return current
+      phaseRef.current = 'idle'
+      return 'idle'
+    })
+  }, [])
+
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (!['Enter', 'Escape', ' ', 'Spacebar'].includes(event.key)) return
+    event.preventDefault()
+    dismiss()
+  }, [dismiss])
+
+  const handlePointerUp = useCallback((_event: PointerEvent<HTMLDivElement>) => {
+    dismiss()
+  }, [dismiss])
 
   useEffect(() => {
     if (reduce) finish()
@@ -46,25 +81,17 @@ export function SplashScreen() {
     const oldOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     overlayRef.current?.focus({ preventScroll: true })
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); finish() }
+    const visibility = () => {
+      overlay?.classList.toggle('tide-intro--hidden', document.hidden)
     }
-    const visibility = () => { if (document.hidden) finish() }
-    window.addEventListener('keydown', keydown)
+    visibility()
     document.addEventListener('visibilitychange', visibility)
     return () => {
       document.body.style.overflow = oldOverflow
-      window.removeEventListener('keydown', keydown)
+      overlay?.classList.remove('tide-intro--hidden')
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [active, finish])
-
-  useEffect(() => {
-    if (phase !== 'playing' || reduce) return
-    const scope = createMotionScope()
-    scope.timeout(() => setPhase('leaving'), INTRO_HOLD_MS)
-    return () => scope.dispose()
-  }, [phase, run, reduce])
 
   useEffect(() => {
     if (phase !== 'leaving' || reduce) return
@@ -126,9 +153,11 @@ export function SplashScreen() {
   function replay() {
     if (prefersReducedMotion()) return
     replaying.current = true
+    dismissedRef.current = false
+    phaseRef.current = 'entrance'
     window.scrollTo({ top: 0, behavior: 'instant' })
     setRun(value => value + 1)
-    setPhase('playing')
+    setPhase('entrance')
   }
 
   return (
@@ -143,7 +172,17 @@ export function SplashScreen() {
         </div>
       </div>
       {active && createPortal(
-        <div ref={overlayRef} key={run} className={`tide-intro tide-intro--${phase}`} role="dialog" aria-modal="true" aria-labelledby="tide-intro-label" tabIndex={-1}>
+        <div
+          ref={overlayRef}
+          key={run}
+          className={`tide-intro tide-intro--${phase}`}
+          role="button"
+          aria-label="Enter Red Tide PPC"
+          tabIndex={0}
+          onClick={dismiss}
+          onPointerUp={handlePointerUp}
+          onKeyDown={handleKeyDown}
+        >
           <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
             <svg className="tide-intro__curtain-edge" viewBox="0 0 1600 160" preserveAspectRatio="none">
               <path d="M0 82C320 150 540 10 820 62S1290 150 1600 50V160H0Z" fill="currentColor" />
@@ -170,11 +209,19 @@ export function SplashScreen() {
               </svg>
             </div>
             <div className="tide-intro__title-clip">
-              <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" aria-label="Red Tide"><span aria-hidden="true">RED TIDE</span></div>
+                <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" aria-label="Red Tide"><span aria-hidden="true">RED TIDE</span></div>
             </div>
-            <div className="tide-intro__copy tide-intro__chrome">
-              <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
-              <p className="tide-intro__line">One coast. A shared watch.</p>
+              <div className="tide-intro__copy tide-intro__chrome">
+                <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
+                <p className="tide-intro__line" onAnimationEnd={handleEntranceComplete}>One coast. A shared watch.</p>
+              </div>
+              <div
+                className="tide-intro__hint"
+                data-hint-state={phase === 'idle' ? 'visible' : phase === 'leaving' ? 'exiting' : 'hidden'}
+                aria-hidden="true"
+              >
+                TAP TO ENTER
+              </div>
             </div>
           </div>
           <div className="tide-intro__bottom tide-intro__chrome"><span>WATCH THE WATER.</span><span>PROTECT THE COAST.</span></div>
