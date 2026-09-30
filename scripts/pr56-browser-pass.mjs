@@ -119,8 +119,8 @@ async function sampleExit(page, dir, viewport) {
   const endRect = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
   assert(endRect, 'landing heading missing after exit')
   const rectDelta = {
-    left: endRect.left - base.landingHeadingRect.left,
-    top: endRect.top - base.landingHeadingRect.top,
+    left: endRect.x - base.landingHeadingRect.left,
+    top: endRect.y - base.landingHeadingRect.top,
     width: endRect.width - base.landingHeadingRect.width,
     height: endRect.height - base.landingHeadingRect.height,
   }
