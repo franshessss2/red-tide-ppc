@@ -223,7 +223,7 @@ export function SplashScreen() {
                   <div className="tide-intro__wave-bob tide-intro__wave-bob--front">
                     <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
                       <defs>
-                        <linearGradient id="tide-front-crest" x1="0" x2="1">
+                        <linearGradient id="tide-front-crest" x1="0" x2="1000" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
                           <stop offset="0" stopColor="#f0a50000" />
                           <stop offset=".46" stopColor="#f0a500" stopOpacity=".88" />
                           <stop offset=".72" stopColor="#ff5252" stopOpacity=".74" />
