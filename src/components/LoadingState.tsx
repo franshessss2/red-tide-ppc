@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import { usePageVisible, useReducedMotion } from '../motion/preferences'
 import { MOTION } from '../motion/tokens'
+import { SearchingOrb } from './SearchingOrb'
 
 /**
  * Branded loading states.
@@ -80,15 +81,10 @@ export function MapLoadingOverlay({ label = 'Loading zones' }: { label?: string 
       className="absolute inset-0 z-[var(--layer-loading)] grid place-items-center bg-ink/88 backdrop-blur-sm"
     >
       <div className="flex flex-col items-center">
-        <BrandMark className="h-11 w-11 text-accent" />
+        <SearchingOrb size={56} />
         <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.24em] text-accent">
           {label}
         </p>
-        {/* A determinate-looking bar would lie about progress; this one sweeps
-            to say "working" and nothing more. */}
-        <span className="mt-3 block h-0.5 w-28 overflow-hidden rounded-full bg-line">
-          <span className="animate-sheen block h-full w-full bg-accent text-accent" />
-        </span>
       </div>
     </div>
   )

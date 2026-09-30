@@ -1,13 +1,14 @@
 import { MOTION, tween } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useScroll, useSpring } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CountUp } from '../components/CountUp'
 import { DecryptedText } from '../components/DecryptedText'
+import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
 import { HeroBackdrop } from '../components/HeroBackdrop'
 import { StatusPip } from '../components/StatusPip'
@@ -90,6 +91,7 @@ export function Landing() {
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
   const reduceMotion = useReducedMotion()
+  const [headlineDecrypted, setHeadlineDecrypted] = useState(false)
   const counts = useMemo(() => {
     const result: Record<ZoneStatus, number> = { safe: 0, unconfirmed: 0, advisory: 0 }
     for (const zone of zones) result[zone.status] += 1
@@ -261,10 +263,15 @@ export function Landing() {
                     aria-label="Red Tide"
                     className="font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
                   >
-                    <DecryptedText
-                      text="RED TIDE"
-                      delay={0}
-                    />
+                    {headlineDecrypted ? (
+                      <TextPressure text="RED TIDE" />
+                    ) : (
+                      <DecryptedText
+                        text="RED TIDE"
+                        delay={0}
+                        onComplete={() => setHeadlineDecrypted(true)}
+                      />
+                    )}
                   </h1>
 
                   {/* The subheading blurs in by words, after the scramble has had
