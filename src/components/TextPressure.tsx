@@ -7,7 +7,9 @@ const MAX_SCALE = 1.08
 
 export function TextPressure({ text, className = '' }: { text: string; className?: string }) {
   const reduce = useReducedMotion()
-  const [coarse, setCoarse] = useState(true)
+  const [coarse, setCoarse] = useState(() =>
+    typeof window === 'undefined' ? true : window.matchMedia('(pointer: coarse)').matches,
+  )
   const pointerX = useMotionValue(-10000)
   const pointerY = useMotionValue(-10000)
 
