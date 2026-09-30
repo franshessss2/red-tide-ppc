@@ -79,7 +79,8 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 6000 })
+  await page.keyboard.press('Escape')
+  await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 5000 })
   await page.evaluate(() => {
     window.__pr56ExitMetrics = null
     const deadline = performance.now() + 4200
