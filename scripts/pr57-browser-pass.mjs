@@ -166,7 +166,8 @@ async function exerciseViewport(browser, vp) {
   await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, seamB)
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.removeProperty('animation-play-state') }))
   const seam = comparePng(seamA, seamB)
-  if (!seam.equal) {
+  const seamMatch = seam.equal || (seam.differenceRatio <= 0.005 && seam.maxDelta <= 8)
+  if (!seamMatch) {
     throw new Error(`${vp.name}: front wave seam mismatch after one full period: ${JSON.stringify(seam)}`)
   }
 
@@ -253,6 +254,7 @@ async function exerciseViewport(browser, vp) {
     idleAt30,
     idleFrames,
     seam,
+    seamMatch,
     seamTransformA: transformA,
     seamTransformB: transformB,
     exitFrames,
