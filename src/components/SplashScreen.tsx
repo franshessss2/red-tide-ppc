@@ -8,6 +8,7 @@ import { MOTION } from '../motion/tokens'
 import '../styles/tide-intro.css'
 
 const SEEN_KEY = 'red-tide-ppc:splash:v1'
+export const INTRO_ENTRANCE_MS = 1900
 export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
 export const INTRO_TITLE_HANDOFF_MS = 700
 export const INTRO_TITLE_HANDOFF_DELAY_MS = 80
@@ -53,14 +54,6 @@ export function SplashScreen() {
     setPhase('leaving')
   }, [])
 
-  const handleEntranceComplete = useCallback(() => {
-    setPhase((current) => {
-      if (current !== 'entrance') return current
-      phaseRef.current = 'idle'
-      return 'idle'
-    })
-  }, [])
-
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
     if (!['Enter', 'Escape', ' ', 'Spacebar'].includes(event.key)) return
     event.preventDefault()
@@ -92,6 +85,17 @@ export function SplashScreen() {
       document.removeEventListener('visibilitychange', visibility)
     }
   }, [active, finish])
+
+  useEffect(() => {
+    if (phase !== 'entrance' || reduce) return
+    const scope = createMotionScope()
+    scope.timeout(() => {
+      if (phaseRef.current !== 'entrance') return
+      phaseRef.current = 'idle'
+      setPhase('idle')
+    }, INTRO_ENTRANCE_MS)
+    return () => scope.dispose()
+  }, [phase, reduce])
 
   useEffect(() => {
     if (phase !== 'leaving' || reduce) return
@@ -240,7 +244,7 @@ export function SplashScreen() {
             </div>
             <div className="tide-intro__copy tide-intro__chrome">
               <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
-              <p className="tide-intro__line" onAnimationEnd={handleEntranceComplete}>One coast. A shared watch.</p>
+              <p className="tide-intro__line">One coast. A shared watch.</p>
             </div>
             <div
               className="tide-intro__hint"
