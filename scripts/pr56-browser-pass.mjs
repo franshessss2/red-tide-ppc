@@ -81,7 +81,9 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await page.clock.runFor(3500)
+  const initialClock = await page.evaluate(() => Date.now())
+  await page.clock.runFor(4000)
+  await page.clock.pauseAt(new Date(initialClock + 4000))
   await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 2000 })
   await page.getByRole('button', { name: /Replay intro/ }).click()
   await page.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 2000 })
