@@ -10,51 +10,93 @@ const viewports = [
   { name: '1440x900', width: 1440, height: 900 },
 ]
 const idleMarks = [500, 1500, 3000, 6000, 10000, 30000]
-const errors = []
+const FRONT_PERIOD_MS = 10000
+const EXIT_MS = 800
 const results = []
 
 await fs.rm(OUT, { recursive: true, force: true })
 await fs.mkdir(OUT, { recursive: true })
 
-function parseMatrixY(transform) {
-  const match = transform.match(/^matrix3?\((.+)\)$/)
-  if (!match) return null
-  const parts = match[1].split(',').map(Number)
-  return transform.startsWith('matrix3d') ? parts[13] : parts[5]
-}
-
 function comparePng(a, b) {
   const pa = PNG.sync.read(a)
   const pb = PNG.sync.read(b)
   if (pa.width !== pb.width || pa.height !== pb.height) {
-    return { equal: false, differing: pa.width * pa.height, total: pa.width * pa.height, maxDelta: 255 }
+    return { equal: false, differingBytes: -1, totalBytes: -1, maxDelta: 255 }
   }
-  let differing = 0
+  let differingBytes = 0
   let maxDelta = 0
   for (let i = 0; i < pa.data.length; i++) {
     const d = Math.abs(pa.data[i] - pb.data[i])
-    if (d) differing++
+    if (d !== 0) differingBytes++
     if (d > maxDelta) maxDelta = d
   }
-  return { equal: differing === 0, differing, total: pa.data.length, maxDelta }
+  return {
+    equal: differingBytes === 0,
+    differingBytes,
+    totalBytes: pa.data.length,
+    differenceRatio: differingBytes / pa.data.length,
+    maxDelta,
+  }
 }
 
-async function waitIdle(page) {
-  await page.waitForSelector('.tide-experience--idle', { state: 'attached', timeout: 5000 })
-  await page.waitForSelector('.tide-intro__wave-layer--front', { state: 'visible', timeout: 5000 })
-}
-
-async function resetSplash(page) {
+async function clearAndReload(page) {
   await page.evaluate(() => {
     sessionStorage.clear()
     localStorage.clear()
   })
-  await page.reload({ waitUntil: 'networkidle' })
-  await waitIdle(page)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.tide-experience--idle', { state: 'attached', timeout: 6000 })
 }
 
 async function capture(page, name) {
-  await page.screenshot({ path: `${OUT}/${name}.png`, animations: 'allow' })
+  const path = `${OUT}/${name}.png`
+  await page.screenshot({ path, animations: 'allow' })
+  return path
+}
+
+async function computedY(page, selector) {
+  return page.locator(selector).evaluate(el => {
+    const t = getComputedStyle(el).transform
+    const m = t.match(/^matrix3d?\((.+)\)$/)
+    if (!m) return 0
+    const p = m[1].split(',').map(Number)
+    return t.startsWith('matrix3d') ? p[13] : p[5]
+  })
+}
+
+async function handoffState(page) {
+  return page.evaluate(() => {
+    const isVisible = (el) => {
+      if (!el) return false
+      const cs = getComputedStyle(el)
+      const rect = el.getBoundingClientRect()
+      return cs.visibility !== 'hidden'
+        && Number.parseFloat(cs.opacity || '1') > 0.01
+        && rect.width > 0
+        && rect.height > 0
+    }
+    const intro = document.querySelector('.tide-intro__title')
+    const landing = document.querySelector('h1[aria-label="Red Tide"]')
+    const skipText = [...document.querySelectorAll('button')].filter(b => /skip intro/i.test(b.textContent || ''))
+    return {
+      introVisible: isVisible(intro),
+      landingVisible: isVisible(landing),
+      visibleWordmarks: [intro, landing].filter(isVisible).length,
+      redTideTextCount: [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title')].filter(isVisible).length,
+      skipButtons: skipText.length,
+    }
+  })
+}
+
+async function runKeyboardCheck(page, key) {
+  await clearAndReload(page)
+  const root = page.getByRole('button', { name: 'Enter Red Tide PPC' })
+  await root.focus()
+  const beforeScroll = await page.evaluate(() => window.scrollY)
+  await page.keyboard.press(key === ' ' ? 'Space' : key)
+  const afterScroll = await page.evaluate(() => window.scrollY)
+  const leaving = await page.locator('.tide-experience--leaving').count()
+  return { key, leaving, scrollChanged: afterScroll !== beforeScroll }
 }
 
 async function exerciseViewport(browser, vp) {
@@ -67,141 +109,123 @@ async function exerciseViewport(browser, vp) {
   const consoleMessages = []
   const pageErrors = []
   page.on('console', msg => {
-    if (msg.type() === 'error' || msg.type() === 'warning') consoleMessages.push(`${msg.type()}: ${msg.text()}`)
+    if (msg.type() === 'error' || msg.type() === 'warning') {
+      consoleMessages.push(`${msg.type()}: ${msg.text()}`)
+    }
   })
-  page.on('pageerror', err => pageErrors.push(String(err)))
+  page.on('pageerror', error => pageErrors.push(String(error)))
 
-  const startUrl = `${BASE}/?pr57=1`
-  await page.goto(startUrl, { waitUntil: 'networkidle' })
-  await page.evaluate(() => { sessionStorage.clear(); localStorage.clear() })
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await clearAndReload(page)
 
   const root = page.getByRole('button', { name: 'Enter Red Tide PPC' })
   const focusedOnMount = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || '')
-  if (focusedOnMount !== 'Enter Red Tide PPC') throw new Error(`${vp.name}: splash did not focus on mount`)
-
-  await page.waitForSelector('.tide-experience--idle', { state: 'attached', timeout: 5000 })
-  const idleStart = Date.now()
-  const framePaths = {}
-  let front10 = null
-  let front20 = null
-
-  for (const mark of idleMarks) {
-    const elapsed = Date.now() - idleStart
-    await page.waitForTimeout(Math.max(0, mark - elapsed))
-    const present = await page.locator('.tide-intro').count() === 1
-    if (!present) throw new Error(`${vp.name}: splash disappeared at idle + ${mark}ms`)
-    const name = `${vp.name}_idle_${String(mark).padStart(5, '0')}ms`
-    await capture(page, name)
-    framePaths[mark] = `${name}.png`
-    if (mark === 10000) {
-      front10 = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
-      await fs.writeFile(`${OUT}/${vp.name}_front_period_a.png`, front10)
-    }
+  if (focusedOnMount !== 'Enter Red Tide PPC') {
+    throw new Error(`${vp.name}: splash did not focus on mount`)
+  }
+  if (await page.locator('button', { hasText: 'Skip intro' }).count()) {
+    throw new Error(`${vp.name}: Skip intro button is still present`)
   }
 
-  // One full horizontal period for the front layer is exactly 10s.
-  const elapsed20 = Date.now() - idleStart
-  await page.waitForTimeout(Math.max(0, 20000 - elapsed20))
-  front20 = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
-  await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, front20)
-  const seam = comparePng(front10, front20)
+  const idleStart = Date.now()
+  const idleFrames = {}
+  for (const mark of idleMarks) {
+    await page.waitForTimeout(Math.max(0, mark - (Date.now() - idleStart)))
+    if (await page.locator('.tide-intro').count() !== 1) {
+      throw new Error(`${vp.name}: splash disappeared at idle + ${mark}ms`)
+    }
+    idleFrames[mark] = await capture(page, `${vp.name}_idle_${String(mark).padStart(5, '0')}ms`)
+  }
 
   const idleAt30 = await page.locator('.tide-intro').count() === 1
+  if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  const beforeClick = await page.locator('.tide-intro__curtain').evaluate(el => getComputedStyle(el).animationName)
-  if (!beforeClick) throw new Error(`${vp.name}: curtain animation metadata missing`)
-
-  await root.click({ position: { x: Math.round(vp.width / 2), y: Math.round(vp.height / 2) } })
-  const exitFrames = {}
-  for (const mark of [100, 400, 800]) {
-    await page.waitForTimeout(mark - (Date.now() - (idleStart + 30000)))
+  // Seam check: freeze only the vertical bob, then compare the same front SVG
+  // one complete 10s horizontal period apart.
+  const bob = page.locator('.tide-intro__wave-bob--front')
+  await bob.evaluate(el => { el.style.animationPlayState = 'paused' })
+  await page.waitForTimeout(100)
+  const seamA = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
+  await fs.writeFile(`${OUT}/${vp.name}_front_period_a.png`, seamA)
+  const transformA = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
+  await page.waitForTimeout(FRONT_PERIOD_MS)
+  const seamB = await page.locator('.tide-intro__wave-layer--front svg').screenshot()
+  await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, seamB)
+  const transformB = await page.locator('.tide-intro__wave-layer--front').evaluate(el => getComputedStyle(el).transform)
+  await bob.evaluate(el => { el.style.removeProperty('animation-play-state') })
+  const seam = comparePng(seamA, seamB)
+  if (transformA !== transformB || !seam.equal) {
+    throw new Error(`${vp.name}: front wave seam mismatch: transforms ${transformA} vs ${transformB}, image ${JSON.stringify(seam)}`)
   }
-  // The loop above would be timing-sensitive; capture from the actual click timestamp below.
-  const clickAt = Date.now()
-  await resetSplash(page)
-  const root2 = page.getByRole('button', { name: 'Enter Red Tide PPC' })
-  await root2.click({ position: { x: Math.round(vp.width / 2), y: Math.round(vp.height / 2) } })
-  const clickStart = Date.now()
+
+  await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
+
+  const exitDurationData = await page.evaluate(() => ({
+    curtain: document.querySelector('.tide-intro__curtain')?.getAttribute('data-intro-exit-duration'),
+    surface: document.querySelector('.tide-intro__surface')?.getAttribute('data-intro-exit-duration'),
+  }))
+  if (exitDurationData.curtain !== '800' || exitDurationData.surface !== '800') {
+    throw new Error(`${vp.name}: exit duration metadata mismatch ${JSON.stringify(exitDurationData)}`)
+  }
+
+  await root.click({ position: { x: Math.floor(vp.width / 2), y: Math.floor(vp.height / 2) } })
+  const exitStart = Date.now()
+  const exitFrames = {}
+  const handoffAt400 = { state: null }
   for (const mark of [100, 400, 800]) {
-    await page.waitForTimeout(Math.max(0, mark - (Date.now() - clickStart)))
-    const name = `${vp.name}_exit_${String(mark).padStart(4, '0')}ms`
-    await capture(page, name)
-    exitFrames[mark] = `${name}.png`
+    await page.waitForTimeout(Math.max(0, mark - (Date.now() - exitStart)))
+    exitFrames[mark] = await capture(page, `${vp.name}_exit_${String(mark).padStart(4, '0')}ms`)
     if (mark === 400) {
-      const handoff = await page.evaluate(() => {
-        const intro = document.querySelector('.tide-intro__title')
-        const landing = document.querySelector('h1[aria-label="Red Tide"]')
-        const visible = (el) => {
-          if (!el) return false
-          const cs = getComputedStyle(el)
-          return cs.visibility !== 'hidden' && Number.parseFloat(cs.opacity || '1') > 0.01
-        }
-        const curtain = document.querySelector('.tide-intro__curtain')
-        const surface = document.querySelector('.tide-intro__surface')
-        return {
-          introVisible: visible(intro),
-          landingVisible: visible(landing),
-          introCount: document.querySelectorAll('.tide-intro__title').length,
-          landingCount: document.querySelectorAll('h1[aria-label="Red Tide"]').length,
-          curtainY: curtain ? csY(curtain) : null,
-          surfaceY: surface ? csY(surface) : null,
-        }
-        function csY(el) {
-          const t = getComputedStyle(el).transform
-          const m = t.match(/^matrix3?\((.+)\)$/)
-          if (!m) return 0
-          const p = m[1].split(',').map(Number)
-          return t.startsWith('matrix3d') ? p[13] : p[5]
-        }
-      })
-      if (handoff.introVisible === handoff.landingVisible) {
-        throw new Error(`${vp.name}: handoff visibility overlap at 400ms`)
-      }
-      if (handoff.curtainY === null || handoff.surfaceY === null || Math.abs(handoff.curtainY - handoff.surfaceY) > 1.5) {
-        throw new Error(`${vp.name}: surface/curtain Y drift at 400ms: ${handoff.curtainY} vs ${handoff.surfaceY}`)
-      }
+      handoffAt400.state = await handoffState(page)
+      const curtainY = await computedY(page, '.tide-intro__curtain').catch(() => null)
+      const surfaceY = await computedY(page, '.tide-intro__surface').catch(() => null)
+      handoffAt400.curtainY = curtainY
+      handoffAt400.surfaceY = surfaceY
     }
+  }
+
+  if (handoffAt400.state.redTideTextCount !== 1 || handoffAt400.state.skipButtons !== 0) {
+    throw new Error(`${vp.name}: handoff duplicate/skip state ${JSON.stringify(handoffAt400.state)}`)
+  }
+  if (handoffAt400.curtainY == null || handoffAt400.surfaceY == null || Math.abs(handoffAt400.curtainY - handoffAt400.surfaceY) > 1.5) {
+    throw new Error(`${vp.name}: exit surface/curtain drift ${handoffAt400.curtainY} vs ${handoffAt400.surfaceY}`)
   }
 
   const detached = await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 5000 }).then(() => true).catch(() => false)
-  const visibleRedTideAfter = await page.locator('h1[aria-label="Red Tide"]:visible').count()
-  if (!detached) {
-    throw new Error(`${vp.name}: exit was not observed within 5s`)
-  }
-  if (visibleRedTideAfter !== 1) {
-    throw new Error(`${vp.name}: expected exactly one visible landing RED TIDE after exit, got ${visibleRedTideAfter}`)
-  }
+  if (!detached) throw new Error(`${vp.name}: exit was not observed within 5s`)
+  const visibleLanding = await page.locator('h1[aria-label="Red Tide"]:visible').count()
+  if (visibleLanding !== 1) throw new Error(`${vp.name}: expected exactly one visible landing RED TIDE after exit, got ${visibleLanding}`)
 
-  // Keyboard validation.
+  const keyboard = []
   for (const key of ['Enter', ' ', 'Escape']) {
-    await resetSplash(page)
-    const keyboardRoot = page.getByRole('button', { name: 'Enter Red Tide PPC' })
-    await keyboardRoot.focus()
-    const scrollBefore = await page.evaluate(() => window.scrollY)
-    await page.keyboard.press(key === ' ' ? 'Space' : key)
-    if (key === ' ' && (await page.evaluate(() => window.scrollY)) !== scrollBefore) {
-      throw new Error(`${vp.name}: Space changed scroll position`)
-    }
-    const leaving = await page.locator('.tide-experience--leaving').count()
-    if (leaving !== 1) throw new Error(`${vp.name}: ${key} did not start exit`)
+    keyboard.push(await runKeyboardCheck(page, key))
   }
+  if (keyboard.some(x => x.leaving !== 1)) throw new Error(`${vp.name}: keyboard exit failure ${JSON.stringify(keyboard)}`)
+  if (keyboard.find(x => x.key === ' ' && x.scrollChanged)) throw new Error(`${vp.name}: Space changed scroll position`)
 
-  // Visibility pause/resume validation.
-  await resetSplash(page)
-  await page.evaluate(() => {
+  await clearAndReload(page)
+  const hidden = await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })
     document.dispatchEvent(new Event('visibilitychange'))
+    const front = document.querySelector('.tide-intro__wave-layer--front')
+    return {
+      rootPaused: document.querySelector('.tide-intro')?.classList.contains('tide-intro--hidden'),
+      wavePaused: front ? getComputedStyle(front).animationPlayState : null,
+    }
   })
-  const paused = await page.locator('.tide-intro--hidden').count() === 1
-  await page.evaluate(() => {
+  const shown = await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false })
     document.dispatchEvent(new Event('visibilitychange'))
+    const front = document.querySelector('.tide-intro__wave-layer--front')
+    return {
+      rootPaused: document.querySelector('.tide-intro')?.classList.contains('tide-intro--hidden'),
+      wavePaused: front ? getComputedStyle(front).animationPlayState : null,
+    }
   })
-  const resumed = await page.locator('.tide-intro--hidden').count() === 0
-  if (!paused || !resumed) throw new Error(`${vp.name}: visibility pause/resume failed`)
+  if (!hidden.rootPaused || hidden.wavePaused !== 'paused' || shown.rootPaused || shown.wavePaused !== 'running') {
+    throw new Error(`${vp.name}: visibility pause/resume failed ${JSON.stringify({ hidden, shown })}`)
+  }
 
-  // No app console errors/warnings.
   if (consoleMessages.length || pageErrors.length) {
     throw new Error(`${vp.name}: console/page errors: ${JSON.stringify({ consoleMessages, pageErrors })}`)
   }
@@ -209,10 +233,15 @@ async function exerciseViewport(browser, vp) {
   results.push({
     viewport: vp.name,
     idleAt30,
+    idleFrames,
     seam,
-    exitObserved: detached,
+    seamTransformA: transformA,
+    seamTransformB: transformB,
     exitFrames,
-    idleFrames: framePaths,
+    exitObserved: detached,
+    handoffAt400,
+    keyboard,
+    visibility: { hidden, shown },
     focusedOnMount,
     consoleMessages,
     pageErrors,
@@ -223,10 +252,8 @@ async function exerciseViewport(browser, vp) {
 async function measureCost(browser) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
   const page = await context.newPage()
-  await page.goto(`${BASE}/?pr57-cost=1`, { waitUntil: 'networkidle' })
-  await page.evaluate(() => { sessionStorage.clear(); localStorage.clear() })
-  await page.reload({ waitUntil: 'networkidle' })
-  await page.waitForSelector('.tide-experience--idle', { state: 'attached', timeout: 5000 })
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' })
+  await clearAndReload(page)
   const cdp = await context.newCDPSession(page)
   await cdp.send('Performance.enable')
   await page.evaluate(() => {
@@ -239,20 +266,19 @@ async function measureCost(browser) {
   await page.waitForTimeout(10000)
   const after = await cdp.send('Performance.getMetrics')
   const metric = (payload, name) => Number(payload.metrics.find(m => m.name === name)?.value ?? 0)
-  const taskDelta = metric(after, 'TaskDuration') - metric(before, 'TaskDuration')
-  const scriptDelta = metric(after, 'ScriptDuration') - metric(before, 'ScriptDuration')
-  const layoutDelta = metric(after, 'LayoutCount') - metric(before, 'LayoutCount')
-  const recalcDelta = metric(after, 'RecalcStyleCount') - metric(before, 'RecalcStyleCount')
-  const framesDelta = metric(after, 'Frames') - metric(before, 'Frames')
+  const taskDuration = metric(after, 'TaskDuration') - metric(before, 'TaskDuration')
+  const scriptDuration = metric(after, 'ScriptDuration') - metric(before, 'ScriptDuration')
+  const frames = metric(after, 'Frames') - metric(before, 'Frames')
   const longTasks = await page.evaluate(() => window.__pr57LongTasks || [])
+  const expectedFrames = 600
   await fs.writeFile(`${OUT}/cpu-cost.json`, JSON.stringify({
     sampleSeconds: 10,
-    taskDurationSeconds: taskDelta,
-    approximateMainThreadPercent: taskDelta / 10 * 100,
-    scriptDurationSeconds: scriptDelta,
-    layoutCountDelta: layoutDelta,
-    recalcStyleCountDelta: recalcDelta,
-    framesDelta,
+    taskDurationSeconds: taskDuration,
+    approximateMainThreadPercent: taskDuration / 10 * 100,
+    scriptDurationSeconds: scriptDuration,
+    framesDelta: frames,
+    expectedFramesAt60Hz: expectedFrames,
+    approximateDroppedFrames: Math.max(0, expectedFrames - frames),
     longTaskCount: longTasks.length,
     maxLongTaskMs: Math.max(0, ...longTasks),
   }, null, 2))
@@ -263,8 +289,8 @@ await fs.writeFile(`${OUT}/run-metadata.json`, JSON.stringify({
   commitSha: process.env.GITHUB_SHA || 'unknown',
   viewports,
   idleMarks,
-  frontPeriodMs: 10000,
-  exitMs: 800,
+  frontPeriodMs: FRONT_PERIOD_MS,
+  exitMs: EXIT_MS,
 }, null, 2))
 
 const browser = await chromium.launch({ headless: true })
