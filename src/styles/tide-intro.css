@@ -106,7 +106,7 @@
   40% { opacity: .65; transform: scaleY(.06); }
   100% { opacity: 1; transform: scaleY(1); }
 }
-@keyframes tide-curtain-out { from { transform: translateY(0); } to { transform: translateY(115%); } }
+@keyframes tide-curtain-out { from { transform: translateY(0); } to { transform: translateY(115dvh); } }
 @keyframes tide-surface-out { from { transform: translate(-50%, 0); } to { transform: translate(-50%, 115dvh); } }
 @media (max-width: 600px) {
   .tide-intro__location { max-width: 10rem; letter-spacing: .055em; }
