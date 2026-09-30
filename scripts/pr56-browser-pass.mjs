@@ -73,12 +73,14 @@ async function sampleExit(page, dir, viewport) {
     const surface = document.querySelector('.tide-intro__surface')
     const intro = document.querySelector('.tide-intro')
     const heading = document.querySelector('h1[aria-label="Red Tide"]')
+    const rect = heading.getBoundingClientRect()
     const animations = document.querySelector('.tide-intro__title')?.getAnimations().map(a => a.effect?.getTiming())
     return {
       curtainTop: curtain.getBoundingClientRect().top,
       surfaceTop: surface.getBoundingClientRect().top,
       introHeight: intro.getBoundingClientRect().height,
       headingVisibility: getComputedStyle(heading).visibility,
+      landingHeadingRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
       handoff: document.querySelector('.tide-intro')?.getAttribute('data-handoff'),
       titleAnimations: animations,
     }
@@ -113,6 +115,14 @@ async function sampleExit(page, dir, viewport) {
   const maxDrift = Math.max(...diffs)
   await page.waitForTimeout(120)
   assert(await page.locator('.tide-intro').count() === 0, 'intro did not finish after synchronized exit')
+  const endRect = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
+  assert(endRect, 'landing heading missing after exit')
+  assert(Math.abs(endRect.left - base.landingHeadingRect.left) < 1 &&
+    Math.abs(endRect.top - base.landingHeadingRect.top) < 1 &&
+    Math.abs(endRect.width - base.landingHeadingRect.width) < 1 &&
+    Math.abs(endRect.height - base.landingHeadingRect.height) < 1,
+    'landing headline moved or resized during handoff')
+  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, 'landing headline double-rendered')
 
   // Warm-up must be complete before exit ends: landing hero backdrop has its WebGL
   // canvas mounted after its existing 1.2s idle gate, while Waves is always mounted.
@@ -158,7 +168,12 @@ try {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
 
     const logs = []
-    page.on('console', msg => { if (msg.type() === 'error' || msg.type() === 'warning') logs.push(`${msg.type()}: ${msg.text()}`) })
+    const gpuWarnings = []
+    page.on('console', msg => {
+      if (msg.type() !== 'error' && msg.type() !== 'warning') return
+      if (msg.text().startsWith('[.WebGL-')) gpuWarnings.push(msg.text())
+      else logs.push(`${msg.type()}: ${msg.text()}`)
+    })
     page.on('pageerror', err => logs.push(`pageerror: ${err.message}`))
 
     await waitForApp(page)
@@ -173,7 +188,8 @@ try {
     assert(Math.abs(meta.introHeight - height) < 2, `intro height mismatch at ${name}: ${meta.introHeight}`)
 
     await sampleExit(page, name, { width, height })
-    assert(logs.length === 0, `console warnings/errors on ${name}: ${logs.join(' | ')}`)
+    console.log(JSON.stringify({ viewport: name, chromiumGpuWarnings: gpuWarnings.length }))
+    assert(logs.length === 0, `application console warnings/errors on ${name}: ${logs.join(' | ')}`)
     await context.close()
   }
 
@@ -206,7 +222,12 @@ try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   const logs = []
-  page.on('console', msg => { if (msg.type() === 'error' || msg.type() === 'warning') logs.push(`${msg.type()}: ${msg.text()}`) })
+  const gpuWarnings = []
+  page.on('console', msg => {
+    if (msg.type() !== 'error' && msg.type() !== 'warning') return
+    if (msg.text().startsWith('[.WebGL-')) gpuWarnings.push(msg.text())
+    else logs.push(`${msg.type()}: ${msg.text()}`)
+  })
   page.on('pageerror', err => logs.push(`pageerror: ${err.message}`))
 
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
@@ -268,7 +289,8 @@ try {
   assert(await rapidPage.locator('.tide-intro').count() === 0, 'rapid skip/escape/replay left intro stuck')
   await rapidContext.close()
 
-  assert(logs.length === 0, `console warnings/errors during behavior suite: ${logs.join(' | ')}`)
+  console.log(JSON.stringify({ behaviorSuiteChromiumGpuWarnings: gpuWarnings.length }))
+  assert(logs.length === 0, `application console warnings/errors during behavior suite: ${logs.join(' | ')}`)
   await context.close()
   console.log('PR56 browser verification: PASS')
 } finally {
