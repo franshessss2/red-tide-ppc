@@ -14,7 +14,20 @@ server.stderr.on('data', chunk => process.stderr.write('[server:err] ' + chunk))
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const assert = (condition, message) => { if (!condition) throw new Error(message) }
 
+async function waitForServer() {
+  const deadline = Date.now() + 15000
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${PORT}/`)
+      if (response.ok) return
+    } catch {}
+    await sleep(150)
+  }
+  throw new Error('Vite demo server did not become ready within 15s')
+}
+
 async function waitForApp(page) {
+  await waitForServer()
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
 }
