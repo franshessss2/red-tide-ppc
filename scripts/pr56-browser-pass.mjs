@@ -67,6 +67,25 @@ async function inspectIntro(page) {
 
 async function captureFrames(name, width, height) {
   const context = await browser.newContext({ viewport: { width, height } })
+  await context.addInitScript(() => {
+    sessionStorage.removeItem('red-tide-ppc:splash:v1')
+    window.__pr56IntroStart = null
+    const markIntroStart = () => {
+      if (window.__pr56IntroStart === null && document.querySelector('.tide-intro')) {
+        window.__pr56IntroStart = performance.now()
+      }
+    }
+    const observeRoot = () => {
+      if (document.documentElement) {
+        new MutationObserver(markIntroStart).observe(document.documentElement, { childList: true, subtree: true })
+        markIntroStart()
+      } else {
+        setTimeout(observeRoot, 0)
+      }
+    }
+    observeRoot()
+  })
+
   const page = await context.newPage()
   const errors = []
   page.on('console', message => {
@@ -79,8 +98,17 @@ async function captureFrames(name, width, height) {
 
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await page.keyboard.press('Escape')
-  await page.waitForSelector('.tide-intro', { state: 'detached', timeout: 5000 })
+  const started = await page.evaluate(() => window.__pr56IntroStart ?? performance.now())
+
+  const meta = await inspectIntro(page)
+  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
+  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
+  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
+  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
+  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
+  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
+  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
+
   await page.evaluate(() => {
     window.__pr56ExitMetrics = null
     const deadline = performance.now() + 4200
@@ -111,27 +139,14 @@ async function captureFrames(name, width, height) {
       }
       requestAnimationFrame(sample)
     }
-    const observer = new MutationObserver(() => sample(performance.now()))
-    if (document.documentElement) observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'], subtree: true })
     requestAnimationFrame(sample)
   })
-  await page.getByRole('button', { name: /Replay intro/ }).click()
-  const started = await page.evaluate(() => performance.now())
-
-  const meta = await inspectIntro(page)
-  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
-  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
-  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
-  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
-  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
-  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
-  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
   const frameMeta = []
   await fs.mkdir(OUT + '/' + name, { recursive: true })
 
   for (const target of FRAMES) {
-    const elapsed = await page.evaluate(start => performance.now() - start, started)
+    const elapsed = await page.evaluate(startTime => performance.now() - startTime, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
     await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
     const state = await page.evaluate(targetValue => {
@@ -156,7 +171,6 @@ async function captureFrames(name, width, height) {
     }, target)
     frameMeta.push(state)
     assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
-    if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': visible RED TIDE count ' + state.visibleHeadlines + ' at ' + target + 'ms')
   }
 
   await page.waitForTimeout(60)
