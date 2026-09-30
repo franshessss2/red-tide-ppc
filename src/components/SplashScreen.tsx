@@ -6,7 +6,7 @@ import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
 import '../styles/tide-intro.css'
 
-const SEEN_KEY = 'red-tide:intro:v1'
+const SEEN_KEY = 'red-tide-ppc:splash:v1'
 export const INTRO_HOLD_MS = MOTION.time.introHold * 1000
 export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
 export const INTRO_TITLE_HANDOFF_MS = 700
