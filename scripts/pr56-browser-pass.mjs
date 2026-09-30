@@ -77,7 +77,16 @@ async function captureFrames(name, width, height) {
   })
   page.on('pageerror', error => errors.push('pageerror: ' + error.message))
 
-  await context.addInitScript(() => sessionStorage.removeItem('red-tide-ppc:splash:v1'))
+  await context.addInitScript(() => {
+    sessionStorage.removeItem('red-tide-ppc:splash:v1')
+    window.__pr56IntroStart = null
+    const markIntroStart = () => {
+      if (window.__pr56IntroStart === null && document.querySelector('.tide-intro')) {
+        window.__pr56IntroStart = performance.now()
+      }
+    }
+    new MutationObserver(markIntroStart).observe(document.documentElement, { childList: true, subtree: true })
+  })
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
 
@@ -90,7 +99,7 @@ async function captureFrames(name, width, height) {
   assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
   assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
-  const started = await page.evaluate(() => performance.now())
+  const started = await page.evaluate(() => window.__pr56IntroStart || performance.now())
   await page.evaluate(() => {
     window.__pr56ExitMetrics = null
     const deadline = performance.now() + 3600
