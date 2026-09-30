@@ -24,7 +24,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
       - name: Test
-        run: npm test
+        run: npm test -- --reporter=verbose --reporter=json --outputFile=pr57-test-results.json
       - name: Build
         run: npm run build
       - name: Install Playwright Chromium
@@ -48,6 +48,8 @@ jobs:
       - name: Build standalone preview
         if: always()
         run: node scripts/pr57-standalone-preview.mjs
+
+      - name: Upload PR57 verification artifacts
 
       - name: Upload PR57 verification artifacts
         if: always()
