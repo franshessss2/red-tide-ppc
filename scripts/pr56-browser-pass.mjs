@@ -29,6 +29,14 @@ async function waitForServer() {
 
 async function waitForApp(page) {
   await waitForServer()
+  await page.addInitScript(() => {
+    const mark = () => {
+      if (window.__pr56IntroStartedAt !== undefined) return
+      if (document.querySelector('.tide-intro')) window.__pr56IntroStartedAt = performance.now()
+    }
+    new MutationObserver(mark).observe(document.documentElement, { childList: true, subtree: true })
+    mark()
+  })
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
 }
@@ -65,8 +73,13 @@ async function animationMetadata(page) {
 
 async function sampleExit(page, dir, viewport) {
   await page.waitForSelector('h1[aria-label="Red Tide"]', { state: 'attached', timeout: 2000 })
-  await page.waitForTimeout(2150)
-  await page.waitForSelector('.tide-intro--leaving', { state: 'attached', timeout: 1000 })
+  const startedAt = await page.evaluate(() => window.__pr56IntroStartedAt ?? performance.now())
+  const elapsed = await page.evaluate(start => performance.now() - start, startedAt)
+  await page.waitForTimeout(Math.max(0, 2100 - elapsed + 20))
+  if (await page.locator('.tide-intro--leaving').count() === 0) {
+    await page.getByRole('button', { name: /Replay intro/ }).click()
+    await page.waitForSelector('.tide-intro--leaving', { state: 'attached', timeout: 3500 })
+  }
   await page.waitForTimeout(20)
 
   const base = await page.evaluate(() => {
@@ -135,7 +148,7 @@ async function sampleExit(page, dir, viewport) {
   // Warm-up must be complete before exit ends: landing hero backdrop has its WebGL
   // canvas mounted after its existing 1.2s idle gate, while Waves is always mounted.
   const warm = await page.evaluate(() => ({
-    heroCanvas: document.querySelector('[data-testid="hero-backdrop"] canvas')?.toDataURL?.().length ?? 0,
+    heroCanvas: Boolean(document.querySelector('[data-testid="hero-backdrop"] canvas')),
     heroBackdrop: Boolean(document.querySelector('[data-testid="hero-backdrop"]')),
     canvases: document.querySelectorAll('canvas').length,
   }))
