@@ -1,0 +1,32 @@
+name: PR56 verification
+
+on:
+  push:
+    branches: [arena/pr56-surface-continuity]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/pr56-browser-pass.mjs
+      - name: Upload PR56 browser captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr56-browser-captures
+          path: qa/pr56
+          if-no-files-found: warn
+          retention-days: 2
