@@ -61,7 +61,7 @@ describe('cinematic entrance', () => {
     const button = splash()
     act(() => vi.advanceTimersByTime(30000))
     expect(document.querySelector('.tide-experience--entrance')).toBeTruthy()
-    expect(button).toBeInTheDocument()
+    expect(button).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Enter Red Tide PPC' })).toBe(button)
   })
 
@@ -167,9 +167,9 @@ describe('cinematic entrance', () => {
 
   it('exposes a focused, focusable role=button with the expected accessible name', () => {
     const button = splash()
-    expect(button).toHaveAttribute('role', 'button')
-    expect(button).toHaveAttribute('aria-label', 'Enter Red Tide PPC')
-    expect(button).toHaveAttribute('tabindex', '0')
+    expect(button.getAttribute('role')).toBe('button')
+    expect(button.getAttribute('aria-label')).toBe('Enter Red Tide PPC')
+    expect(button.getAttribute('tabindex')).toBe('0')
     expect(document.activeElement).toBe(button)
   })
 
