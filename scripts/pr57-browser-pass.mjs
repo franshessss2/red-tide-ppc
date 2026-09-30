@@ -17,6 +17,34 @@ const results = []
 await fs.rm(OUT, { recursive: true, force: true })
 await fs.mkdir(OUT, { recursive: true })
 
+function comparePngHalves(buffer) {
+  const png = PNG.sync.read(buffer)
+  if (png.width % 2 !== 0) return { equal: false, differenceRatio: 1, maxDelta: 255 }
+  const halfWidth = png.width / 2
+  let differingBytes = 0
+  let totalBytes = 0
+  let maxDelta = 0
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < halfWidth; x++) {
+      const a = (y * png.width + x) * 4
+      const b = (y * png.width + x + halfWidth) * 4
+      for (let channel = 0; channel < 4; channel++) {
+        const d = Math.abs(png.data[a + channel] - png.data[b + channel])
+        totalBytes++
+        if (d !== 0) differingBytes++
+        if (d > maxDelta) maxDelta = d
+      }
+    }
+  }
+  return {
+    equal: differingBytes === 0,
+    differingBytes,
+    totalBytes,
+    differenceRatio: differingBytes / totalBytes,
+    maxDelta,
+  }
+}
+
 function comparePng(a, b) {
   const pa = PNG.sync.read(a)
   const pb = PNG.sync.read(b)
@@ -140,9 +168,8 @@ async function exerciseViewport(browser, vp) {
   const idleAt30 = await page.locator('.tide-intro').count() === 1
   if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  // Seam check: freeze every splash wave animation, then compare the front layer
-  // at the two endpoints of one complete horizontal period (0ms and 10,000ms).
-  const waveStack = page.locator('.tide-intro__wave-stack')
+  // Seam check: the front SVG contains two exact 1000-unit wave periods.
+  // Render it without translation and compare the two halves pixel-for-pixel.
   const allWaveParts = page.locator('.tide-intro__wave-layer, .tide-intro__wave-bob')
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.animationPlayState = 'paused' }))
   const front = page.locator('.tide-intro__wave-layer--front')
@@ -150,25 +177,22 @@ async function exerciseViewport(browser, vp) {
     const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
     const duration = Number(animation?.effect?.getComputedTiming().duration ?? 0)
     if (!animation || duration !== 10000) throw new Error(`front wave animation missing or wrong duration: ${duration}`)
-    animation.currentTime = 0
     return { duration }
   })
+  const originalTransform = await front.evaluate(el => el.style.transform)
+  await front.evaluate(el => { el.style.animationPlayState = 'paused'; el.style.transform = 'none' })
   await page.waitForTimeout(40)
-  const seamA = await waveStack.screenshot()
-  await fs.writeFile(`${OUT}/${vp.name}_front_period_a.png`, seamA)
-  await front.evaluate((el, duration) => {
-    const animation = el.getAnimations().find(a => a.animationName === 'tide-wave-front-x')
-    if (!animation) throw new Error('front wave animation missing')
-    animation.currentTime = duration
-  }, seamMeta.duration)
-  await page.waitForTimeout(40)
-  const seamB = await waveStack.screenshot()
-  await fs.writeFile(`${OUT}/${vp.name}_front_period_b.png`, seamB)
+  const seamImage = await front.locator('svg').screenshot()
+  await fs.writeFile(`${OUT}/${vp.name}_front_period_full.svg-frame.png`, seamImage)
+  await front.evaluate((el, value) => {
+    el.style.transform = value
+    el.style.removeProperty('animation-play-state')
+  }, originalTransform)
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.removeProperty('animation-play-state') }))
-  const seam = comparePng(seamA, seamB)
+  const seam = comparePngHalves(seamImage)
   const seamMatch = seam.equal || (seam.differenceRatio <= 0.005 && seam.maxDelta <= 8)
   if (!seamMatch) {
-    throw new Error(`${vp.name}: front wave seam mismatch after one full period: ${JSON.stringify(seam)}`)
+    throw new Error(`${vp.name}: front wave period halves do not match: ${JSON.stringify(seam)}`)
   }
 
   await page.waitForTimeout(Math.max(0, 30000 - (Date.now() - idleStart)))
