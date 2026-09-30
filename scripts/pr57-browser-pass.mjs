@@ -168,8 +168,8 @@ async function exerciseViewport(browser, vp) {
   const idleAt30 = await page.locator('.tide-intro').count() === 1
   if (!idleAt30) throw new Error(`${vp.name}: splash was not present at 30s`)
 
-  // Seam check: the front SVG contains two exact 1000-unit wave periods.
-  // Render it without translation and compare the two halves pixel-for-pixel.
+  // Seam check: clone the front SVG outside the splash clipping stack, then compare
+  // its two 1000-unit periods as rendered pixels.
   const allWaveParts = page.locator('.tide-intro__wave-layer, .tide-intro__wave-bob')
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.animationPlayState = 'paused' }))
   const front = page.locator('.tide-intro__wave-layer--front')
@@ -179,15 +179,26 @@ async function exerciseViewport(browser, vp) {
     if (!animation || duration !== 10000) throw new Error(`front wave animation missing or wrong duration: ${duration}`)
     return { duration }
   })
-  const originalTransform = await front.evaluate(el => el.style.transform)
-  await front.evaluate(el => { el.style.animationPlayState = 'paused'; el.style.transform = 'none' })
+  const svgMarkup = await front.locator('svg').evaluate(el => el.outerHTML)
+  const probe = await page.evaluate(markup => {
+    const host = document.createElement('div')
+    host.id = 'pr57-seam-probe'
+    host.style.cssText = 'position:fixed;left:0;top:0;width:200vw;height:180px;z-index:99999;pointer-events:none;overflow:visible;background:transparent'
+    host.innerHTML = markup
+    const svg = host.firstElementChild
+    if (svg) {
+      svg.setAttribute('width', '100%')
+      svg.setAttribute('height', '100%')
+      svg.setAttribute('preserveAspectRatio', 'none')
+      svg.style.display = 'block'
+    }
+    document.body.appendChild(host)
+    return host.id
+  }, svgMarkup)
   await page.waitForTimeout(40)
-  const seamImage = await front.locator('svg').screenshot()
+  const seamImage = await page.locator('#pr57-seam-probe').screenshot()
   await fs.writeFile(`${OUT}/${vp.name}_front_period_full.svg-frame.png`, seamImage)
-  await front.evaluate((el, value) => {
-    el.style.transform = value
-    el.style.removeProperty('animation-play-state')
-  }, originalTransform)
+  await page.locator('#pr57-seam-probe').evaluate(el => el.remove())
   await allWaveParts.evaluateAll(elements => elements.forEach(el => { el.style.removeProperty('animation-play-state') }))
   const seam = comparePngHalves(seamImage)
   const seamMatch = seam.equal || (seam.differenceRatio <= 0.005 && seam.maxDelta <= 8)
