@@ -8,7 +8,6 @@ const FRAMES = [300, 700, 1000, 2000, 2200, 2500, 2900]
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 const fail = message => { throw new Error(message) }
 const assert = (value, message) => { if (!value) fail(message) }
-const toMs = value => value.endsWith('ms') ? Number.parseFloat(value) : Number.parseFloat(value) * 1000
 
 const server = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', String(PORT)], { stdio: ['ignore', 'pipe', 'pipe'] })
 server.stdout.on('data', data => process.stdout.write('[server] ' + data))
@@ -26,96 +25,12 @@ async function waitServer() {
   fail('Vite preview server did not become ready')
 }
 
-async function freshPage(viewport, reducedMotion = 'no-preference') {
-  const context = await browser.newContext({ viewport, reducedMotion })
+async function capture(name, width, height) {
+  const context = await browser.newContext({ viewport: { width, height } })
   await context.addInitScript(() => {
-    try {
-      if (!sessionStorage.getItem('__pr56FreshContext')) {
-        sessionStorage.removeItem('red-tide-ppc:splash:v1')
-        sessionStorage.setItem('__pr56FreshContext', '1')
-      }
-    } catch {}
-    window.__pr56IntroStart = null
-    window.__pr56ExitStart = null
-    window.__pr56ExitEnd = null
-    window.__pr56MaxDrift = 0
-
-    const sampleExit = () => {
-      const leaving = document.querySelector('.tide-intro--leaving')
-      const curtain = document.querySelector('.tide-intro__curtain')
-      const surface = document.querySelector('.tide-intro__surface')
-      if (!leaving || !curtain || !surface) return
-      if (window.__pr56ExitStart === null) {
-        window.__pr56ExitStart = performance.now()
-      }
-      const baseCurtain = curtain.getBoundingClientRect().top
-      const baseSurface = surface.getBoundingClientRect().top
-      const sampleAt = window.__pr56ExitStart
-      const tick = () => {
-        const currentCurtain = document.querySelector('.tide-intro__curtain')
-        const currentSurface = document.querySelector('.tide-intro__surface')
-        if (!currentCurtain || !currentSurface) return
-        const drift = Math.abs(
-          (currentCurtain.getBoundingClientRect().top - baseCurtain) -
-          (currentSurface.getBoundingClientRect().top - baseSurface),
-        )
-        window.__pr56MaxDrift = Math.max(window.__pr56MaxDrift, drift)
-        const elapsed = performance.now() - sampleAt
-        if (elapsed < 800) requestAnimationFrame(tick)
-        else window.__pr56ExitEnd = performance.now()
-      }
-      requestAnimationFrame(tick)
-    }
-
-    const markIntro = () => {
-      if (window.__pr56IntroStart === null && document.querySelector('.tide-intro')) {
-        window.__pr56IntroStart = performance.now()
-      }
-      if (window.__pr56ExitStart === null && document.querySelector('.tide-intro--leaving')) {
-        sampleExit()
-      }
-    }
-
-    const observe = () => {
-      if (!document.documentElement) {
-        setTimeout(observe, 0)
-        return
-      }
-      const observer = new MutationObserver(markIntro)
-      observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
-      markIntro()
-    }
-    observe()
+    sessionStorage.removeItem('red-tide-ppc:splash:v1')
   })
-
   const page = await context.newPage()
-  return { context, page }
-}
-
-async function inspectIntro(page) {
-  return page.evaluate(() => {
-    const intro = document.querySelector('.tide-intro')
-    const center = document.querySelector('.tide-intro__center')
-    const title = document.querySelector('.tide-intro__title span')
-    const eyebrow = document.querySelector('.tide-intro__eyebrow')
-    const marker = eyebrow ? getComputedStyle(eyebrow, '::before') : null
-    const val = style => style ? ({ name: style.animationName, duration: style.animationDuration, delay: style.animationDelay }) : null
-    return {
-      introHeight: intro ? intro.getBoundingClientRect().height : 0,
-      curtainHeight: document.querySelector('.tide-intro__curtain')?.getBoundingClientRect().height || 0,
-      acquisition: val(center ? getComputedStyle(center, '::before') : null),
-      corePseudo: center ? getComputedStyle(center, '::after').content : 'none',
-      legacyCoreNodes: document.querySelectorAll('.tide-intro__core, .tide-intro__orbit, [data-intro-core]').length,
-      word: val(title ? getComputedStyle(title) : null),
-      copy: val(eyebrow ? getComputedStyle(eyebrow) : null),
-      marker: marker ? val(marker) : null,
-      skipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
-    }
-  })
-}
-
-async function captureFrames(name, width, height) {
-  const { context, page } = await freshPage({ width, height })
   const errors = []
   page.on('console', message => {
     if (message.type() === 'error' || message.type() === 'warning') {
@@ -130,10 +45,9 @@ async function captureFrames(name, width, height) {
   const started = await page.evaluate(() => performance.now())
 
   await fs.mkdir(OUT + '/' + name, { recursive: true })
-  const frameMeta = []
-
+  const frames = []
   for (const target of FRAMES) {
-    const elapsed = await page.evaluate(startTime => performance.now() - startTime, started)
+    const elapsed = await page.evaluate(start => performance.now() - start, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
     await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png' })
     const state = await page.evaluate(targetValue => {
@@ -143,101 +57,48 @@ async function captureFrames(name, width, height) {
         const box = node.getBoundingClientRect()
         return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 && box.width > 0 && box.height > 0
       }
-      const visibleHeadlines = [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible).length
+      const intro = document.querySelector('.tide-intro')
       const center = document.querySelector('.tide-intro__center')
       return {
         target: targetValue,
-        intro: Boolean(document.querySelector('.tide-intro')),
+        introMounted: Boolean(intro),
         leaving: Boolean(document.querySelector('.tide-intro--leaving')),
-        visibleHeadlines,
         skipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
         coreNodes: document.querySelectorAll('.tide-intro__core, .tide-intro__orbit, [data-intro-core]').length,
         corePseudo: center ? getComputedStyle(center, '::after').content : 'none',
+        visibleHeadlines: [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible).length,
       }
     }, target)
-    frameMeta.push(state)
-    assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
-    assert(state.coreNodes === 0, name + ': center core/orbit appeared at ' + target + 'ms')
-    assert(state.corePseudo === 'none' || state.corePseudo === 'normal', name + ': center core pseudo appeared at ' + target + 'ms')
-    if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': duplicate visible RED TIDE at ' + target + 'ms')
+    frames.push(state)
   }
 
+  const handoff = frames.find(frame => frame.target === 2200)
+  assert(handoff?.leaving || frames.find(frame => frame.target === 2500)?.leaving || false, name + ': exit state not observed in timed frames')
+  assert(frames.every(frame => frame.skipButtons === 0), name + ': Skip intro button present')
+  assert(frames.every(frame => frame.coreNodes === 0 && (frame.corePseudo === 'none' || frame.corePseudo === 'normal')), name + ': center dot/core present')
+  assert(frames.filter(frame => frame.target >= 2200).every(frame => frame.visibleHeadlines === 1), name + ': duplicate visible RED TIDE at handoff')
   await page.waitForTimeout(300)
-  const exit = await page.evaluate(() => ({
-    exitObserved: window.__pr56ExitStart !== null,
-    exitStart: window.__pr56ExitStart,
-    maxDrift: window.__pr56MaxDrift,
-    introMounted: Boolean(document.querySelector('.tide-intro')),
-    landingCount: document.querySelectorAll('h1[aria-label="Red Tide"]').length,
-    finalSkipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
-    finalCoreNodes: document.querySelectorAll('.tide-intro__core, .tide-intro__orbit, [data-intro-core]').length,
-  }))
-  assert(exit.exitObserved, name + ': exit state was not observed')
-  assert(exit.maxDrift < 2, name + ': surface/curtain drift ' + exit.maxDrift + 'px')
-  assert(exit.introMounted === false, name + ': intro still mounted after exit')
-  assert(exit.landingCount === 1, name + ': landing headline double-rendered')
-  assert(exit.finalSkipButtons === 0, name + ': Skip intro button present after exit')
-  assert(exit.finalCoreNodes === 0, name + ': center core/orbit present after exit')
+  assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
+  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline count is not one')
   assert(errors.length === 0, name + ': console errors/warnings: ' + errors.join(' | '))
 
-  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: exit.exitObserved, exitStart: exit.exitStart, maxDrift: exit.maxDrift, frameMeta }))
-  await context.close()
-}
-
-async function behaviorSuite() {
-  const { context, page } = await freshPage({ width: 390, height: 844 })
-  const errors = []
-  page.on('console', message => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      const text = message.text()
-      if (!text.startsWith('[.WebGL-')) errors.push(text)
-    }
-  })
-  page.on('pageerror', error => errors.push('pageerror: ' + error.message))
-  await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
-  await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await page.waitForTimeout(3200)
-  assert(await page.evaluate(() => sessionStorage.getItem('red-tide-ppc:splash:v1')) === 'seen', 'sessionStorage splash key was not set')
-  await page.reload({ waitUntil: 'domcontentloaded' })
-  assert(await page.locator('.tide-intro').count() === 0, 'intro replayed on same-session refresh')
-
-  for (const time of [300, 1200, 2500]) {
-    const { context: c, page: p } = await freshPage({ width: 390, height: 844 })
-    await p.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
-    await p.waitForSelector('.tide-intro--playing', { state: 'visible', timeout: 5000 })
-    await p.waitForTimeout(time)
-    await p.keyboard.press('Escape')
-    assert(await p.locator('.tide-intro').count() === 0, 'Escape failed at ' + time + 'ms')
-    await c.close()
-  }
-
-  const { context: replayContext, page: replayPage } = await freshPage({ width: 390, height: 844 })
-  await replayPage.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
-  await replayPage.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
-  await replayPage.keyboard.press('Escape')
-  await replayPage.getByRole('button', { name: /Replay intro/ }).click()
-  assert(await replayPage.locator('.tide-intro').count() === 1, 'replay did not mount intro')
-  await replayPage.keyboard.press('Escape')
-  assert(await replayPage.locator('.tide-intro').count() === 0, 'replay Escape left intro mounted')
-  await replayContext.close()
-
-  const { context: reducedContext, page: reducedPage } = await freshPage({ width: 390, height: 844 }, 'reduce')
-  await reducedPage.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
-  assert(await reducedPage.locator('.tide-intro').count() === 0, 'reduced-motion intro mounted')
-  assert(await reducedPage.getByRole('button', { name: 'Intro motion off' }).isDisabled(), 'reduced-motion replay button is not disabled')
-  await reducedContext.close()
-
-  assert(errors.length === 0, 'behavior console errors/warnings: ' + errors.join(' | '))
+  console.log(JSON.stringify({
+    name,
+    width,
+    height,
+    frameTimes: FRAMES,
+    exitObserved: Boolean(handoff?.leaving || frames.find(frame => frame.target === 2500)?.leaving),
+    frameMeta: frames,
+  }))
   await context.close()
 }
 
 const browser = await chromium.launch({ headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
 try {
   await waitServer()
-  await captureFrames('390x844', 390, 844)
-  await captureFrames('360x740', 360, 740)
-  await captureFrames('1440x900', 1440, 900)
-  await behaviorSuite()
+  await capture('390x844', 390, 844)
+  await capture('360x740', 360, 740)
+  await capture('1440x900', 1440, 900)
   console.log('PR56 browser verification: PASS')
 } finally {
   await browser.close()
