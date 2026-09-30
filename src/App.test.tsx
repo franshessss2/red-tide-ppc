@@ -86,8 +86,8 @@ describe('landing page (/)', () => {
     const h1 = screen.getByRole('heading', { name: 'Red Tide' })
     await waitFor(
       () => {
-        const overlay = h1.querySelector('span.absolute') as HTMLElement
-        expect(overlay.textContent).toBe('RED TIDE')
+        const headline = h1.querySelector('[data-text-pressure-target]') as HTMLElement
+        expect(headline.textContent).toBe('RED TIDE')
       },
       { timeout: 3000 },
     )

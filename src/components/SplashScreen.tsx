@@ -72,8 +72,9 @@ export function SplashScreen() {
     const scope = createMotionScope()
     const title = titleRef.current
     const heading = pageRef.current?.querySelector<HTMLElement>('h1[aria-label="Red Tide"]')
-    // Measure the text's own box, not the full-width h1 container.
-    const destination = heading?.querySelector<HTMLElement>('[aria-label="RED TIDE"]') ?? heading
+    // Measure the rendered headline span, not the full-width h1 container. TextPressure
+    // keeps this selector stable without changing its accessible name.
+    const destination = heading?.querySelector<HTMLElement>('[data-text-pressure-target]') ?? heading
     const overlay = overlayRef.current
     let animation: Animation | undefined
     let hidingTwin = false

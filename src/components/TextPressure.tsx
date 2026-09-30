@@ -5,16 +5,19 @@ import { useReducedMotion } from '../motion/preferences'
 const RADIUS = 120
 const MAX_SCALE = 1.08
 
+function isCoarsePointer() {
+  return typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: coarse)').matches)
+}
+
 export function TextPressure({ text, className = '' }: { text: string; className?: string }) {
   const reduce = useReducedMotion()
-  const [coarse, setCoarse] = useState(() =>
-    typeof window === 'undefined' ? true : window.matchMedia('(pointer: coarse)').matches,
-  )
+  const [coarse, setCoarse] = useState(isCoarsePointer)
   const pointerX = useMotionValue(-10000)
   const pointerY = useMotionValue(-10000)
 
   useEffect(() => {
-    const media = window.matchMedia('(pointer: coarse)')
+    const media = window.matchMedia?.('(pointer: coarse)')
+    if (!media) return
     const sync = () => setCoarse(media.matches)
     sync()
     media.addEventListener?.('change', sync)
@@ -22,7 +25,7 @@ export function TextPressure({ text, className = '' }: { text: string; className
   }, [])
 
   if (reduce || coarse) {
-    return <span className={`inline-block ${className}`}>{text}</span>
+    return <span data-text-pressure-target className={`inline-block ${className}`}>{text}</span>
   }
 
   return (
@@ -37,6 +40,7 @@ export function TextPressure({ text, className = '' }: { text: string; className
         pointerY.set(-10000)
       }}
       aria-hidden="true"
+      data-text-pressure-target
     >
       {Array.from(text).map((char, index) => (
         <PressureLetterLive

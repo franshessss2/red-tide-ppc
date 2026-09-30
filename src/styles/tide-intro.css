@@ -74,7 +74,12 @@
 .tide-intro--leaving .tide-intro__title-clip { overflow: visible; }
 .tide-intro--leaving .tide-intro__chrome:not(.tide-intro__top),
 .tide-intro--leaving .tide-intro__location, .tide-intro--leaving .tide-intro__surface { opacity: 0; transition: opacity var(--dur-base, 220ms); }
-.tide-intro--leaving .tide-intro__top { border-color: transparent; }
+.tide-intro--leaving .tide-intro__top {
+  opacity: 0;
+  pointer-events: none;
+  border-color: transparent;
+  transition: opacity var(--dur-base, 220ms) var(--ease-out-quint);
+}
 .tide-intro[data-handoff="fade"] .tide-intro__title { opacity: 0; transition: opacity var(--motion-reveal, 380ms); }
 .tide-replay-wrap { background: var(--color-ink); padding: 0 1.25rem max(1.4rem, env(safe-area-inset-bottom)); text-align: center; }
 .tide-replay {
