@@ -85,7 +85,7 @@ async function captureFrames(name, width, height) {
         window.__pr56IntroStart = performance.now()
       }
     }
-    new MutationObserver(markIntroStart).observe(document.documentElement, { childList: true, subtree: true })
+    new MutationObserver(markIntroStart).observe(document, { childList: true, subtree: true })
   })
   await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
