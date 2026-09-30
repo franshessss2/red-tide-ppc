@@ -51,7 +51,7 @@
   animation: tide-copy-in var(--motion-reveal, 380ms) var(--ease-out-quint) calc(var(--motion-intro-copy-start, 850ms) + var(--motion-fast, 140ms)) both;
 }
 /* All water artwork shares the wordmark baseline. No extra canvas or filter. */
-.tide-intro__surface { position: absolute; bottom: 0; left: 50%; width: 100vw; height: 0; transform: translateX(-50%); pointer-events: none; }
+.tide-intro__surface { position: absolute; bottom: 0; left: 50%; width: 100vw; height: 0; transform: translateX(-50%); pointer-events: none; will-change: transform; }
 .tide-intro__horizon {
   position: absolute; top: 0; left: 10%; width: 80%; height: 1px;
   background: linear-gradient(90deg, transparent, #f0a500b3 48%, #f0a50030 72%, transparent);
@@ -70,10 +70,11 @@
   bottom: max(1.8rem, env(safe-area-inset-bottom)); padding-top: 1.2rem; border-top: 1px solid #ffffff16;
   font: 400 .75rem/1.5 var(--font-mono); letter-spacing: .12em; color: #8c8582;
 }
-.tide-intro--leaving .tide-intro__curtain { animation: tide-curtain-out var(--motion-intro-exit, 1050ms) var(--ease-tide) both; }
+.tide-intro--leaving .tide-intro__curtain { animation: tide-curtain-out var(--motion-intro-exit, 800ms) var(--ease-tide) both; }
+.tide-intro--leaving .tide-intro__surface { animation: tide-surface-out var(--motion-intro-exit, 800ms) var(--ease-tide) both; }
 .tide-intro--leaving .tide-intro__title-clip { overflow: visible; }
 .tide-intro--leaving .tide-intro__chrome:not(.tide-intro__top),
-.tide-intro--leaving .tide-intro__location, .tide-intro--leaving .tide-intro__surface { opacity: 0; transition: opacity var(--dur-base, 220ms); }
+.tide-intro--leaving .tide-intro__location { opacity: 0; transition: opacity var(--dur-base, 220ms); }
 .tide-intro--leaving .tide-intro__top {
   opacity: 0;
   pointer-events: none;
@@ -93,10 +94,11 @@
 @keyframes tide-word-in { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes tide-copy-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes tide-horizon {
-  0% { opacity: .5; transform: scaleX(.08); }
-  7% { opacity: 1; transform: scaleX(.28); }
-  40% { opacity: .7; transform: scaleX(1); }
-  70%, 100% { opacity: 0; transform: scaleX(1); }
+  0% { opacity: .18; transform: scaleX(.08); }
+  24% { opacity: .72; transform: scaleX(.42); }
+  48% { opacity: .9; transform: scaleX(1); }
+  68% { opacity: .52; transform: scaleX(1); }
+  100% { opacity: .34; transform: scaleX(1); }
 }
 @keyframes tide-ripple { from { opacity: .55; transform: scale(.08); } to { opacity: 0; transform: scale(1); } }
 @keyframes tide-contour {
@@ -105,6 +107,7 @@
   100% { opacity: 1; transform: scaleY(1); }
 }
 @keyframes tide-curtain-out { from { transform: translateY(0); } to { transform: translateY(115%); } }
+@keyframes tide-surface-out { from { transform: translate(-50%, 0); } to { transform: translate(-50%, 115dvh); } }
 @media (max-width: 600px) {
   .tide-intro__location { max-width: 10rem; letter-spacing: .055em; }
   .tide-intro__location span { padding: 0 .2rem; }
@@ -189,7 +192,7 @@
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
-  animation: tide-orbit-in 1400ms var(--ease-out-quint) 220ms both;
+  animation: tide-orbit-in 520ms var(--ease-out-quint) 140ms both;
 }
 
 .tide-intro__center::after {
@@ -207,7 +210,7 @@
     0 0 22px #f0a50055;
   opacity: 0;
   pointer-events: none;
-  animation: tide-core-in 650ms var(--ease-spring) 520ms both;
+  animation: tide-core-in 200ms var(--ease-spring) 400ms both;
 }
 
 .tide-intro__title span {
@@ -227,7 +230,7 @@
   color: #ff5252;
   opacity: 0;
   transform: translateX(-8px);
-  animation: tide-marker-in 420ms var(--ease-out-quint) 760ms both;
+  animation: tide-marker-in 360ms var(--ease-out-quint) 900ms both;
 }
 
 .tide-intro__horizon::after {
@@ -238,8 +241,8 @@
   width: 18%;
   height: 5px;
   border-radius: 50%;
-  background: #f0a50055;
-  filter: blur(5px);
+  background: #f0a50035;
+  filter: blur(4px);
   opacity: 0;
   animation: tide-horizon-spark 1200ms var(--ease-out-quint) 420ms both;
 }
@@ -249,15 +252,15 @@
   content: "";
   position: absolute;
   inset: 0;
-  border: 1px solid #ff525220;
+  border: 1px solid #ff525212;
   border-radius: 50%;
   opacity: 0;
   transform: scale(.1);
-  animation: tide-ripple-secondary 1100ms var(--ease-out-quint) 340ms both;
+  animation: tide-ripple-secondary 900ms var(--ease-out-quint) 280ms both;
 }
 
 .tide-intro__ripple::after {
-  animation-delay: 520ms;
+  animation-delay: 440ms;
 }
 
 .tide-intro--leaving .tide-intro::before,
@@ -271,12 +274,12 @@
 
 @keyframes tide-grid-in {
   from { opacity: 0; transform: scale(1.08); }
-  to { opacity: .32; transform: scale(1); }
+  to { opacity: .2; transform: scale(1); }
 }
 
 @keyframes tide-atmosphere-in {
   from { opacity: 0; transform: scale(1.06); }
-  to { opacity: .24; transform: scale(1); }
+  to { opacity: .16; transform: scale(1); }
 }
 
 @keyframes tide-atmosphere-out {
@@ -285,8 +288,9 @@
 }
 
 @keyframes tide-orbit-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.72) rotate(-8deg); }
+  60% { opacity: .9; transform: translate(-50%, -50%) scale(1.04) rotate(0); }
+  100% { opacity: .5; transform: translate(-50%, -50%) scale(1) rotate(0); }
 }
 
 @keyframes tide-orbit-out {
@@ -296,7 +300,8 @@
 
 @keyframes tide-core-in {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-  65% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); }
+  30% { opacity: .95; transform: translate(-50%, -50%) scale(1.15); }
+  60% { opacity: .82; transform: translate(-50%, -50%) scale(1.05); }
   100% { opacity: .72; transform: translate(-50%, -50%) scale(1); }
 }
 
@@ -319,7 +324,7 @@
 
 @keyframes tide-ripple-secondary {
   0% { opacity: 0; transform: scale(.1); }
-  18% { opacity: .5; }
+  18% { opacity: .28; }
   100% { opacity: 0; transform: scale(1.45); }
 }
 
