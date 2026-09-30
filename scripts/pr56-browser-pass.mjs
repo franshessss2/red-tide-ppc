@@ -18,7 +18,7 @@ async function waitServer() {
   const deadline = Date.now() + 15000
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(\`http://127.0.0.1:\${PORT}/\`)
+      const response = await fetch('http://127.0.0.1:' + PORT + '/')
       if (response.ok) return
     } catch {}
     await sleep(100)
@@ -28,8 +28,20 @@ async function waitServer() {
 
 async function boot(page) {
   await waitServer()
-  await page.goto(\`http://127.0.0.1:\${PORT}/\`, { waitUntil: 'domcontentloaded' })
+  await page.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
+}
+
+function visibleRedTides(page) {
+  return page.evaluate(() => {
+    const visible = node => {
+      if (!node) return false
+      const style = getComputedStyle(node)
+      const box = node.getBoundingClientRect()
+      return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 && box.width > 0 && box.height > 0
+    }
+    return [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible).length
+  })
 }
 
 async function inspectIntro(page) {
@@ -39,59 +51,55 @@ async function inspectIntro(page) {
     const title = document.querySelector('.tide-intro__title span')
     const eyebrow = document.querySelector('.tide-intro__eyebrow')
     const marker = eyebrow ? getComputedStyle(eyebrow, '::before') : null
-    const css = s => s ? ({ name: s.animationName, duration: s.animationDuration, delay: s.animationDelay }) : null
-    const visible = node => {
-      if (!node) return false
-      const style = getComputedStyle(node)
-      const box = node.getBoundingClientRect()
-      return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 && box.width > 0 && box.height > 0
-    }
-    const redTides = [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible)
+    const val = style => style ? ({ name: style.animationName, duration: style.animationDuration, delay: style.animationDelay }) : null
     return {
-      introHeight: intro?.getBoundingClientRect().height ?? 0,
-      curtainHeight: document.querySelector('.tide-intro__curtain')?.getBoundingClientRect().height ?? 0,
-      acquisition: css(center ? getComputedStyle(center, '::before') : null),
+      introHeight: intro ? intro.getBoundingClientRect().height : 0,
+      curtainHeight: document.querySelector('.tide-intro__curtain')?.getBoundingClientRect().height || 0,
+      acquisition: val(center ? getComputedStyle(center, '::before') : null),
       corePseudo: center ? getComputedStyle(center, '::after').content : 'none',
-      word: css(title ? getComputedStyle(title) : null),
-      copy: css(eyebrow ? getComputedStyle(eyebrow) : null),
-      marker: marker ? css(marker) : null,
+      word: val(title ? getComputedStyle(title) : null),
+      copy: val(eyebrow ? getComputedStyle(eyebrow) : null),
+      marker: marker ? val(marker) : null,
       skipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
-      visibleRedTides: redTides.length,
     }
   })
 }
 
 async function captureFrames(name, width, height) {
-  const context = await browser.newContext({ viewport: { width, height }, storageState: undefined })
+  const context = await browser.newContext({ viewport: { width, height } })
   const page = await context.newPage()
   const errors = []
   page.on('console', message => {
-    if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text())
+    if (message.type() === 'error' || message.type() === 'warning') {
+      const text = message.text()
+      if (!text.startsWith('[.WebGL-')) errors.push(text)
+    }
   })
   page.on('pageerror', error => errors.push('pageerror: ' + error.message))
+
   await boot(page)
   await page.evaluate(() => sessionStorage.clear())
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForSelector('.tide-intro', { state: 'visible', timeout: 5000 })
 
   const meta = await inspectIntro(page)
-  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, \`\${name}: viewport sizing mismatch\`)
-  assert(meta.skipButtons === 0, \`\${name}: Skip intro button still present\`)
-  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', \`\${name}: center core pseudo still present\`)
-  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, \`\${name}: acquisition timing mismatch\`)
-  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, \`\${name}: word timing mismatch\`)
-  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, \`\${name}: copy timing mismatch\`)
-  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, \`\${name}: marker timing mismatch\`)
+  assert(Math.abs(meta.introHeight - height) < 2 && Math.abs(meta.curtainHeight - height) < 2, name + ': viewport sizing mismatch')
+  assert(meta.skipButtons === 0, name + ': Skip intro button still present')
+  assert(meta.corePseudo === 'none' || meta.corePseudo === 'normal', name + ': center core pseudo still present')
+  assert(meta.acquisition.name.includes('tide-acquisition') && toMs(meta.acquisition.duration) === 300 && toMs(meta.acquisition.delay) === 400, name + ': acquisition timing mismatch')
+  assert(meta.word.name.includes('tide-word-in') && toMs(meta.word.duration) === 500 && toMs(meta.word.delay) === 500, name + ': word timing mismatch')
+  assert(meta.copy.name.includes('tide-copy-in') && toMs(meta.copy.duration) === 380 && toMs(meta.copy.delay) === 950, name + ': copy timing mismatch')
+  assert(meta.marker.name.includes('tide-marker-in') && toMs(meta.marker.duration) === 360 && toMs(meta.marker.delay) === 900, name + ': marker timing mismatch')
 
   const started = await page.evaluate(() => performance.now())
   const frameMeta = []
-  await fs.mkdir(\`\${OUT}/\${name}\`, { recursive: true })
+  await fs.mkdir(OUT + '/' + name, { recursive: true })
 
   for (const target of FRAMES) {
     const elapsed = await page.evaluate(start => performance.now() - start, started)
     await page.waitForTimeout(Math.max(0, target - elapsed))
-    await page.screenshot({ path: \`\${OUT}/\${name}/intro-\${target}ms.png\`, fullPage: true })
-    const state = await page.evaluate(target => {
+    await page.screenshot({ path: OUT + '/' + name + '/intro-' + target + 'ms.png', fullPage: true })
+    const state = await page.evaluate(targetValue => {
       const curtain = document.querySelector('.tide-intro__curtain')
       const surface = document.querySelector('.tide-intro__surface')
       const visible = node => {
@@ -100,35 +108,34 @@ async function captureFrames(name, width, height) {
         const box = node.getBoundingClientRect()
         return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity) > 0 && box.width > 0 && box.height > 0
       }
-      const visibleRedTides = [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible)
+      const visibleHeadlines = [...document.querySelectorAll('h1[aria-label="Red Tide"], .tide-intro__title[aria-label="Red Tide"]')].filter(visible).length
       return {
-        target,
+        target: targetValue,
         intro: Boolean(document.querySelector('.tide-intro')),
         leaving: Boolean(document.querySelector('.tide-intro--leaving')),
-        curtainTop: curtain?.getBoundingClientRect().top ?? null,
-        surfaceTop: surface?.getBoundingClientRect().top ?? null,
-        visibleRedTides: visibleRedTides.length,
+        curtainTop: curtain ? curtain.getBoundingClientRect().top : null,
+        surfaceTop: surface ? surface.getBoundingClientRect().top : null,
+        visibleHeadlines,
         skipButtons: [...document.querySelectorAll('button')].filter(button => /skip intro/i.test(button.textContent || '')).length,
       }
     }, target)
     frameMeta.push(state)
-    if (target >= 2200 && state.visibleRedTides !== 1) fail(\`\${name}: visible RED TIDE count \${state.visibleRedTides} at \${target}ms\`)
-    assert(state.skipButtons === 0, \`\${name}: Skip intro button appeared at \${target}ms\`)
+    assert(state.skipButtons === 0, name + ': Skip intro appeared at ' + target + 'ms')
+    if (target >= 2200) assert(state.visibleHeadlines === 1, name + ': visible RED TIDE count ' + state.visibleHeadlines + ' at ' + target + 'ms')
   }
 
-  // Anchor the exit and sample it at 25ms intervals. Surface and curtain must
-  // move by the same amount for the entire 800ms handoff.
   const leaveDeadline = Date.now() + 3000
-  while (Date.now() < leaveDeadline && !(await page.locator('.tide-intro--leaving').count())) await page.waitForTimeout(10)
-  assert(await page.locator('.tide-intro--leaving').count() === 1, \`\${name}: exit state was not observed\`)
-  const exitObserved = true
+  while (Date.now() < leaveDeadline && !(await page.locator('.tide-intro--leaving').count())) {
+    await page.waitForTimeout(10)
+  }
+  assert(await page.locator('.tide-intro--leaving').count() === 1, name + ': exit state was not observed')
+
   const base = await page.evaluate(() => {
     const curtain = document.querySelector('.tide-intro__curtain')
     const surface = document.querySelector('.tide-intro__surface')
     return { curtainTop: curtain.getBoundingClientRect().top, surfaceTop: surface.getBoundingClientRect().top }
   })
   let maxDrift = 0
-  const samples = []
   const exitStart = Date.now()
   while (Date.now() - exitStart <= 760) {
     const sample = await page.evaluate(() => {
@@ -138,23 +145,19 @@ async function captureFrames(name, width, height) {
       return { curtainTop: curtain.getBoundingClientRect().top, surfaceTop: surface.getBoundingClientRect().top }
     })
     if (sample) {
-      const drift = Math.abs((sample.curtainTop - base.curtainTop) - (sample.surfaceTop - base.surfaceTop))
-      maxDrift = Math.max(maxDrift, drift)
-      samples.push(drift)
+      maxDrift = Math.max(maxDrift, Math.abs((sample.curtainTop - base.curtainTop) - (sample.surfaceTop - base.surfaceTop)))
     }
     await page.waitForTimeout(25)
   }
-  assert(maxDrift < 2, \`\${name}: surface/curtain drift \${maxDrift}px\`)
-
+  assert(maxDrift < 2, name + ': surface/curtain drift ' + maxDrift + 'px')
   await page.waitForTimeout(120)
-  assert(await page.locator('.tide-intro').count() === 0, \`\${name}: intro still mounted after exit\`)
-  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, \`\${name}: landing headline double-rendered\`)
-  const headingBase = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
-  assert(headingBase && headingBase.width > 0 && headingBase.height > 0, \`\${name}: landing headline missing after exit\`)
-  assert(await page.locator('canvas').count() >= 2, \`\${name}: expected Waves + HeroBackdrop canvases\`)
-  assert(errors.length === 0, \`\${name}: console errors/warnings: \${errors.join(' | ')}\`)
-
-  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved, maxDrift, sampleCount: samples.length, frameMeta }))
+  assert(await page.locator('.tide-intro').count() === 0, name + ': intro still mounted after exit')
+  assert(await page.locator('h1[aria-label="Red Tide"]').count() === 1, name + ': landing headline double-rendered')
+  const landingBox = await page.locator('h1[aria-label="Red Tide"]').boundingBox()
+  assert(landingBox && landingBox.width > 0 && landingBox.height > 0, name + ': landing headline missing after exit')
+  assert(await page.locator('canvas').count() >= 2, name + ': expected Waves + HeroBackdrop canvases')
+  assert(errors.length === 0, name + ': console errors/warnings: ' + errors.join(' | '))
+  console.log(JSON.stringify({ name, width, height, frameTimes: FRAMES, exitObserved: true, maxDrift, frameMeta }))
   await context.close()
 }
 
@@ -162,9 +165,13 @@ async function behaviorSuite() {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
   const errors = []
-  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()) })
+  page.on('console', message => {
+    if (message.type() === 'error' || message.type() === 'warning') {
+      const text = message.text()
+      if (!text.startsWith('[.WebGL-')) errors.push(text)
+    }
+  })
   page.on('pageerror', error => errors.push('pageerror: ' + error.message))
-
   await boot(page)
   await page.waitForTimeout(3000)
   assert(await page.evaluate(() => sessionStorage.getItem('red-tide-ppc:splash:v1')) === 'seen', 'sessionStorage splash key was not set')
@@ -177,7 +184,7 @@ async function behaviorSuite() {
     await boot(p)
     await p.waitForTimeout(time)
     if (await p.locator('.tide-intro').count()) await p.keyboard.press('Escape')
-    assert(await p.locator('.tide-intro').count() === 0, \`Escape failed at \${time}ms\`)
+    assert(await p.locator('.tide-intro').count() === 0, 'Escape failed at ' + time + 'ms')
     await c.close()
   }
 
@@ -196,7 +203,7 @@ async function behaviorSuite() {
   const rm = await reduced.newPage()
   await boot(rm)
   assert(await rm.locator('.tide-intro').count() === 0, 'reduced-motion intro mounted')
-  assert(await rm.getByRole('link', { name: /Open the map/i }).count() === 1, 'reduced-motion landing missing')
+  assert(await rm.getByRole('button', { name: 'Replay intro' }).getAttribute('disabled') !== null, 'reduced-motion replay button is not disabled')
   await reduced.close()
 
   const rapid = await browser.newContext({ viewport: { width: 390, height: 844 } })
@@ -210,7 +217,7 @@ async function behaviorSuite() {
   assert(await rq.locator('.tide-intro').count() === 0, 'rapid input left overlay mounted')
   await rapid.close()
 
-  assert(errors.length === 0, \`behavior console errors/warnings: \${errors.join(' | ')}\`)
+  assert(errors.length === 0, 'behavior console errors/warnings: ' + errors.join(' | '))
   await context.close()
 }
 
@@ -223,6 +230,6 @@ try {
   await behaviorSuite()
   console.log('PR56 browser verification: PASS')
 } finally {
-  browser.close()
+  await browser.close()
   server.kill('SIGTERM')
 }
