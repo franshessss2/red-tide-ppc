@@ -133,14 +133,11 @@ export function SplashScreen() {
     }
     if (!hidingTwin) overlay?.setAttribute('data-handoff', 'fade')
     scope.timeout(finish, INTRO_EXIT_MS)
-    // A resized viewport cannot leave the wordmark at a stale destination.
-    window.addEventListener('resize', finish, { once: true })
     return () => {
       scope.dispose()
       animation?.cancel()
       if (hidingTwin && heading) heading.style.visibility = previousVisibility
       overlay?.removeAttribute('data-handoff')
-      window.removeEventListener('resize', finish)
     }
   }, [phase, finish, reduce])
 
