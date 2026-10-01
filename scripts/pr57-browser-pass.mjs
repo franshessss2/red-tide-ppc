@@ -206,7 +206,7 @@ async function exerciseViewport(browser, vp) {
   await seamBob.evaluate(el => {
     el.style.animation = ''
     el.style.transform = ''
-    node.removeAttribute('data-pr57-seam-bob')
+    el.removeAttribute('data-pr57-seam-bob')
   })
   const seamGeometry = await front.evaluate(el => {
     const stroke = el.querySelector('path[stroke]')
