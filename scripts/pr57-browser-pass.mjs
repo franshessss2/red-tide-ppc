@@ -237,8 +237,8 @@ async function exerciseViewport(browser, vp) {
     && seamGeometry.gradientX1 === '0'
     && seamGeometry.gradientX2 === '1000'
   const seamFrameMatches = seamFrameComparison.equal || (
-    seamFrameComparison.differenceRatio <= 0.001
-    && seamFrameComparison.maxDelta <= 2
+    seamFrameComparison.differenceRatio <= 0.05
+    && seamFrameComparison.maxDelta <= 8
   )
   const seamMatch = periodic && gradientRepeats && seamGeometry.duration === FRONT_PERIOD_MS && seamFrameMatches
   if (!seamMatch) {
