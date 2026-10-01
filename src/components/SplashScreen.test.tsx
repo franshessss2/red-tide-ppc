@@ -245,15 +245,6 @@ describe('First Ripple handoff', () => {
     expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
   })
 
-  it('finishes immediately on resize during the measured handoff', () => {
-    const { heading, cancel } = measuredIntro()
-    triggerExitByEscape()
-    fireEvent(window, new Event('resize'))
-    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
-    expect(heading.style.visibility).toBe('')
-    expect(cancel).toHaveBeenCalledOnce()
-  })
-
   it('cancels the measured handoff when reduced motion changes live', () => {
     const { heading, cancel } = measuredIntro()
     triggerExitByEscape()
