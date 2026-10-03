@@ -90,7 +90,7 @@ describe('six-item pass on /map (jsdom side)', () => {
 
     const panel = drawer()
     expect(panel.dataset.state).toBe('collapsed')
-    expect(within(panel).getByText('7 zones · No advisories')).toBeTruthy()
+    expect(within(panel).getByText('7 zones · 0 warnings')).toBeTruthy()
     expect(within(panel).getByText('01 / 02')).toBeTruthy()
 
     const attribution = within(panel).getByRole('link', { name: '© OSM', hidden: true })

@@ -1,18 +1,17 @@
-import { useEffect, useId } from 'react'
-import { animate, LayoutGroup, motion, useMotionValue, useTransform } from 'motion/react'
+import { useId } from 'react'
+import { LayoutGroup, motion, useMotionValue, useTransform } from 'motion/react'
 import type { MotionValue } from 'motion/react'
 import { ZONE_STATUS_ORDER } from '../lib/status'
 import { useReducedMotion } from '../motion/preferences'
-import { MOTION, spring, tween } from '../motion/tokens'
+import { spring } from '../motion/tokens'
 import { usePulse } from '../motion/usePulse'
 import { resolveActiveStatus } from '../motion/statusKey'
 import { zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { ZoneStatus } from '../types'
-import { CountUp } from './CountUp'
-import { StatusPip } from './StatusPip'
+import { ZoneStatusIcon } from './ZoneStatusIcon'
 
 /**
- * The status key: the ADVISORY / UNCONFIRMED / SAFE count pills, fixed
+ * The status key: warning / review / unavailable / no-alert record counts, fixed
  * top-left over the map.
  *
  * WHAT IT IS — AND WHAT IT IS NOT
@@ -43,6 +42,7 @@ import { StatusPip } from './StatusPip'
 
 export interface StatusKeyProps {
   counts: Record<ZoneStatus, number>
+  ready?: boolean
   /** Optional fade driver; defaults to always visible. */
   chromeOpacity?: MotionValue<number>
   /**
@@ -52,18 +52,11 @@ export interface StatusKeyProps {
   activeStatus?: ZoneStatus | null
 }
 
-export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProps) {
-  const reduceMotion = useReducedMotion()
-
+export function StatusKey({ counts, chromeOpacity, activeStatus, ready = true }: StatusKeyProps) {
   const groupId = useId()
-  const fallbackOpacity = useMotionValue(reduceMotion ? 1 : 0)
+  const fallbackOpacity = useMotionValue(1)
   const opacity = chromeOpacity ?? fallbackOpacity
-  useEffect(() => {
-    if (chromeOpacity) return
-    if (reduceMotion) { fallbackOpacity.jump(1); return }
-    const animation = animate(fallbackOpacity, 1, tween(false, MOTION.time.reveal))
-    return () => animation.stop()
-  }, [chromeOpacity, fallbackOpacity, reduceMotion])
+
 
   // Chips re-enable pointer events only while the chrome is actually
   // visible — invisible chrome must never eat map gestures.
@@ -76,7 +69,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
   return (
     <motion.div
       style={{ opacity }}
-      className="pointer-events-none absolute left-3 top-[4.5rem] z-[var(--layer-chrome)] mt-[env(safe-area-inset-top)]"
+      className="map-status-key pointer-events-none absolute left-3 top-[4.5rem] z-[var(--layer-chrome)] max-w-[calc(100vw-5rem)] mt-[env(safe-area-inset-top)]"
       data-testid="status-key"
     >
       <motion.div
@@ -90,7 +83,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
           <StatusChip
             key={status}
             status={status}
-            count={counts[status] ?? 0}
+            count={ready ? counts[status] ?? 0 : null}
             active={status === active}
           />
         ))}
@@ -108,8 +101,7 @@ export function StatusKey({ counts, chromeOpacity, activeStatus }: StatusKeyProp
  *    active status changes (selection or counts), motion moves that single
  *    element from the old chip's bounds to the new one — the highlight slides
  *    between pills while the pills themselves never move;
- *  - the count ticks through `<CountUp/>` instead of cutting to the new
- *    number.
+ *  - critical counts appear immediately; the surrounding indicator acknowledges changes.
  *
  * The indicator is a static-tinted layer (no looping animation, no shadow
  * animation — a transform-only layout move), so the row stays as cheap as
@@ -121,7 +113,7 @@ function StatusChip({
   active,
 }: {
   status: ZoneStatus
-  count: number
+  count: number | null
   active: boolean
 }) {
   const theme = zoneTheme(status)
@@ -142,15 +134,7 @@ function StatusChip({
           transition={spring(reduceMotion)}
         />
       )}
-      {/* The pip pops whenever the count changes — a legend that only re-colours
-          is a legend nobody notices going from 0 to 1. */}
-      <StatusPip
-        size="xs"
-        hex={theme.hex}
-        pulses={theme.pulses}
-        glowClass={theme.glowClass}
-        trigger={count}
-      />
+      <span style={{ color: theme.hex }}><ZoneStatusIcon status={status} /></span>
       <span className="font-display text-[11px] leading-none tracking-[0.03em] text-paper/85">
         {label}
       </span>
@@ -160,12 +144,12 @@ function StatusChip({
 }
 
 /**
- * The pip already pulses on a count change; this gives the digit itself a
+ * The final count stays readable while this gives the digit itself a
  * short acknowledgement too, so the data that changed is the thing that
  * briefly expands. It is intentionally one-shot and transform-only (plus a
  * tiny text shadow) rather than a loop.
  */
-function StatusCount({ count, color }: { count: number; color: string }) {
+function StatusCount({ count, color }: { count: number | null; color: string }) {
   const ref = usePulse<HTMLSpanElement>(count)
 
   return (
@@ -174,7 +158,7 @@ function StatusCount({ count, color }: { count: number; color: string }) {
       className="inline-block origin-center font-mono text-[10px] leading-none"
       style={{ color }}
     >
-      <CountUp to={count} duration={MOTION.time.countUpdate} />
+      {count ?? '—'}
     </span>
   )
 }

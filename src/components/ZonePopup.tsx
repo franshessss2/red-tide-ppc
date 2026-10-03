@@ -1,5 +1,6 @@
-import { StatusPip } from './StatusPip'
-import { formatDateTime, formatRelative } from '../lib/format'
+import { ZoneStatusIcon } from './ZoneStatusIcon'
+import { CommunitySource } from './DataProvenance'
+import { formatRecordTime } from '../lib/format'
 import { zoneGuidance, zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { Zone } from '../types'
 
@@ -37,11 +38,11 @@ export function ZonePopup({
 
   return (
     <div className="p-4">
-      <div className="zone-popup-line flex items-center gap-2" style={{ ['--i' as string]: 0 }}>
+      <div className="flex items-center gap-2" style={{ ['--i' as string]: 0 }}>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${theme.pillClass}`}
         >
-          <StatusPip size="xs" hex={theme.hex} pulses={theme.pulses} trigger={zone.status} />
+          <ZoneStatusIcon status={zone.status} />
           {zoneLabel(zone.status)}
         </span>
       </div>
@@ -56,7 +57,7 @@ export function ZonePopup({
       </h3>
 
       <p
-        className="zone-popup-line mt-2 text-xs leading-relaxed text-muted"
+        className="mt-2 text-xs leading-relaxed text-muted"
         style={{ ['--i' as string]: 2 }}
       >
         {zoneGuidance(zone.status)}
@@ -76,18 +77,11 @@ export function ZonePopup({
         className="zone-popup-line mt-3 border-t border-line pt-2.5"
         style={{ ['--i' as string]: pendingCount > 0 ? 4 : 3 }}
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-            Last updated
-          </dt>
-          <dd className="font-mono text-[11px] text-paper/85">
-            {formatRelative(zone.lastUpdated)}
-          </dd>
-        </div>
-        <div className="mt-1 text-right font-mono text-[10px] text-faint">
-          {formatDateTime(zone.lastUpdated)} PHT
-        </div>
+        <dt className="text-xs text-muted">Status changed</dt>
+        <dd className="mt-1 text-xs text-paper">{formatRecordTime(zone.lastUpdated, zone.lastUpdatedPending)}</dd>
       </dl>
+
+      <div className="mt-3"><CommunitySource /></div>
 
       <button
         type="button"

@@ -1,5 +1,6 @@
 import { reportLabel, reportTheme, zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { ReportStatus, ZoneStatus } from '../types'
+import { ZoneStatusIcon } from './ZoneStatusIcon'
 import { StatusPip } from './StatusPip'
 
 type BadgeSize = 'sm' | 'md'
@@ -17,6 +18,7 @@ function Badge({
   glowClass,
   size,
   trigger,
+  zoneStatus,
 }: {
   label: string
   hex: string
@@ -26,24 +28,15 @@ function Badge({
   size: BadgeSize
   /** Changes to this pop the pip — see StatusPip. */
   trigger?: string
+  zoneStatus?: ZoneStatus
 }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full font-mono uppercase tracking-[0.08em] ${SIZE_CLASS[size]} ${pillClass}`}
     >
-      {/*
-        Status is never carried by colour alone: the dot pulses for the
-        advisory state, and the label always spells the state out. The pip
-        itself pops when the status changes, so a row that changes does not
-        change silently.
-      */}
-      <StatusPip
-        size="xs"
-        hex={hex}
-        pulses={pulses}
-        glowClass={glowClass}
-        trigger={trigger}
-      />
+      {zoneStatus ? <ZoneStatusIcon status={zoneStatus} /> : <StatusPip
+        size="xs" hex={hex} pulses={pulses} glowClass={glowClass} trigger={trigger}
+      />}
       {label}
     </span>
   )
@@ -66,6 +59,7 @@ export function ZoneStatusBadge({
       glowClass={theme.glowClass}
       size={size}
       trigger={`zone:${status}`}
+      zoneStatus={status}
     />
   )
 }

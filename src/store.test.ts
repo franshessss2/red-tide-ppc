@@ -148,9 +148,9 @@ describe('approveReport', () => {
 
     expect(state.reports[0].status).toBe('confirmed')
     expect(zone.status).toBe('advisory')
-    expect(zone.lastUpdated).toBeGreaterThanOrEqual(before)
+    expect(zone.lastUpdated).toBeGreaterThanOrEqual(before!)
     expect(state.busyReportId).toBeNull()
-    expect(state.notice).toContain('under advisory')
+    expect(state.notice).toContain('community warning')
     expect(selectPendingReports(state.reports)).toHaveLength(0)
   })
 })

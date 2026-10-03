@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { getBackend } from './lib/backend'
+import { emptyFeed, receivedFeed, type FeedName, type FeedState } from './lib/feed'
+import { zoneStatusMeta } from './lib/status'
 import { isImageFile, MAX_PHOTO_BYTES } from './lib/image'
-import type { Report, Zone, ZoneStatus } from './types'
+import type { Report, Zone, KnownZoneStatus } from './types'
 
 /**
  * The one and only place the app talks to the datastore.
@@ -22,6 +24,10 @@ export interface ReportDraft {
 export const MIN_DESCRIPTION_LENGTH = 10
 export const MAX_DESCRIPTION_LENGTH = 2000
 
+// One subscription owner survives retries; obsolete callbacks cannot write state.
+let stopActiveFeeds: (() => void) | null = null
+let retryActiveFeed: ((feed?: FeedName) => void) | null = null
+
 const ADMIN_SESSION_KEY = 'red-tide-ppc:admin-unlocked'
 
 const rawEnv = import.meta.env as Record<string, string | undefined>
@@ -31,7 +37,7 @@ function sortByZoneName(zones: Zone[]): Zone[] {
 }
 
 function sortByNewest(reports: Report[]): Report[] {
-  return [...reports].sort((a, b) => b.submittedAt - a.submittedAt)
+  return [...reports].sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0))
 }
 
 function readAdminSession(): boolean {
@@ -58,6 +64,8 @@ export interface AppState {
 
   zonesReady: boolean
   reportsReady: boolean
+  zonesFeed: FeedState
+  reportsFeed: FeedState
   /** Global problem — surfaced as a toast by <Notice />. */
   error: string | null
   /** Problem with the form the user is filling in — shown inline, not as a
@@ -81,13 +89,14 @@ export interface AppState {
 
   /** Subscribe to both live feeds. Returns the unsubscribe function. */
   init: () => () => void
+  retryFeeds: (feed?: FeedName) => void
   selectZone: (zoneId: string | null) => void
   openReportForm: (zoneId: string) => void
   closeReportForm: () => void
   submitReport: (draft: ReportDraft) => Promise<void>
   approveReport: (reportId: string) => Promise<void>
   rejectReport: (reportId: string) => Promise<void>
-  setZoneStatus: (zoneId: string, status: ZoneStatus) => Promise<void>
+  setZoneStatus: (zoneId: string, status: KnownZoneStatus) => Promise<void>
   tryUnlockAdmin: (passcode: string) => boolean
   lockAdmin: () => void
   dismissMessages: () => void
@@ -100,6 +109,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   zonesReady: false,
   reportsReady: false,
+  zonesFeed: emptyFeed(),
+  reportsFeed: emptyFeed(),
   error: null,
   formError: null,
   notice: null,
@@ -114,25 +125,79 @@ export const useAppStore = create<AppState>()((set, get) => ({
   adminUnlocked: readAdminSession(),
 
   init() {
+    stopActiveFeeds?.()
     const backend = getBackend()
-    set({ backendKind: backend.kind })
+    const changedBackend = get().backendKind !== backend.kind
+    set({
+      backendKind: backend.kind,
+      zonesFeed: emptyFeed(), reportsFeed: emptyFeed(),
+      ...(changedBackend ? { zones: [], reports: [], zonesReady: false, reportsReady: false, selectedZoneId: null, reportZoneId: null } : {}),
+    })
+    let alive = true
+    const generations = { zones: 0, reports: 0 }
+    const unsubscribe: Record<FeedName, (() => void) | null> = { zones: null, reports: null }
 
-    const unsubscribeZones = backend.subscribeToZones(
-      (zones) => set({ zones: sortByZoneName(zones), zonesReady: true }),
-      (error) =>
-        set({ error: describe(error, 'Could not load the zone list.') }),
-    )
-
-    const unsubscribeReports = backend.subscribeToReports(
-      (reports) => set({ reports: sortByNewest(reports), reportsReady: true }),
-      (error) =>
-        set({ error: describe(error, 'Could not load the report list.') }),
-    )
-
-    return () => {
-      unsubscribeZones()
-      unsubscribeReports()
+    function connect(feed: FeedName) {
+      const generation = ++generations[feed]
+      unsubscribe[feed]?.()
+      unsubscribe[feed] = null
+      const key = feed === 'zones' ? 'zonesFeed' : 'reportsFeed'
+      set((state) => ({ [key]: { ...state[key], phase: 'loading', error: null } }))
+      const current = () => alive && generations[feed] === generation
+      const onError = (error: unknown) => {
+        if (!current()) return
+        set((state) => ({
+          [key]: { ...state[key], phase: 'error', error: describe(error, `Could not load ${feed}.`) },
+        }))
+      }
+      try {
+        unsubscribe[feed] = feed === 'zones'
+          ? backend.subscribeToZones((zones, metadata) => {
+              if (!current()) return
+              set((state) => ({
+                // An unverified empty cache cannot erase a received warning.
+                zones: metadata?.fromCache && zones.length === 0 && state.zonesReady
+                  ? state.zones : sortByZoneName(zones),
+                zonesReady: true,
+                zonesFeed: receivedFeed(state.zonesFeed, backend.kind, metadata),
+              }))
+            }, onError)
+          : backend.subscribeToReports((reports, metadata) => {
+              if (!current()) return
+              set((state) => ({
+                reports: metadata?.fromCache && reports.length === 0 && state.reportsReady
+                  ? state.reports : sortByNewest(reports),
+                reportsReady: true,
+                reportsFeed: receivedFeed(state.reportsFeed, backend.kind, metadata),
+              }))
+            }, onError)
+      } catch (error) {
+        onError(error)
+      }
     }
+    const retry = (feed?: FeedName) => {
+      if (!alive) return
+      if (feed) connect(feed)
+      else { connect('zones'); connect('reports') }
+    }
+    const stop = () => {
+      if (!alive) return
+      alive = false
+      unsubscribe.zones?.()
+      unsubscribe.reports?.()
+      if (stopActiveFeeds === stop) {
+        stopActiveFeeds = null
+        retryActiveFeed = null
+      }
+    }
+    stopActiveFeeds = stop
+    retryActiveFeed = retry
+    retry()
+    return stop
+  },
+
+  retryFeeds(feed) {
+    retryActiveFeed?.(feed)
   },
 
   selectZone(zoneId) {
@@ -240,7 +305,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
           busyReportId: null,
           error: describe(
             zoneError,
-            'Report confirmed, but the zone could not be updated. Check your Firestore rules.',
+            'Report reviewed, but the zone warning could not be updated. Please retry the zone change.',
           ),
         })
         return
@@ -249,7 +314,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       const zoneName = zoneNameFor(get().zones, report.zoneId)
       set({
         busyReportId: null,
-        notice: `Approved. ${zoneName} is now under advisory.`,
+        notice: `Approved. ${zoneName} now has a community warning.`,
       })
     } catch (error) {
       set({
@@ -287,7 +352,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
       await getBackend().setZoneStatus(zoneId, status)
       set({
         busyZoneId: null,
-        notice: `${zoneNameFor(get().zones, zoneId)} set to ${status}.`,
+        notice: `${zoneNameFor(get().zones, zoneId)} set to ${zoneStatusMeta(status).label}.`,
       })
     } catch (error) {
       set({

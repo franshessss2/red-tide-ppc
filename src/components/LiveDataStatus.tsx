@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { advisoryShare, formatPercent } from '../motion/readouts'
+import { feedLabel } from '../lib/feed'
 import { selectPendingCountByZone, useAppStore } from '../store'
 import { zoneLabel } from '../styles/statusTheme'
 
@@ -18,6 +18,8 @@ export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
+  const zonesFeed = useAppStore((state) => state.zonesFeed)
+  const reportsFeed = useAppStore((state) => state.reportsFeed)
   const [message, setMessage] = useState('')
 
   const snapshot = useMemo(() => {
@@ -25,14 +27,15 @@ export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
     const advisory = zones.filter((zone) => zone.status === 'advisory').length
     const unconfirmed = zones.filter((zone) => zone.status === 'unconfirmed').length
     const safe = zones.filter((zone) => zone.status === 'safe').length
+    const unknown = zones.filter((zone) => zone.status === 'unknown').length
     const pending = Object.values(pendingCounts).reduce((sum, count) => sum + count, 0)
     return {
       summary: [
         zonesReady
-          ? `${zones.length} zones watched. ${advisory} under advisory. ${unconfirmed} unconfirmed. ${safe} safe.`
+          ? zones.length > 0 ? `${zones.length} zone records. ${advisory} community warnings. ${unconfirmed} under review. ${safe} with no alert recorded. ${unknown} status unavailable.` : 'No zone records available.'
           : 'Zone data loading.',
         reportsReady ? `${pending} pending reports.` : 'Report data loading.',
-        zonesReady ? `Advisory signal ${formatPercent(advisoryShare(advisory, zones.length))}.` : '',
+        `Zones: ${feedLabel(zonesFeed)}. Reports: ${feedLabel(reportsFeed)}.`,
         admin && reportsReady ? `${reports.length} total reports. ${reports.length - pending} reviewed reports.` : '',
       ].filter(Boolean).join(' '),
       zones: Object.fromEntries((zonesReady ? zones : []).map((zone) => [zone.id,
@@ -40,11 +43,11 @@ export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
           (reportsReady ? `${pendingCounts[zone.id] ?? 0} pending reports.` : 'Report data loading.'),
       ])),
     }
-  }, [zones, reports, zonesReady, reportsReady, admin])
+  }, [zones, reports, zonesReady, reportsReady, zonesFeed, reportsFeed, admin])
   const announced = useRef<typeof snapshot | null>(null)
 
   useEffect(() => {
-    if (!zonesReady && !reportsReady) return
+    if (!zonesReady && !reportsReady && zonesFeed.phase !== 'error' && reportsFeed.phase !== 'error') return
     const timer = window.setTimeout(() => {
       const previous = announced.current
       const details: string[] = []
@@ -63,7 +66,7 @@ export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
       announced.current = snapshot
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [snapshot, zonesReady, reportsReady])
+  }, [snapshot, zonesReady, reportsReady, zonesFeed.phase, reportsFeed.phase])
 
   return (
     <p role="status" aria-live="polite" aria-atomic="true" aria-label="Live coastal data" className="sr-only">

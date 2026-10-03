@@ -207,16 +207,7 @@ body {
   }
 }
 
-/* One tile width (120 user units in the gauge's viewBox), so the loop is
-   seamless where the two wave copies meet. */
-@keyframes tide-drift {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-120px);
-  }
-}
+
 
 @keyframes fade-in {
   from {
@@ -278,9 +269,7 @@ body {
   will-change: transform, opacity;
 }
 
-.animate-tide-drift {
-  animation: tide-drift var(--motion-tide-drift, 9000ms) linear infinite;
-}
+
 
 /* --- Zone sheet ------------------------------------------------------- */
 
@@ -551,9 +540,28 @@ body {
   /* The sweep is pure ambience — the global rule above would freeze it at its
      final frame (invisible mid-flight), which reads as a stuck artefact. Hide
      it outright instead. */
-  .animate-tide-scan,
-  .animate-tide-drift {
+  .animate-tide-scan {
     animation: none;
     opacity: 0;
   }
+}
+
+/* Short landscape screens keep the list's scroll area, rather than spending
+   its height on a second vertical control stack. Hit areas remain 44px. */
+@media (max-height: 480px) {
+  .map-controls {
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: stretch;
+  }
+  .map-zoom { flex-direction: row; grid-column: 2; grid-row: 1; align-self: start; justify-self: end; width: max-content; }
+  .map-zoom > span { width: 1px; height: 44px; }
+  .zone-count-drawer { grid-column: 1; grid-row: 1; }
+  .zone-count-drawer[data-state='collapsed'] { height: 44px; }
+  .zone-drawer { grid-column: 1 / -1; grid-row: 2; height: 100%; align-self: stretch; }
+  .zone-count-tab, .zone-drawer-tab { height: 44px; padding-block: 6px; gap: 2px; }
+  .drawer-grip { display: none; }
+  .map-status-key { max-width: calc(100vw - 14rem); }
 }

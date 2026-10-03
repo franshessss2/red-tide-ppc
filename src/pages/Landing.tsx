@@ -1,12 +1,12 @@
-import { MOTION, tween } from '../motion/tokens'
+import { MOTION } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, useScroll, useSpring, useTransform } from 'motion/react'
+import { motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
-import { CountUp } from '../components/CountUp'
+import { DataProvenance } from '../components/DataProvenance'
 import { DecryptedText } from '../components/DecryptedText'
 import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
@@ -82,7 +82,7 @@ const EASE_OUT_QUINT = MOTION.ease.out
 const HOW_IT_WORKS = [
   'Find your shore — seven zones cover the coast, from the city bay to St. Paul Bay.',
   'Report what you see — water colour, dead shellfish; ten words is enough.',
-  'A local admin verifies it — if it checks out, the zone goes under advisory.',
+  'An admin reviews community reports — a reviewed report can prompt a community warning. Check BFAR for official bulletins.',
 ] as const
 
 export function Landing() {
@@ -93,7 +93,7 @@ export function Landing() {
   const reduceMotion = useReducedMotion()
   const [headlineDecrypted, setHeadlineDecrypted] = useState(false)
   const counts = useMemo(() => {
-    const result: Record<ZoneStatus, number> = { safe: 0, unconfirmed: 0, advisory: 0 }
+    const result: Record<ZoneStatus, number> = { safe: 0, unconfirmed: 0, advisory: 0, unknown: 0 }
     for (const zone of zones) result[zone.status] += 1
     return result
   }, [zones])
@@ -123,33 +123,6 @@ export function Landing() {
   const heroContentOpacity = useTransform(heroScroll, [0, 0.85], [1, reduceMotion ? 1 : 0.9])
   const heroContentScale = useTransform(heroScroll, [0, 1], [1, reduceMotion ? 1 : 0.985])
 
-  const overviewContainerVariants: Variants = useMemo(
-    () => ({
-      hidden: {},
-      show: {
-        transition: {
-          staggerChildren: reduceMotion ? 0 : MOTION.time.stagger,
-          delayChildren: reduceMotion ? 0 : MOTION.time.fast,
-        },
-      },
-    }),
-    [reduceMotion],
-  )
-
-  const overviewChildVariants: Variants = useMemo(
-    () => ({
-      hidden: { opacity: 0, y: reduceMotion ? 0 : 10 },
-      show: {
-        opacity: 1,
-        y: 0,
-        transition: {
-          duration: reduceMotion ? 0 : MOTION.time.reveal,
-          ease: EASE_OUT_QUINT,
-        },
-      },
-    }),
-    [reduceMotion],
-  )
 
   const primerContainerVariants: Variants = useMemo(
     () => ({
@@ -328,63 +301,33 @@ export function Landing() {
               </section>
 
               <motion.div
-                variants={overviewContainerVariants}
-                initial="hidden"
-                animate="show"
                 className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
-                {/* -------------------------------------------------- live status */}
-                <motion.section variants={overviewChildVariants} aria-label="Live status" className="relative">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                  {zonesReady ? (
-                    <motion.div key="ready" initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }}
-                      animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }}
-                      transition={tween(reduceMotion, MOTION.time.readySwap)}
-                      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
-                      <StatusPip
-                        hex={dominantTheme.hex}
-                        pulses={dominantTheme.pulses}
-                        trigger={dominant}
-                      />
-                      <span className="font-medium text-paper/90">
-                        {zones.length} zones watched
-                      </span>
-                      <span className="text-faint">
-                        · {counts.advisory} advisory · {counts.unconfirmed} unconfirmed
-                      </span>
-                      <span className="ml-auto text-paper/80">
-                        {pendingTotal} pending report{pendingTotal === 1 ? '' : 's'}
-                      </span>
-                    </motion.div>
-                  ) : (
-                    <motion.p key="loading"
-                      initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: reduceMotion ? 0 : -6 }} transition={tween(reduceMotion, MOTION.time.readySwap)}
-                      role="status"
-                      className="animate-pulse rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] text-faint"
-                    >
-                      Reading the water…
-                    </motion.p>
-                  )}
-                  </AnimatePresence>
-                </motion.section>
+                <section aria-label="Community status" className="rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
+                  {zonesReady ? <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <StatusPip hex={dominantTheme.hex} pulses={dominantTheme.pulses} trigger={dominant} />
+                    <span className="font-medium text-paper/90">{zones.length > 0 ? `${zones.length} zones recorded` : 'No zone records available'}</span>
+                    <span>· {counts.advisory} community warnings · {counts.unconfirmed} under review · {counts.unknown} unavailable</span>
+                    <span>{reportsReady ? `${pendingTotal} pending reports` : 'Report records loading'}</span>
+                  </div> : <p>Loading community zone records…</p>}
+                </section>
 
                 {/* ------------------------------------------------------ figures */}
                 <motion.section
-                  variants={overviewChildVariants}
                   aria-label="Figures"
-                  className="mt-3.5 grid grid-cols-3 gap-2.5 sm:mt-4 sm:gap-3"
+                  className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,8em),1fr))] gap-2.5 sm:mt-4 sm:gap-3"
                 >
-                  <Figure label="Zones watched" value={zones.length} ready={zonesReady} />
+                  <Figure label="Zone records" value={zones.length} ready={zonesReady} />
                   <Figure label="Pending reports" value={pendingTotal} ready={reportsReady} />
                   <Figure
-                    label="Under advisory"
+                    label="Community warnings"
                     value={counts.advisory}
                     ready={zonesReady}
                     valueClass={counts.advisory > 0 ? 'text-advisory' : undefined}
                   />
                 </motion.section>
+                <div className="mt-3.5"><DataProvenance /></div>
               </motion.div>
             </div>
           </motion.div>
@@ -531,13 +474,13 @@ function Figure({
   ready?: boolean
 }) {
   return (
-    <div className="rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
+    <div className="min-w-0 rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
       <p
         className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
-        <CountUp to={ready ? value : 0} from={0} duration={MOTION.time.count} />
+        {ready ? value : '—'}
       </p>
-      <p className="mt-1.5 text-[11px] leading-snug text-faint lg:mt-2 lg:text-xs">{label}</p>
+      <p className="mt-1.5 text-[11px] leading-snug text-muted lg:mt-2 lg:text-xs">{label}</p>
     </div>
   )
 }

@@ -6,7 +6,7 @@ const counts = (
   advisory: number,
   unconfirmed: number,
   safe: number,
-): Record<ZoneStatus, number> => ({ advisory, unconfirmed, safe })
+): Record<ZoneStatus, number> => ({ advisory, unconfirmed, safe, unknown: 0 })
 
 describe('resolveActiveStatus', () => {
   it('the selected zone owns the indicator', () => {
@@ -19,9 +19,9 @@ describe('resolveActiveStatus', () => {
     expect(resolveActiveStatus(null, counts(0, 2, 5))).toBe('unconfirmed')
   })
 
-  it('an all-clear map rests on safe', () => {
+  it('known no-alert records stay distinct from an empty feed', () => {
     expect(resolveActiveStatus(null, counts(0, 0, 7))).toBe('safe')
-    expect(resolveActiveStatus(null, counts(0, 0, 0))).toBe('safe')
+    expect(resolveActiveStatus(null, counts(0, 0, 0))).toBe('unknown')
   })
 
   it('a selection wins even over a worse count', () => {

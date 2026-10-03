@@ -43,7 +43,7 @@ export function MapControlColumn({
 }) {
   return (
     <aside
-      className="pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(4.5rem+env(safe-area-inset-top))] z-[var(--layer-chrome)] flex flex-col items-end gap-2"
+      className="map-controls pointer-events-none absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(4.5rem+env(safe-area-inset-top))] z-[var(--layer-chrome)] flex flex-col items-end gap-2"
       aria-label="Map controls"
       data-testid="map-control-column"
     >
@@ -103,7 +103,7 @@ export function ZoomControls({ map }: { map: LeafletMap | null }) {
       aria-label="Map zoom"
       data-testid="zoom-controls"
       data-zoom={zoom ?? undefined}
-      className="pointer-events-auto flex shrink-0 flex-col overflow-hidden rounded-md border border-line bg-ink-2/85 backdrop-blur-md"
+      className="map-zoom pointer-events-auto flex shrink-0 flex-col overflow-hidden rounded-md border border-line bg-ink-2/85 backdrop-blur-md"
     >
       <button
         type="button"

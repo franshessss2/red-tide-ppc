@@ -15,6 +15,7 @@ const COUNTS: Record<ZoneStatus, number> = {
   safe: 4,
   unconfirmed: 1,
   advisory: 1,
+  unknown: 0,
 }
 
 function renderKey() {
@@ -36,9 +37,10 @@ describe('StatusKey content', () => {
     renderKey()
 
     const key = screen.getByRole('group', { name: 'Zone status key' })
-    expect(within(key).getByText('Advisory')).toBeTruthy()
-    expect(within(key).getByText('Unconfirmed')).toBeTruthy()
-    expect(within(key).getByText('Safe')).toBeTruthy()
+    expect(within(key).getByText('Community warning')).toBeTruthy()
+    expect(within(key).getByText('Under review')).toBeTruthy()
+    expect(within(key).getByText('No alert recorded')).toBeTruthy()
+    expect(within(key).getByText('Status unavailable')).toBeTruthy()
     expect(within(key).getByText('4')).toBeTruthy() // safe count
     expect(within(key).getAllByText('1')).toHaveLength(2) // advisory + unconfirmed
   })

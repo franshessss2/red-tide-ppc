@@ -54,7 +54,7 @@ function renderZoneDrawer(initial: SidePanelState = 'collapsed') {
         zones={[zone]}
         zonesReady
         pendingCounts={{}}
-        counts={{ safe: 1, unconfirmed: 0, advisory: 0 }}
+        counts={{ safe: 1, unconfirmed: 0, advisory: 0, unknown: 0 }}
         selectedZoneId={null}
         panel={panel}
         onFocusZone={() => {}}
@@ -94,7 +94,7 @@ describe('ZoneDrawer resting state', () => {
     expect(tab().classList.contains('w-11')).toBe(true) // 44px hit area
 
     // The sheet's content, present in the DOM even while tucked.
-    expect(within(drawer()).getByText('1 zone · No advisories')).toBeTruthy()
+    expect(within(drawer()).getByText('1 zone · 0 warnings')).toBeTruthy()
     expect(within(drawer()).getByText('01 / 02')).toBeTruthy()
   })
 
@@ -173,7 +173,7 @@ describe('ZoneDrawer toggle paths', () => {
     // The summary line toggles.
     await user.click(
       within(drawer()).getByRole('button', {
-        name: '1 zone · No advisories — Collapse the zone drawer',
+        name: '1 zone · 0 warnings — Collapse the zone drawer',
       }),
     )
     await waitFor(() => expect(drawer().dataset.state).toBe('collapsed'))
@@ -326,7 +326,7 @@ describe('ZoneDrawer content parity with the sheet', () => {
     expect(
       within(drawer()).getByRole('heading', { name: 'Puerto Princesa Bay (City Proper)', hidden: true }),
     ).toBeTruthy()
-    expect(within(drawer()).getByText('No advisories')).toBeTruthy()
+    expect(within(drawer()).getByText('No community warnings recorded')).toBeTruthy()
     expect(
       within(drawer()).getByRole('button', { name: /Report here/i, hidden: true }),
     ).toBeTruthy()
@@ -395,7 +395,7 @@ describe('ZoneDrawer on the map page', () => {
 
     // And its content lives in the drawer instead.
     expect(
-      within(live).getByText('7 zones · No advisories'),
+      within(live).getByText('7 zones · 0 warnings'),
     ).toBeTruthy()
   })
 

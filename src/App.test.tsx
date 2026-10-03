@@ -96,8 +96,8 @@ describe('landing page (/)', () => {
     expect(screen.getByRole('link', { name: /report a sighting/i })).toBeTruthy()
 
     // The live readout lands from the demo backend (synchronous subscribe).
-    expect(await screen.findByText('7 zones watched')).toBeTruthy()
-    expect(screen.getByText('Zones watched')).toBeTruthy()
+    expect(await screen.findByText('7 zones recorded')).toBeTruthy()
+    expect(screen.getByText('Zone records')).toBeTruthy()
   })
 })
 
@@ -155,7 +155,7 @@ describe('map page (/map)', () => {
     }
 
     // All zones start safe, so the "no advisories" panel is shown.
-    expect(screen.getByText('No advisories')).toBeTruthy()
+    expect(screen.getByText('No community warnings recorded')).toBeTruthy()
   })
 
   it('rejects a report that is too short', async () => {
@@ -240,12 +240,12 @@ describe('the full report → approve loop', () => {
     // --- 3. the public map now shows the advisory ---------------------
     await user.click(screen.getByRole('link', { name: 'Public map' }))
     expect(
-      await screen.findByText(/zone is under advisory|zones are under advisory/i),
+      await screen.findByText(/1 community warning/i),
     ).toBeTruthy()
 
     await user.click(screen.getByTestId('zone-drawer-tab'))
     const card = zoneCard(ZONE)
-    expect(within(card).getByText('Advisory')).toBeTruthy()
+    expect(within(card).getByText('Community warning')).toBeTruthy()
   })
 })
 
@@ -310,11 +310,11 @@ describe('live data announcement routing', () => {
     const user = userEvent.setup()
     render(<App />)
     const channel = () => screen.getByRole('status', { name: 'Live coastal data' })
-    await waitFor(() => expect(channel().textContent).toContain('7 zones watched'))
+    await waitFor(() => expect(channel().textContent).toContain('7 zone records'))
     expect(screen.getAllByRole('status', { name: 'Live coastal data' })).toHaveLength(1)
 
     await openMap(user)
-    await waitFor(() => expect(channel().textContent).toContain('7 zones watched'))
+    await waitFor(() => expect(channel().textContent).toContain('7 zone records'))
     expect(screen.getAllByRole('status', { name: 'Live coastal data' })).toHaveLength(1)
 
     await user.click(screen.getByRole('link', { name: 'Admin' }))

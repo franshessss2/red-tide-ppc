@@ -5,13 +5,12 @@ import { MOTION, staggerDelay } from '../motion/tokens'
 import { useEntrance } from '../motion/useEntrance'
 import { usePulse } from '../motion/usePulse'
 import { MorphChevronIcon } from './MorphChevron'
-import { formatRelative } from '../lib/format'
-import { ZONE_STATUS_ORDER } from '../lib/status'
+import { formatRecordTime } from '../lib/format'
+import { DataProvenance } from './DataProvenance'
 import {
   dominantZoneStatus,
   sidePanelReadout,
   zoneSummaryLine,
-  zoneTag,
 } from '../motion/readouts'
 import { isDragTail, SIDE_PANEL_STATE_ORDER } from '../motion/sidePanelAnchors'
 import type { SidePanelController } from '../motion/useSidePanel'
@@ -174,15 +173,15 @@ function ZoneCardItem({
           onClick={() => onFocusZone(zone.id)}
           className="block w-full p-3 text-left"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <h3 className="font-display text-lg leading-none text-paper">
               {zone.name}
             </h3>
             <ZoneStatusBadge status={zone.status} size="sm" />
           </div>
 
-          <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-faint">
-            {zoneTag(zone.id)} · {formatRelative(zone.lastUpdated)}
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            Status changed: {formatRecordTime(zone.lastUpdated, zone.lastUpdatedPending)}
           </p>
 
           <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted">
@@ -253,7 +252,7 @@ export function ZoneDrawer({
 }: ZoneDrawerProps) {
   const open = panel.state === 'open'
   const advisoryCount = counts.advisory ?? 0
-  const summary = zoneSummaryLine(zones.length, advisoryCount)
+  const summary = zoneSummaryLine(zones.length, advisoryCount, counts.unknown)
   const dominant = dominantZoneStatus(counts)
   const dominantTheme = zoneTheme(dominant)
   const action = ACTION_LABEL[panel.state]
@@ -316,7 +315,7 @@ export function ZoneDrawer({
 
   return (
     <div
-      className="pointer-events-none flex min-h-0 flex-1 flex-row items-start justify-end"
+      className="zone-drawer pointer-events-none flex min-h-0 flex-1 flex-row items-start justify-end"
       role="region"
       aria-label="Advisory and zone list"
       data-testid="zone-drawer"
@@ -334,7 +333,7 @@ export function ZoneDrawer({
         title={action}
         data-testid="zone-drawer-tab"
         style={{ marginRight: tabGap }}
-        className="pointer-events-auto flex w-11 shrink-0 select-none flex-col items-center gap-2 self-start rounded-lg border border-line bg-ink-2/88 py-3 backdrop-blur-md transition-colors [touch-action:none] hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="zone-drawer-tab pointer-events-auto flex w-11 shrink-0 select-none flex-col items-center gap-2 self-start rounded-lg border border-line bg-ink-2/88 py-3 backdrop-blur-md transition-colors [touch-action:none] hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <StatusPip
           size="sm"
@@ -345,7 +344,7 @@ export function ZoneDrawer({
         <MorphChevronIcon open={open} className="h-3.5 w-3.5 text-paper/70" />
         <span
           aria-hidden="true"
-          className="block h-8 w-1 rounded-full bg-line-soft"
+          className="drawer-grip block h-8 w-1 rounded-full bg-line-soft"
         />
       </motion.button>
 
@@ -486,7 +485,8 @@ export function ZoneDrawer({
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-4"
               data-testid="zone-drawer-scroll"
             >
-              <AdvisoryBanner advisoryCount={advisoryCount} />
+              <AdvisoryBanner counts={counts} total={zones.length} ready={zonesReady} />
+              <div className="mt-3"><DataProvenance /></div>
 
               <div className="mt-4 flex items-baseline justify-between gap-2">
                 <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
@@ -526,8 +526,7 @@ export function ZoneDrawer({
 
               {zones.length === 0 && zonesReady && (
                 <p className="mt-3 rounded-lg border border-dashed border-line bg-ink p-6 text-center text-sm text-muted">
-                  No zones found. Run <code className="font-mono text-accent">npm run seed</code>{' '}
-                  to load the Puerto Princesa zones.
+                  No coastal records are available. Check BFAR bulletins for official information.
                 </p>
               )}
 
@@ -538,7 +537,7 @@ export function ZoneDrawer({
 
               <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
                 <p>
-                  Key order: {ZONE_STATUS_ORDER.map((status) => status).join(' · ')}
+                  Approximate community zone boundaries
                 </p>
                 <a
                   href="https://www.openstreetmap.org/copyright"
@@ -557,34 +556,24 @@ export function ZoneDrawer({
   )
 }
 
-/**
- * The advisory summary — same copy the sheet carried.
- */
-function AdvisoryBanner({ advisoryCount }: { advisoryCount: number }) {
-  if (advisoryCount > 0) {
-    return (
-      <div className="relative overflow-hidden rounded-lg border border-advisory/30 bg-advisory/8 p-3 pl-4">
-        <span className="absolute inset-y-0 left-0 w-1 bg-advisory" aria-hidden="true" />
-        <h2 className="font-display text-lg leading-none text-advisory">
-          {advisoryCount} {advisoryCount === 1 ? 'zone is' : 'zones are'} under advisory
-        </h2>
-        <p className="mt-2 text-xs leading-relaxed text-paper/70">
-          Do not gather, sell or eat shellfish or <em>alamang</em> from a zone marked{' '}
-          <strong className="text-advisory">Advisory</strong>. Fish, squid, shrimp and
-          crab are still safe if they are fresh, cleaned and washed before cooking.
-        </p>
-      </div>
-    )
-  }
-
+/** Warnings survive feed failure; empty or incomplete records never mean all clear. */
+function AdvisoryBanner({ counts, total, ready }: { counts: Record<ZoneStatus, number>; total: number; ready: boolean }) {
+  const warning = counts.advisory > 0
+  const title = warning ? `${counts.advisory} community ${counts.advisory === 1 ? 'warning' : 'warnings'}`
+    : !ready ? 'Zone records loading'
+    : total === 0 ? 'No coastal records available'
+    : counts.unknown > 0 ? `${counts.unknown} ${counts.unknown === 1 ? 'status' : 'statuses'} unavailable`
+    : counts.unconfirmed > 0 ? `${counts.unconfirmed} ${counts.unconfirmed === 1 ? 'zone' : 'zones'} under review`
+    : 'No community warnings recorded'
   return (
-    <div className="relative overflow-hidden rounded-lg border border-safe/25 bg-safe/6 p-3 pl-4">
-      <span className="absolute inset-y-0 left-0 w-1 bg-safe" aria-hidden="true" />
-      <h2 className="font-display text-lg leading-none text-safe">No advisories</h2>
-      <p className="mt-2 text-xs leading-relaxed text-paper/70">
-        Nothing flagged. Tap a zone to report unusual water, dead shellfish, or numbness
-        after eating.
+    <div className={`relative overflow-hidden rounded-lg border p-3 pl-4 ${warning ? 'border-advisory/30 bg-advisory/8' : 'border-line bg-ink-2'}`}>
+      <span className={`absolute inset-y-0 left-0 w-1 ${warning ? 'bg-advisory' : 'bg-muted'}`} aria-hidden="true" />
+      <h2 className={`font-display text-lg leading-snug ${warning ? 'text-advisory' : 'text-paper'}`}>{title}</h2>
+      <p className="mt-2 text-xs leading-relaxed text-muted">
+        {warning ? 'Avoid gathering, selling or eating shellfish or alamang from a zone with a community warning. ' : 'Community records cannot establish that shellfish are safe. '}
+        Check the official BFAR bulletin before making a food-safety decision.
       </p>
+      {warning && counts.unknown > 0 && <p className="mt-2 text-xs text-muted">{counts.unknown} additional zone {counts.unknown === 1 ? 'status is' : 'statuses are'} unavailable.</p>}
     </div>
   )
 }

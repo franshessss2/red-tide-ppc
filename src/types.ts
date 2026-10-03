@@ -12,18 +12,10 @@
 /** A [latitude, longitude] pair, in decimal degrees (WGS84). */
 export type LatLng = [number, number]
 
-/**
- * Zone status.
- *
- * - `safe`        — no advisory in effect for this zone.
- * - `unconfirmed` — reports received and flagged by an admin as needing review;
- *                   not yet confirmed as a red tide event.
- * - `advisory`    — confirmed: do not eat shellfish from this zone.
- *
- * Status only ever changes through an admin action. There is deliberately no
- * automatic decay or expiry in the MVP.
- */
-export type ZoneStatus = 'safe' | 'unconfirmed' | 'advisory'
+/** Stored community statuses; none establishes official laboratory clearance. */
+export type KnownZoneStatus = 'safe' | 'unconfirmed' | 'advisory'
+/** Read-side status also preserves absent or malformed records as unknown. */
+export type ZoneStatus = KnownZoneStatus | 'unknown'
 
 /** Lifecycle of a community report. */
 export type ReportStatus = 'pending' | 'confirmed' | 'rejected'
@@ -36,8 +28,10 @@ export interface Zone {
   /** Approximate coastal polygon, [lat, lng] pairs. Not a survey boundary. */
   polygon: LatLng[]
   status: ZoneStatus
-  /** Epoch ms of the last status change. */
-  lastUpdated: number
+  /** Epoch ms of the last status change, or null when unavailable. */
+  lastUpdated: number | null
+  /** An unresolved server timestamp on a locally pending write. */
+  lastUpdatedPending?: boolean
 }
 
 export interface Report {
@@ -47,7 +41,8 @@ export interface Report {
   /** Cloudinary secure image URL, or null when no photo was attached. */
   photoUrl: string | null
   /** Epoch ms. */
-  submittedAt: number
+  submittedAt: number | null
+  submittedAtPending?: boolean
   status: ReportStatus
 }
 

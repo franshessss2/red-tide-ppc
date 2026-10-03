@@ -24,32 +24,40 @@ export interface StatusMeta {
 }
 
 export const ZONE_STATUS_META: Record<ZoneStatus, StatusMeta> = {
+  unknown: {
+    label: 'Status unavailable',
+    labelTl: 'Hindi alam ang katayuan',
+    hex: '#9e9e9e',
+    badgeClass: 'bg-slate-600 text-white',
+    softClass: 'bg-slate-100 text-slate-800 ring-slate-300',
+    guidance: 'The community status is missing or unrecognised. Check the official BFAR bulletin before making a food-safety decision.',
+  },
   safe: {
-    label: 'Safe',
-    labelTl: 'Ligtas',
+    label: 'No alert recorded',
+    labelTl: 'Walang naitalang babala',
     hex: '#16a34a',
     badgeClass: 'bg-green-600 text-white',
     softClass: 'bg-green-50 text-green-800 ring-green-200',
     guidance:
-      'No red tide advisory recorded for this zone. Community reports are still welcome.',
+      'No community warning is recorded for this zone. This is not an official clearance; check BFAR bulletins.',
   },
   unconfirmed: {
-    label: 'Unconfirmed',
-    labelTl: 'Hindi pa kumpirmado',
+    label: 'Under review',
+    labelTl: 'Sinusuri pa',
     hex: '#f59e0b',
     badgeClass: 'bg-amber-500 text-white',
     softClass: 'bg-amber-50 text-amber-900 ring-amber-200',
     guidance:
-      'Reports have been received and are being checked. Avoid shellfish from this zone until it is cleared.',
+      'Community reports are being reviewed. Check BFAR guidance before gathering or eating shellfish.',
   },
   advisory: {
-    label: 'Advisory',
-    labelTl: 'May babala',
+    label: 'Community warning',
+    labelTl: 'Babala ng komunidad',
     hex: '#dc2626',
     badgeClass: 'bg-red-600 text-white',
     softClass: 'bg-red-50 text-red-800 ring-red-200',
     guidance:
-      'Advisory in effect: do not gather, sell or eat shellfish or alamang from this zone.',
+      'Community warning: avoid gathering, selling or eating shellfish or alamang from this zone; check the official BFAR bulletin.',
   },
 }
 
@@ -63,12 +71,12 @@ export const REPORT_STATUS_META: Record<ReportStatus, StatusMeta> = {
     guidance: 'Waiting for an admin to review.',
   },
   confirmed: {
-    label: 'Confirmed',
-    labelTl: 'Kumpirmado',
+    label: 'Reviewed',
+    labelTl: 'Nasuri',
     hex: '#dc2626',
     badgeClass: 'bg-red-600 text-white',
     softClass: 'bg-red-50 text-red-800 ring-red-200',
-    guidance: 'Approved by an admin; the zone was put under advisory.',
+    guidance: 'Reviewed by an admin; the zone has a community warning. This is not laboratory confirmation.',
   },
   rejected: {
     label: 'Rejected',
@@ -81,10 +89,10 @@ export const REPORT_STATUS_META: Record<ReportStatus, StatusMeta> = {
 }
 
 /** Ordered for legends: worst first. */
-export const ZONE_STATUS_ORDER: ZoneStatus[] = ['advisory', 'unconfirmed', 'safe']
+export const ZONE_STATUS_ORDER: ZoneStatus[] = ['advisory', 'unconfirmed', 'unknown', 'safe']
 
 export function zoneStatusMeta(status: ZoneStatus): StatusMeta {
-  return ZONE_STATUS_META[status] ?? ZONE_STATUS_META.safe
+  return ZONE_STATUS_META[status] ?? ZONE_STATUS_META.unknown
 }
 
 export function reportStatusMeta(status: ReportStatus): StatusMeta {

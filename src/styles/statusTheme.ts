@@ -30,11 +30,9 @@ import type { ReportStatus, ZoneStatus } from '../types'
  *
  * COLOUR IS NEVER THE ONLY SIGNAL
  * -------------------------------
- * Roughly 8% of men have red/green colour vision deficiency, and this app is
- * used outdoors in bright sun on a phone. Every status therefore pairs its
- * colour with a distinct shape affordance: `safe` is solid, `unconfirmed`
- * pulses and is drawn dashed on the map, `advisory` is solid with a glow. The
- * map polygons follow the same rule (see `dashArray` in Map.tsx).
+ * Fixed badge symbols and text remain visible without motion. On the map,
+ * review uses a dashed border and unavailable status uses a dotted border.
+ * A received warning stays red even when its date or connection is unknown.
  */
 
 export interface StatusTheme {
@@ -53,8 +51,16 @@ export interface StatusTheme {
 }
 
 const ZONE_THEME: Record<ZoneStatus, StatusTheme> = {
+  unknown: {
+    hex: '#9e9e9e',
+    pillClass: 'bg-white/8 text-[#9e9e9e] ring-1 ring-inset ring-white/25',
+    quietPillClass: 'bg-white/6 text-[#9e9e9e] ring-1 ring-inset ring-white/20',
+    solidClass: 'bg-[#9e9e9e] text-ink',
+    glowClass: '',
+    pulses: false,
+  },
   safe: {
-    // Muted sage-teal, deliberately the quietest of the three. `safe` is the
+    // Muted sage-teal for known no-alert community records. `safe` is the
     // resting state for most of the bay most of the time — it should recede
     // into the basemap, not compete with the two states that can actually tell
     // you something. Contrast is still AA on both ink surfaces (#4a8a75 =
@@ -119,7 +125,7 @@ const REPORT_THEME: Record<ReportStatus, StatusTheme> = {
 }
 
 export function zoneTheme(status: ZoneStatus): StatusTheme {
-  return ZONE_THEME[status] ?? ZONE_THEME.safe
+  return ZONE_THEME[status] ?? ZONE_THEME.unknown
 }
 
 /**
@@ -199,6 +205,11 @@ export interface ZonePaint {
 }
 
 const ZONE_PAINT: Record<ZoneStatus, ZonePaint> = {
+  unknown: {
+    hex: ZONE_THEME.unknown.hex,
+    fill: 0.22, fillHover: 0.32, fillSelected: 0.40,
+    weight: 2, weightSelected: 4, strokeOpacity: 0.85, dashArray: '2 5',
+  },
   safe: {
     hex: '#4a8a75',
     fill: 0.34,
@@ -261,7 +272,7 @@ export const ZONE_CASING = {
 } as const
 
 export function zonePaint(status: ZoneStatus): ZonePaint {
-  return ZONE_PAINT[status] ?? ZONE_PAINT.safe
+  return ZONE_PAINT[status] ?? ZONE_PAINT.unknown
 }
 
 export function reportTheme(status: ReportStatus): StatusTheme {
@@ -270,7 +281,7 @@ export function reportTheme(status: ReportStatus): StatusTheme {
 
 /** Short label — always paired with a colour, never replaced by it. */
 export function zoneLabel(status: ZoneStatus): string {
-  return ZONE_STATUS_META[status]?.label ?? 'Safe'
+  return ZONE_STATUS_META[status]?.label ?? ZONE_STATUS_META.unknown.label
 }
 
 export function reportLabel(status: ReportStatus): string {
@@ -283,5 +294,5 @@ export function zoneGuidance(status: ZoneStatus): string {
 }
 
 export function zoneMeta(status: ZoneStatus): StatusMeta {
-  return ZONE_STATUS_META[status] ?? ZONE_STATUS_META.safe
+  return ZONE_STATUS_META[status] ?? ZONE_STATUS_META.unknown
 }

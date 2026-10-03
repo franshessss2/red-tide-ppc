@@ -1,4 +1,5 @@
 import { reportSuccessMessage } from '../lib/reportFeedback'
+import { MapFeedStatus } from '../components/DataProvenance'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -90,6 +91,8 @@ function isBelowDrawerBreakpoint(): boolean {
 export function MapPage() {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
+  const zonesFeed = useAppStore((state) => state.zonesFeed)
+  const reportsReady = useAppStore((state) => state.reportsReady)
   const zonesReady = useAppStore((state) => state.zonesReady)
   const selectedZoneId = useAppStore((state) => state.selectedZoneId)
   const reportZoneId = useAppStore((state) => state.reportZoneId)
@@ -172,6 +175,7 @@ export function MapPage() {
       safe: 0,
       unconfirmed: 0,
       advisory: 0,
+      unknown: 0,
     }
     for (const zone of zones) counts[zone.status] += 1
     return counts
@@ -325,13 +329,20 @@ export function MapPage() {
 
       {/* Two kinds of chrome, two contracts: the pills row is fixed and never
           moves; the drawers tuck into the right edge behind their tabs. */}
-      <StatusKey counts={statusCounts} activeStatus={activeStatus} />
+      <StatusKey counts={statusCounts} activeStatus={activeStatus} ready={zonesReady} />
+
+      {zonePanel.state === 'collapsed' && <div className="absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-3 z-[var(--layer-controls)] max-w-[calc(100vw-5rem)] sm:max-w-sm">
+        <MapFeedStatus />
+      </div>}
 
       <MapControlColumn map={leafletMap}>
         <AdvisoryDrawer
           advisory={statusCounts.advisory}
           zones={zones.length}
           pending={pendingTotal}
+          unavailable={statusCounts.unknown}
+          ready={zonesReady}
+          reportsReady={reportsReady}
         />
         <ZoneDrawer
           zones={zones}
@@ -359,7 +370,7 @@ export function MapPage() {
       </a>
 
       <AnimatePresence initial={false}>
-        {!zonesReady && (
+        {!zonesReady && zonesFeed.phase !== 'error' && (
           <motion.div
             key="map-loading-overlay"
             className="absolute inset-0 z-[var(--layer-loading)]"
