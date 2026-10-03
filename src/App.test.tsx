@@ -43,7 +43,7 @@ function zoneCard(name: string): HTMLElement {
 }
 
 beforeEach(() => {
-  sessionStorage.setItem('red-tide-ppc:splash:v1', 'seen')
+  localStorage.setItem('red-tide-ppc:intro:v2', 'seen') // PR59: the intro gate moved to versioned localStorage (introGate.ts)
   clearDemoData()
   setBackendForTesting(createDemoBackend())
   useAppStore.setState({

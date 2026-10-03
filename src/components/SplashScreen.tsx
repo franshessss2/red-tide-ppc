@@ -1,40 +1,51 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent } from 'react'
+import type { KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Landing } from '../pages/Landing'
 import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
+import { markIntroSeen, shouldShowIntro } from './intro/introGate'
+import { INTRO_SCENE_COUNT, IntroScene, sceneAnnouncement } from './intro/IntroScenes'
 import { INTRO_COAST_PATH } from '../data/introCoast'
 import '../styles/tide-intro.css'
 
-const SEEN_KEY = 'red-tide-ppc:splash:v1'
 export const INTRO_ENTRANCE_MS = 1100
 export const INTRO_EXIT_MS = 650
 export const INTRO_TITLE_HANDOFF_MS = 550
 export const INTRO_TITLE_HANDOFF_DELAY_MS = 40
+export const INTRO_SCENE_OUT_MS = MOTION.time.introSceneOut * 1000
+export { INTRO_SCENE_COUNT }
 
 type Phase = 'entrance' | 'idle' | 'leaving' | 'done'
 
+/** All gating lives in intro/introGate.ts: versioned localStorage, "/" only, reduced motion off, fail open. */
 function initialPhase(): Phase {
-  if (prefersReducedMotion() || window.location.hash) return 'done'
-  try { if (sessionStorage.getItem(SEEN_KEY)) return 'done' } catch { /* Storage is optional. */ }
-  return 'entrance'
+  return shouldShowIntro() ? 'entrance' : 'done'
 }
 
-/** Finite coastal reveal -> still composition -> user-driven title handoff. */
+/**
+ * Finite coastal reveal -> still composition (scene 0) -> five tap-to-advance scenes ->
+ * the explicit user-driven PR57 exit. Data fetching never controls it, no
+ * timer ever changes the scene, and Skip is one action away on every screen.
+ */
 export function SplashScreen() {
   const [phase, setPhase] = useState<Phase>(initialPhase)
   const reduce = useReducedMotion()
   const [run, setRun] = useState(0)
+  const [scene, setScene] = useState(0)
+  // The 220ms ghost of the outgoing scene. A tap mid-transition drops it
+  // immediately (the transition "completes") and advances exactly once.
+  const [ghostScene, setGhostScene] = useState<number | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
-  const entryRef = useRef<HTMLButtonElement>(null)
+  const advanceRef = useRef<HTMLButtonElement>(null)
   const replayRef = useRef<HTMLButtonElement>(null)
   const replaying = useRef(false)
   const dismissedRef = useRef(false)
   const phaseRef = useRef<Phase>(phase)
+  const sceneRef = useRef(0)
   const active = phase !== 'done' && !reduce
 
   useEffect(() => {
@@ -43,7 +54,7 @@ export function SplashScreen() {
 
   const finish = useCallback(() => {
     phaseRef.current = 'done'
-    try { sessionStorage.setItem(SEEN_KEY, 'seen') } catch { /* Private browsing still works. */ }
+    markIntroSeen()
     setPhase('done')
   }, [])
 
@@ -51,19 +62,39 @@ export function SplashScreen() {
     if (dismissedRef.current || phaseRef.current === 'leaving' || phaseRef.current === 'done') return
     dismissedRef.current = true
     overlayRef.current?.classList.remove('tide-intro--hidden')
-    try { sessionStorage.setItem(SEEN_KEY, 'seen') } catch { /* Private browsing still works. */ }
+    markIntroSeen()
     phaseRef.current = 'leaving'
     setPhase('leaving')
   }, [])
 
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape' && (event.target as HTMLElement).closest('a')) return
-    if (!['Enter', 'Escape', ' ', 'Spacebar'].includes(event.key)) return
-    event.preventDefault()
-    dismiss()
+  /** One tap, one scene. The sixth tap (on the final scene) runs the PR57 exit. */
+  const advance = useCallback(() => {
+    const current = phaseRef.current
+    if (current === 'leaving' || current === 'done') return
+    if (sceneRef.current >= INTRO_SCENE_COUNT) {
+      dismiss()
+      return
+    }
+    if (current === 'entrance') {
+      phaseRef.current = 'idle'
+      setPhase('idle')
+    }
+    setGhostScene(sceneRef.current > 0 ? sceneRef.current : null)
+    sceneRef.current += 1
+    setScene(sceneRef.current)
   }, [dismiss])
 
-  const handlePointerUp = useCallback((_event: PointerEvent<HTMLButtonElement>) => {
+  const handleAdvanceKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!['Enter', ' ', 'Spacebar', 'ArrowRight'].includes(event.key)) return
+    // preventDefault stops the browser's own keyboard "click" on the button,
+    // so Enter and Space advance exactly once — and Space never scrolls.
+    event.preventDefault()
+    advance()
+  }, [advance])
+
+  const handleOverlayKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
     dismiss()
   }, [dismiss])
 
@@ -72,11 +103,18 @@ export function SplashScreen() {
   }, [reduce, finish])
 
   useEffect(() => {
+    if (ghostScene === null) return
+    const scope = createMotionScope()
+    scope.timeout(() => setGhostScene(null), INTRO_SCENE_OUT_MS)
+    return () => scope.dispose()
+  }, [ghostScene, scene])
+
+  useEffect(() => {
     if (!active) return
     const oldOverflow = document.body.style.overflow
     const overlay = overlayRef.current
     document.body.style.overflow = 'hidden'
-    entryRef.current?.focus({ preventScroll: true })
+    advanceRef.current?.focus({ preventScroll: true })
     const visibility = () => {
       overlay?.classList.toggle('tide-intro--hidden', document.hidden)
     }
@@ -112,11 +150,13 @@ export function SplashScreen() {
     let animation: Animation | undefined
     let hidingTwin = false
     const previousVisibility = heading?.style.visibility ?? ''
+    // The wordmark is only on screen during scene 0 and the final scene; a
+    // Skip from scenes 1–4 exits on the dissolve so an invisible title is
+    // never flown over the landing heading.
+    const titleVisible = sceneRef.current === 0 || sceneRef.current >= INTRO_SCENE_COUNT
     // Do not wait for fonts: if metrics are unstable, dissolve on the same deadline.
     const fontsReady = !document.fonts || document.fonts.status === 'loaded'
-    if (title && destination && heading && fontsReady && typeof title.animate === 'function') {
-      // Finish the child reveal before measuring: early input must not hand off
-      // a partly hidden title. Resize during flight uses the dissolve fallback.
+    if (titleVisible && title && destination && heading && fontsReady && typeof title.animate === 'function') {
       title.classList.add('tide-intro__title--ready')
       const from = title.getBoundingClientRect()
       const to = destination.getBoundingClientRect()
@@ -171,6 +211,9 @@ export function SplashScreen() {
     replaying.current = true
     dismissedRef.current = false
     phaseRef.current = 'entrance'
+    sceneRef.current = 0
+    setScene(0)
+    setGhostScene(null)
     window.scrollTo({ top: 0, behavior: 'instant' })
     setRun(value => value + 1)
     setPhase('entrance')
@@ -192,8 +235,11 @@ export function SplashScreen() {
           ref={overlayRef}
           key={run}
           className={`tide-intro tide-intro--${phase}`}
-          onClick={dismiss}
-          onKeyDown={handleKeyDown}
+          data-scene={scene}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Introduction"
+          onKeyDown={handleOverlayKeyDown}
         >
           <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
             <div className="tide-intro__light" />
@@ -214,21 +260,35 @@ export function SplashScreen() {
             <div className="tide-intro__copy tide-intro__chrome">
               <p className="tide-intro__eyebrow">COMMUNITY COASTAL MONITORING</p>
             </div>
-            <button
-              ref={entryRef}
-              type="button"
+            <div
               className="tide-intro__hint"
-              aria-label="Enter Red Tide PPC"
               data-hint-state={phase === 'leaving' ? 'exiting' : 'visible'}
-              onPointerUp={handlePointerUp}
-              onClick={dismiss}
+              aria-hidden="true"
             >
-              <span className="tide-intro__enter-desktop">ENTER SITE</span>
-              <span className="tide-intro__enter-touch">TAP TO ENTER</span>
-              <span aria-hidden="true">↗</span>
-            </button>
+              TAP TO BEGIN
+            </div>
           </div>
-          <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
+          {scene > 0 && (
+            <div className="tide-scenes">
+              {ghostScene !== null && ghostScene !== scene && (
+                <IntroScene key={`out-${ghostScene}`} scene={ghostScene} state="out" />
+              )}
+              <IntroScene key={scene} scene={scene} state="in" />
+            </div>
+          )}
+          <div className="sr-only" aria-live="polite">{sceneAnnouncement(scene)}</div>
+          <button
+            ref={advanceRef}
+            type="button"
+            className="tide-intro__advance"
+            aria-label={scene === 0 ? 'TAP TO BEGIN' : scene === INTRO_SCENE_COUNT ? 'TAP TO ENTER' : `Step ${scene} of ${INTRO_SCENE_COUNT}`}
+            onClick={advance}
+            onKeyDown={handleAdvanceKeyDown}
+          />
+          <button type="button" className="tide-intro__skip" aria-label="Skip introduction" onClick={dismiss}>
+            Skip
+          </button>
+          <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
         </div>
       , document.body)}
     </div>

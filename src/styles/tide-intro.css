@@ -128,3 +128,14 @@
   .tide-replay { transition: none; }
 }
 .tide-intro--hidden * { animation-play-state: paused !important; }
+
+/* Integrate the newer tap-to-advance story without retaining opening art
+   over the product scenes. Its advance button remains the sole tap surface. */
+.tide-intro__hint { pointer-events: none; }
+.tide-intro__bottom { z-index: 5; pointer-events: none; }
+.tide-intro__bottom a { pointer-events: auto; }
+.tide-intro:not([data-scene="0"]) .tide-intro__coast,
+.tide-intro:not([data-scene="0"]) .tide-intro__waterline {
+  opacity: 0; transition: opacity 220ms;
+}
+.tide-intro--leaving[data-handoff="measured"] .tide-intro__title-clip { opacity: 1; transition: none; }
