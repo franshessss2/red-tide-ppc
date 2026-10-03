@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
-import { DataProvenance } from '../components/DataProvenance'
+import { CommunitySource, DataProvenance } from '../components/DataProvenance'
 import { DecryptedText } from '../components/DecryptedText'
 import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
@@ -81,11 +81,11 @@ const EASE_OUT_QUINT = MOTION.ease.out
 
 const HOW_IT_WORKS = [
   'Find your shore — seven zones cover the coast, from the city bay to St. Paul Bay.',
-  'Report what you see — water colour, dead shellfish; ten words is enough.',
+  'Report an observation — describe what you see in at least 10 characters.',
   'An admin reviews community reports — a reviewed report can prompt a community warning. Check BFAR for official bulletins.',
 ] as const
 
-export function Landing() {
+export function Landing({ onReplay }: { onReplay?: () => void }) {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
@@ -182,6 +182,7 @@ export function Landing() {
           title="Red Tide"
           right={
             <>
+              {onReplay && <button type="button" data-intro-replay aria-label="Watch introduction" title="Watch introduction" onClick={onReplay} className="grid h-11 w-11 place-items-center text-2xl text-muted transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-accent"><span aria-hidden="true">↻</span></button>}
               <Link
                 to="/admin"
                 className="rounded-md border border-line bg-ink-2/85 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
@@ -232,8 +233,8 @@ export function Landing() {
           >
             {/* Stack on phones/tablets; use the right half for live information
                 on laptops instead of stretching the hero paragraph across it. */}
-            <div className="lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12 lg:pt-20 xl:gap-20 2xl:gap-24">
-              <section aria-label="Introduction" className="min-w-0 pt-20 sm:pt-24 lg:pt-0">
+            <div className="lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12 lg:pt-16 xl:gap-20 2xl:gap-24">
+              <section aria-label="Introduction" className="min-w-0 pt-14 sm:pt-16 lg:pt-0">
                 <div>
                   {/* Short label — letters read better than words at this size,
                       and it is the first thing to resolve. */}
@@ -271,7 +272,7 @@ export function Landing() {
                       time to resolve above it. */}
                   <BlurText
                     as="p"
-                    text="Watch the water, report what you see, and warn Puerto Princesa before bad shellfish reaches the table."
+                    text="Explore Puerto Princesa’s coastal records, share observations, and follow community warnings."
                     animateBy="words"
                     direction="top"
                     delay={55}
@@ -304,12 +305,11 @@ export function Landing() {
                 className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
-                <section aria-label="Community status" className="rounded-lg border border-line bg-ink-2/60 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted">
-                  {zonesReady ? <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                    <StatusPip hex={dominantTheme.hex} pulses={dominantTheme.pulses} trigger={dominant} />
-                    <span className="font-medium text-paper/90">{zones.length > 0 ? `${zones.length} zones recorded` : 'No zone records available'}</span>
-                    <span>· {counts.advisory} community warnings · {counts.unconfirmed} under review · {counts.unknown} unavailable</span>
-                    <span>{reportsReady ? `${pendingTotal} pending reports` : 'Report records loading'}</span>
+                <CommunitySource />
+                <section aria-label="Community status" className="mt-4 text-sm leading-relaxed text-muted">
+                  {zonesReady ? <div className="flex items-center gap-2.5">
+                    <StatusPip hex={dominantTheme.hex} pulses={false} trigger={dominant} />
+                    <span>{counts.unknown > 0 ? `${counts.unknown} zone statuses unavailable` : counts.advisory > 0 ? `${counts.advisory} community warnings recorded` : 'No community warnings recorded'}. Check official bulletins.</span>
                   </div> : <p>Loading community zone records…</p>}
                 </section>
 
@@ -327,7 +327,7 @@ export function Landing() {
                     valueClass={counts.advisory > 0 ? 'text-advisory' : undefined}
                   />
                 </motion.section>
-                <div className="mt-3.5"><DataProvenance /></div>
+                <div className="mt-3.5"><details className="mt-4 text-xs text-muted"><summary className="min-h-11 cursor-pointer py-3 focus-visible:outline-2 focus-visible:outline-accent">Record details and connection</summary><DataProvenance /></details></div>
               </motion.div>
             </div>
           </motion.div>
@@ -377,18 +377,15 @@ export function Landing() {
                 <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet variants={primerItemVariants}>
-                    A bloom of microscopic algae colours the water. Shellfish —{' '}
+                    Some algal blooms produce toxins that can accumulate in shellfish —{' '}
                     <em>tahong</em>, <em>talaba</em>, <em>halaan</em>,{' '}
-                    <em>alamang</em> — concentrate its toxin as they feed.
+                    <em>alamang</em> — as they feed.
                   </Bullet>
                   <Bullet variants={primerItemVariants}>
-                    Eating affected shellfish causes numbness within 30 minutes to
-                    2 hours, then trouble breathing. Cooking does not destroy the
-                    toxin, and there is no antidote.
+                    Contaminated shellfish can cause serious poisoning. Cooking does not reliably remove red-tide toxins. Seek urgent medical help for suspected poisoning.
                   </Bullet>
                   <Bullet variants={primerItemVariants}>
-                    Only BFAR can confirm red tide by lab test. This app warns
-                    early — it does not replace official advisories.
+                    Water appearance alone cannot establish safety. Community reports do not replace laboratory testing or official BFAR advisories.
                   </Bullet>
                 </ul>
               </motion.section>
@@ -397,18 +394,15 @@ export function Landing() {
                 <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet>
-                    A bloom of microscopic algae colours the water. Shellfish —{' '}
+                    Some algal blooms produce toxins that can accumulate in shellfish —{' '}
                     <em>tahong</em>, <em>talaba</em>, <em>halaan</em>,{' '}
-                    <em>alamang</em> — concentrate its toxin as they feed.
+                    <em>alamang</em> — as they feed.
                   </Bullet>
                   <Bullet>
-                    Eating affected shellfish causes numbness within 30 minutes to
-                    2 hours, then trouble breathing. Cooking does not destroy the
-                    toxin, and there is no antidote.
+                    Contaminated shellfish can cause serious poisoning. Cooking does not reliably remove red-tide toxins. Seek urgent medical help for suspected poisoning.
                   </Bullet>
                   <Bullet>
-                    Only BFAR can confirm red tide by lab test. This app warns
-                    early — it does not replace official advisories.
+                    Water appearance alone cannot establish safety. Community reports do not replace laboratory testing or official BFAR advisories.
                   </Bullet>
                 </ul>
               </section>
@@ -416,7 +410,7 @@ export function Landing() {
           </div>
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-line py-7 text-xs text-faint sm:mt-8 sm:gap-1.5 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
-            <p>Community early warning — not an official BFAR advisory</p>
+            <p>School presentation prototype · Community records, not an official BFAR advisory</p>
             <p>
               Map data ©{' '}
               <a

@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import '../../styles/intro-scenes.css'
 import { useReducedMotion } from '../../motion/preferences'
 import { MOTION } from '../../motion/tokens'
 

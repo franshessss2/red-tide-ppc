@@ -282,7 +282,12 @@ export default function Ferrofluid({
 
     let renderer: Renderer
     try {
+      // OGL logs before throwing when no context exists. Probe with the same
+      // canvas first so unsupported devices use the gradient quietly.
+      const canvas = document.createElement('canvas')
+      if (!canvas.getContext('webgl2') && !canvas.getContext('webgl')) return
       renderer = new Renderer({
+        canvas,
         dpr: dpr ?? (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1),
         alpha: true,
         // The effect is a soft glow on near-black; MSAA buys nothing visible

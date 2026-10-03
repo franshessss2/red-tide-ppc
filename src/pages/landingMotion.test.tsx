@@ -76,8 +76,8 @@ describe('landing motion pass — safety content is never gated on animation', (
     renderLanding()
 
     // Only BFAR can confirm; this app does not replace official advisories.
-    expect(screen.getByText(/Only BFAR can confirm red tide by lab test/i)).toBeTruthy()
-    expect(screen.getByText(/Cooking does not destroy the/i)).toBeTruthy()
+    expect(screen.getByText(/Community reports do not replace laboratory testing/i)).toBeTruthy()
+    expect(screen.getByText(/Cooking does not reliably remove/i)).toBeTruthy()
   })
 
   it('renders the animated hero and list copy even with no IntersectionObserver', () => {
@@ -85,9 +85,9 @@ describe('landing motion pass — safety content is never gated on animation', (
 
     // Every BlurText block falls back to "already in view" rather than waiting
     // forever for an observer that does not exist.
-    expect(container.textContent).toContain('Community early warning')
+    expect(container.textContent?.replace(/\u00a0/g, ' ')).toContain('Community early warning')
     expect(container.textContent).toContain(
-      'Watch the water, report what you see, and warn Puerto Princesa',
+      'Explore Puerto Princesa’s coastal records, share observations,',
     )
     expect(container.textContent).toContain('Find your shore')
     expect(container.textContent).toContain('An admin reviews community reports')
@@ -105,7 +105,7 @@ describe('landing motion pass — safety content is never gated on animation', (
     // into the animation component.
     const text = container.textContent ?? ''
     expect(text).toContain('seven zones cover the coast, from the city bay to St. Paul Bay.')
-    expect(text).toContain('water colour, dead shellfish; ten words is enough.')
+    expect(text).toContain('describe what you see in at least 10 characters.')
     expect(text).toContain('a reviewed report can prompt a community warning.')
   })
 })

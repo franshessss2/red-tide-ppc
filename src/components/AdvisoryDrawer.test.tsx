@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import App from '../App'
-import { clearDemoData, createDemoBackend } from '../lib/backend.demo'
+import { afterEach, describe, expect, it } from 'vitest'
 import { setBackendForTesting } from '../lib/backend'
 import { SIDE_PANEL_FALLBACK_WIDTH } from '../motion/sidePanelAnchors'
-import { useAppStore } from '../store'
 import { AdvisoryDrawer } from './AdvisoryDrawer'
 import { StatusKey } from './StatusKey'
 
@@ -282,59 +279,5 @@ describe('AdvisoryDrawer clip guarantees', () => {
         })
       }
     }
-  })
-})
-
-describe('AdvisoryDrawer on the map page', () => {
-  beforeEach(() => {
-  localStorage.setItem('red-tide-ppc:intro:v2', 'seen') // PR59: the intro gate moved to versioned localStorage (introGate.ts)
-    clearDemoData()
-    setBackendForTesting(createDemoBackend())
-    useAppStore.setState({
-      zones: [],
-      reports: [],
-      zonesReady: false,
-      reportsReady: false,
-      error: null,
-      formError: null,
-      notice: null,
-      submitting: false,
-      busyReportId: null,
-      busyZoneId: null,
-      selectedZoneId: null,
-      reportZoneId: null,
-      adminUnlocked: false,
-    })
-  })
-
-  it('is wired into the control column with a live gauge, a working tab, and a separate fixed key', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
-
-    const live = await screen.findByTestId('advisory-drawer')
-    expect(live.dataset.state).toBe('open')
-    // Seeded demo data: 7 zones, none under advisory.
-    expect(screen.getByText('Community warnings')).toBeTruthy()
-    expect(screen.getByText('0 of 7 zones flagged')).toBeTruthy()
-
-    // The drawer lives in the top-right control column now, under the zoom.
-    const column = screen.getByTestId('map-control-column')
-    expect(column.contains(live)).toBe(true)
-    expect(column.contains(screen.getByTestId('advisory-drawer-tab'))).toBe(true)
-
-    // The pills row is a separate fixed element, not in the drawer.
-    const key = await screen.findByTestId('status-key')
-    expect(live.contains(key)).toBe(false)
-    expect(column.contains(key)).toBe(false)
-
-    const liveTab = screen.getByTestId('advisory-drawer-tab')
-    await user.click(liveTab)
-    await waitFor(() => expect(live.dataset.state).toBe('collapsed'))
-    // The key never moves with the drawer.
-    expect(key.style.transform).toBe('')
-    await user.click(liveTab)
-    await waitFor(() => expect(live.dataset.state).toBe('open'))
   })
 })

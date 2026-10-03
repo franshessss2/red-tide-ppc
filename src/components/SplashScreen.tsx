@@ -1,326 +1,155 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Landing } from '../pages/Landing'
-import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
-import { createMotionScope } from '../motion/scope'
-import { MOTION } from '../motion/tokens'
-import { PhoneMock } from './intro/PhoneMock'
 import { motion } from 'motion/react'
+import { Landing } from '../pages/Landing'
+import { useReducedMotion } from '../motion/preferences'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
-import { INTRO_SCENE_COUNT, IntroScene, sceneAnnouncement } from './intro/IntroScenes'
+import { PhoneMock } from './intro/PhoneMock'
 import { INTRO_COAST_PATH } from '../data/introCoast'
 import '../styles/tide-intro.css'
+import '../styles/showroom.css'
 
-export const INTRO_ENTRANCE_MS = 1100
 export const INTRO_EXIT_MS = 650
-export const INTRO_TITLE_HANDOFF_MS = 550
-export const INTRO_TITLE_HANDOFF_DELAY_MS = 40
-export const INTRO_SCENE_OUT_MS = MOTION.time.introSceneOut * 1000
-export { INTRO_SCENE_COUNT }
+export const INTRO_SCENE_MS = 2400
+export const INTRO_SCENE_COUNT = 4
+const FEATURES = [
+  { title: 'Explore coastal zones.', copy: 'Seven coastal areas. Community records in one view.', tag: '01 / EXPLORE' },
+  { title: 'Report observations.', copy: 'Share what you see. Each report waits for admin review.', tag: '02 / REPORT' },
+  { title: 'Review community warnings.', copy: 'Stay informed. Check BFAR bulletins for official advisories.', tag: '03 / REVIEW' },
+]
+type Phase = 'playing' | 'leaving' | 'done'
 
-type Phase = 'entrance' | 'idle' | 'leaving' | 'done'
-
-/** All gating lives in intro/introGate.ts: versioned localStorage, "/" only, reduced motion off, fail open. */
-function initialPhase(): Phase {
-  return shouldShowIntro() ? 'entrance' : 'done'
-}
-
-/**
- * Finite coastal reveal -> still composition (scene 0) -> five tap-to-advance scenes ->
- * the explicit user-driven PR57 exit. Data fetching never controls it, no
- * timer ever changes the scene, and Skip is one action away on every screen.
- */
+/** Finite showroom sequence. Every activation exits; timers never navigate. */
 export function SplashScreen() {
-  const [phase, setPhase] = useState<Phase>(initialPhase)
   const reduce = useReducedMotion()
-  const [run, setRun] = useState(0)
+  const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'playing' : 'done')
   const [scene, setScene] = useState(0)
-  // The short exit of the outgoing scene. A tap mid-transition drops it
-  // immediately (the transition "completes") and advances exactly once.
-  const [ghostScene, setGhostScene] = useState<number | null>(null)
+  const [previousScene, setPreviousScene] = useState<number | null>(null)
+  const [run, setRun] = useState(0)
+  const phaseRef = useRef(phase)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
-  const titleRef = useRef<HTMLDivElement>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const advanceRef = useRef<HTMLButtonElement>(null)
-  const replayRef = useRef<HTMLButtonElement>(null)
   const replaying = useRef(false)
-  const dismissedRef = useRef(false)
-  const phaseRef = useRef<Phase>(phase)
-  const sceneRef = useRef(0)
-  const active = phase !== 'done' && !reduce
-
-  useEffect(() => {
-    phaseRef.current = phase
-  }, [phase])
-
-  const finish = useCallback(() => {
-    phaseRef.current = 'done'
-    markIntroSeen()
-    setPhase('done')
-  }, [])
+  const active = phase !== 'done'
+  const feature = FEATURES[scene - 1]
 
   const dismiss = useCallback(() => {
-    if (dismissedRef.current || phaseRef.current === 'leaving' || phaseRef.current === 'done') return
-    dismissedRef.current = true
-    overlayRef.current?.classList.remove('tide-intro--hidden')
-    markIntroSeen()
+    if (phaseRef.current !== 'playing') return
     phaseRef.current = 'leaving'
+    markIntroSeen()
     setPhase('leaving')
   }, [])
 
-  /** One tap, one scene. The sixth tap (on the final scene) runs the PR57 exit. */
-  const advance = useCallback(() => {
-    const current = phaseRef.current
-    if (current === 'leaving' || current === 'done') return
-    if (sceneRef.current >= INTRO_SCENE_COUNT) {
-      dismiss()
-      return
-    }
-    if (current === 'entrance') {
-      phaseRef.current = 'idle'
-      setPhase('idle')
-    }
-    setGhostScene(sceneRef.current > 0 ? sceneRef.current : null)
-    sceneRef.current += 1
-    setScene(sceneRef.current)
-  }, [dismiss])
-
-  const handleAdvanceKeyDown = useCallback((event: KeyboardEvent<HTMLButtonElement>) => {
-    if (!['Enter', ' ', 'Spacebar', 'ArrowRight'].includes(event.key)) return
-    // preventDefault stops the browser's own keyboard "click" on the button,
-    // so Enter and Space advance exactly once — and Space never scrolls.
-    event.preventDefault()
-    if (event.repeat) return
-    advance()
-  }, [advance])
-
-  const handleOverlayKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      dismiss()
-      return
-    }
-    if (event.key !== 'Tab') return
-    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]
-    const first = controls[0]
-    const last = controls[controls.length - 1]
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last?.focus()
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first?.focus()
-    }
-  }, [dismiss])
-
+  // Pause the remaining scene time when hidden instead of returning to a
+  // finished sequence after switching tabs. StrictMode owns one timer only.
   useEffect(() => {
-    if (reduce) finish()
-  }, [reduce, finish])
-
-  useEffect(() => {
-    if (ghostScene === null) return
-    const scope = createMotionScope()
-    scope.timeout(() => setGhostScene(null), INTRO_SCENE_OUT_MS)
-    return () => scope.dispose()
-  }, [ghostScene, scene])
-
-  useEffect(() => {
-    if (!active) return
-    const oldOverflow = document.body.style.overflow
-    const overlay = overlayRef.current
-    document.body.style.overflow = 'hidden'
-    advanceRef.current?.focus({ preventScroll: true })
+    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT || reduce) return
+    let remaining = INTRO_SCENE_MS
+    let started = performance.now()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const start = () => {
+      started = performance.now()
+      timer = setTimeout(() => {
+        if (phaseRef.current === 'playing') { setPreviousScene(scene); setScene(scene + 1) }
+      }, remaining)
+    }
     const visibility = () => {
-      overlay?.classList.toggle('tide-intro--hidden', document.hidden)
+      if (document.hidden) {
+        clearTimeout(timer)
+        remaining = Math.max(0, remaining - (performance.now() - started))
+      } else start()
     }
-    visibility()
+    if (!document.hidden) start()
     document.addEventListener('visibilitychange', visibility)
-    return () => {
-      document.body.style.overflow = oldOverflow
-      overlay?.classList.remove('tide-intro--hidden')
-      document.removeEventListener('visibilitychange', visibility)
-    }
-  }, [active, finish])
+    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', visibility) }
+  }, [phase, scene, reduce, run])
 
   useEffect(() => {
-    if (phase !== 'entrance' || reduce) return
-    const scope = createMotionScope()
-    scope.timeout(() => {
-      if (phaseRef.current !== 'entrance') return
-      phaseRef.current = 'idle'
-      setPhase('idle')
-    }, INTRO_ENTRANCE_MS)
-    return () => scope.dispose()
+    if (previousScene === null) return
+    const timer = setTimeout(() => setPreviousScene(null), 400)
+    return () => clearTimeout(timer)
+  }, [previousScene])
+
+  useEffect(() => {
+    if (phase !== 'leaving') return
+    const timer = setTimeout(() => {
+      phaseRef.current = 'done'
+      setPhase('done')
+    }, reduce ? 120 : INTRO_EXIT_MS)
+    return () => clearTimeout(timer)
   }, [phase, reduce])
 
   useEffect(() => {
-    if (phase !== 'leaving' || reduce) return
-    const scope = createMotionScope()
-    const title = titleRef.current
-    const heading = pageRef.current?.querySelector<HTMLElement>('h1[aria-label="Red Tide"]')
-    // Measure the rendered headline span, not the full-width h1 container. TextPressure
-    // keeps this selector stable without changing its accessible name.
-    const destination = heading?.querySelector<HTMLElement>('[data-text-pressure-target]') ?? heading
-    const overlay = overlayRef.current
-    let animation: Animation | undefined
-    let hidingTwin = false
-    const previousVisibility = heading?.style.visibility ?? ''
-    // The wordmark is only on screen during scene 0 and the final scene; a
-    // Skip from scenes 1–4 exits on the dissolve so an invisible title is
-    // never flown over the landing heading.
-    const titleVisible = sceneRef.current === 0 || sceneRef.current >= INTRO_SCENE_COUNT
-    // Do not wait for fonts: if metrics are unstable, dissolve on the same deadline.
-    const fontsReady = !document.fonts || document.fonts.status === 'loaded'
-    if (titleVisible && title && destination && heading && fontsReady && typeof title.animate === 'function') {
-      title.classList.add('tide-intro__title--ready')
-      const from = title.getBoundingClientRect()
-      const to = destination.getBoundingClientRect()
-      if (from.width > 0 && from.height > 0 && to.width > 0 && to.height > 0) {
-        try {
-          animation = title.animate([
-            { transform: 'translate(0, 0) scale(1, 1)' },
-            { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})` },
-          ], {
-            duration: INTRO_TITLE_HANDOFF_MS,
-            delay: INTRO_TITLE_HANDOFF_DELAY_MS,
-            easing: `cubic-bezier(${MOTION.ease.tide.join(',')})`,
-            fill: 'forwards',
-          })
-          heading.style.visibility = 'hidden'
-          hidingTwin = true
-          overlay?.setAttribute('data-handoff', 'measured')
-        } catch { /* Unsupported animation implementations use the dissolve. */ }
-      }
-    }
-    if (!hidingTwin) overlay?.setAttribute('data-handoff', 'fade')
-    const resize = () => {
-      animation?.cancel()
-      if (hidingTwin && heading) heading.style.visibility = previousVisibility
-      hidingTwin = false
-      overlay?.setAttribute('data-handoff', 'fade')
-    }
-    window.addEventListener('resize', resize)
-    scope.timeout(finish, INTRO_EXIT_MS)
-    return () => {
-      scope.dispose()
-      window.removeEventListener('resize', resize)
-      title?.classList.remove('tide-intro__title--ready')
-      animation?.cancel()
-      if (hidingTwin && heading) heading.style.visibility = previousVisibility
-      overlay?.removeAttribute('data-handoff')
-    }
-  }, [phase, finish, reduce])
+    if (!active) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    buttonRef.current?.focus({ preventScroll: true })
+    return () => { document.body.style.overflow = previous }
+  }, [active, run])
 
   const wasActive = useRef(active)
   useEffect(() => {
     if (!active && wasActive.current) {
-      const target = replaying.current ? replayRef.current : pageRef.current?.querySelector<HTMLElement>('.landing-map-cta')
-      target?.focus({ preventScroll: true })
+      pageRef.current?.querySelector<HTMLElement>(replaying.current ? '[data-intro-replay]' : '.landing-map-cta')?.focus({ preventScroll: true })
       replaying.current = false
     }
     wasActive.current = active
   }, [active])
 
-  function replay() {
-    if (prefersReducedMotion()) return
+  const replay = () => {
     replaying.current = true
-    dismissedRef.current = false
-    phaseRef.current = 'entrance'
-    sceneRef.current = 0
+    phaseRef.current = 'playing'
     setScene(0)
-    setGhostScene(null)
-    window.scrollTo({ top: 0, behavior: 'instant' })
+    setPreviousScene(null)
     setRun(value => value + 1)
-    setPhase('entrance')
+    setPhase('playing')
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
-  return (
-    <div className={`tide-experience tide-experience--${phase}`}>
-      <div ref={pageRef} inert={active} aria-hidden={active ? true : undefined}>
-        <Landing />
-        <div className="tide-replay-wrap">
-          <button ref={replayRef} className="tide-replay" onClick={replay} disabled={reduce}>
-            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M4 6a7 7 0 1 1-1 7M4 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            {reduce ? 'Intro motion off' : 'Replay intro'}
-          </button>
+  return <div className={`showroom-experience showroom-experience--${phase}`}>
+    <div ref={pageRef} className="showroom-landing" inert={active} aria-hidden={active ? true : undefined}>
+      <Landing onReplay={replay} />
+    </div>
+    {active && createPortal(<motion.div key={run} role="dialog" aria-modal="true" aria-label="Introduction"
+      className={`showroom showroom--${phase}${reduce ? ' showroom--reduced' : ''}`} data-scene={scene}
+      initial={false} animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
+      transition={{ duration: reduce ? 0.12 : 0.65 }}
+      onKeyDown={event => {
+        if (['Enter', ' ', 'Escape'].includes(event.key)) {
+          event.preventDefault()
+          if (!event.repeat) dismiss()
+        }
+        if (event.key === 'Tab') { event.preventDefault(); buttonRef.current?.focus() }
+      }}>
+      <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
+      <svg className="showroom-coast" viewBox="0 0 800 420" aria-hidden="true">
+        <motion.path d={INTRO_COAST_PATH} fill="none" stroke="currentColor" strokeWidth="1.5"
+          initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 2, ease: 'easeInOut' }} />
+      </svg>
+      <div className={`showroom-stage${feature && !reduce ? ' showroom-stage--feature' : ''}`}>
+        <div className="showroom-copy">
+          {previousScene !== null && !reduce && <div className="showroom-copy-out" aria-hidden="true">
+            <p className="showroom-eyebrow">{FEATURES[previousScene - 1]?.tag ?? 'COMMUNITY COASTAL MONITORING'}</p>
+            <h1>{FEATURES[previousScene - 1]?.title ?? 'RED TIDE'}</h1>
+            <p className="showroom-description">{FEATURES[previousScene - 1]?.copy ?? 'Explore the coast. Share observations. Follow community warnings.'}</p>
+          </div>}
+          <div key={reduce ? 'static' : scene} className="showroom-copy-in">
+            <p className="showroom-eyebrow">{feature && !reduce ? feature.tag : 'COMMUNITY COASTAL MONITORING'}</p>
+            <h1>{feature && !reduce ? feature.title : 'RED TIDE'}</h1>
+            <p className="showroom-description">{feature && !reduce ? feature.copy : 'Explore the coast. Share observations. Follow community warnings.'}</p>
+            {reduce && <p className="showroom-disclaimer">Reports are reviewed by an admin. Check BFAR for official advisories.</p>}
+          </div>
+        </div>
+        <div className={`showroom-device${feature && !reduce ? ' showroom-device--visible' : ''}`} aria-hidden="true">
+          <PhoneMock variant={scene === 2 ? 'report' : 'zones'} persistent />
+          <span className="showroom-device-caption">{scene === 2 ? 'OBSERVATION → REVIEW' : scene === 3 ? 'COMMUNITY RECORDS' : 'SEVEN COASTAL ZONES'}</span>
         </div>
       </div>
-      {active && createPortal(
-        <motion.div
-          layoutRoot
-          ref={overlayRef}
-          key={run}
-          className={`tide-intro tide-intro--${phase}`}
-          data-scene={scene}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Introduction"
-          onKeyDown={handleOverlayKeyDown}
-        >
-          <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
-            <div className="tide-intro__light" />
-          </div>
-          <div className="tide-intro__top tide-intro__chrome">
-            <span className="tide-intro__location">PUERTO PRINCESA <span>/</span> PALAWAN</span>
-          </div>
-          <div className="tide-intro__center">
-            <svg className="tide-intro__coast" viewBox="0 0 800 420" aria-hidden="true">
-              <path d={INTRO_COAST_PATH} pathLength="1" />
-            </svg>
-            <div className="tide-intro__waterline" aria-hidden="true" />
-            <div className="tide-intro__title-clip">
-              <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" role="heading" aria-level={1} aria-label="Red Tide">
-                <span aria-hidden="true">RED TIDE</span>
-              </div>
-            </div>
-            <div className="tide-intro__copy tide-intro__chrome">
-              <p className="tide-intro__eyebrow">COMMUNITY COASTAL MONITORING</p>
-            </div>
-            <div
-              className="tide-intro__hint"
-              data-hint-state={phase === 'leaving' ? 'exiting' : 'visible'}
-              aria-hidden="true"
-            >
-              TAP TO BEGIN
-            </div>
-          </div>
-          {scene > 0 && (
-            <div className="tide-scenes">
-              {ghostScene !== null && ghostScene !== scene && (
-                <IntroScene key={ghostScene} scene={ghostScene} state="out" showPhone={false} />
-              )}
-              <IntroScene key={scene} scene={scene} state="in" showPhone={false} />
-            </div>
-          )}
-          <div className="tide-phone-stage" aria-hidden="true">
-            <div className="tide-product-copy" />
-            <motion.div
-              className="tide-phone-carrier"
-              initial={{ opacity: 0, y: 40, scale: 0.94 }}
-              animate={scene === 3 || scene === 4
-                ? { opacity: 1, y: 0, scale: 1 }
-                : { opacity: 0, y: scene >= 5 ? -18 : 40, scale: scene >= 5 ? 0.85 : 0.94 }}
-              transition={{ duration: reduce ? 0 : MOTION.time.introScenePhone, ease: MOTION.ease.out }}
-            >
-              <PhoneMock variant={scene >= 4 ? 'report' : 'zones'} persistent />
-            </motion.div>
-          </div>
-          <div className="sr-only" aria-live="polite">{sceneAnnouncement(scene)}</div>
-          <button
-            ref={advanceRef}
-            type="button"
-            className="tide-intro__advance"
-            aria-label={scene === 0 ? 'TAP TO BEGIN' : scene === INTRO_SCENE_COUNT ? 'TAP TO ENTER' : `Step ${scene} of ${INTRO_SCENE_COUNT}`}
-            onClick={advance}
-            onKeyDown={handleAdvanceKeyDown}
-          />
-          <button type="button" className="tide-intro__skip" aria-label="Skip introduction" onClick={dismiss}>
-            Skip
-          </button>
-          <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
-        </motion.div>
-      , document.body)}
-    </div>
-  )
+      <div className="showroom-footer" aria-hidden="true">
+        <div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={scene >= index ? 'is-complete' : ''} />)}</div>
+        <span>Click to explore <span className="showroom-enter">↵</span></span>
+      </div>
+      <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase === 'leaving'} />
+    </motion.div>, document.body)}
+  </div>
 }

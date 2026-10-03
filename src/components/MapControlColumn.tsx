@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Map as LeafletMap } from 'leaflet'
 import { useReducedMotion } from '../motion/preferences'
-import { MOTION } from '../motion/tokens'
 import { cameraFor } from '../motion/camera'
 
 /**
@@ -65,8 +64,8 @@ export function ZoomControls({ map }: { map: LeafletMap | null }) {
   const zoomBy = (delta: number) => {
     if (!map) return
     const target = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), map.getZoom() + delta))
-    const center = map.getCenter()
-    cameraFor(map).run(() => reduce ? map.setZoom(target, { animate: false }) : map.flyTo(center, target, { duration: MOTION.time.base }), () => map.setZoom(target, { animate: false }), !reduce)
+    cameraFor(map).cancel()
+    map.setZoom(target, { animate: !reduce })
   }
   const [limits, setLimits] = useState({ canZoomIn: false, canZoomOut: false })
   // The live zoom level, republished as a data attribute so the real-browser

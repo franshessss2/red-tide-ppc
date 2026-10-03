@@ -19,11 +19,11 @@ afterEach(() => {
 const at = (pathname: string, search = '', hash = '') => ({ pathname, search, hash })
 
 describe('introGate', () => {
-  it('uses the versioned localStorage key red-tide-ppc:intro:v2', () => {
-    expect(INTRO_SEEN_KEY).toBe('red-tide-ppc:intro:v2')
+  it('uses the versioned localStorage key red-tide-ppc:intro:v3', () => {
+    expect(INTRO_SEEN_KEY).toBe('red-tide-ppc:intro:v3')
     markIntroSeen()
-    expect(localStorage.getItem('red-tide-ppc:intro:v2')).toBe('seen')
-    expect(sessionStorage.getItem('red-tide-ppc:intro:v2')).toBeNull()
+    expect(localStorage.getItem('red-tide-ppc:intro:v3')).toBe('seen')
+    expect(sessionStorage.getItem('red-tide-ppc:intro:v3')).toBeNull()
   })
 
   it('shows the intro on "/" for a first visit', () => {
@@ -42,11 +42,10 @@ describe('introGate', () => {
     expect(shouldShowIntro(at('/'))).toBe(false)
   })
 
-  it('does not show the intro under reduced motion, even on a first visit', () => {
+  it('lets the intro present a static equivalent under reduced motion', () => {
     reduced = true
-    expect(shouldShowIntro(at('/'))).toBe(false)
-    // Reduced motion also wins over an explicit replay request.
-    expect(shouldShowIntro(at('/', '?intro=1'))).toBe(false)
+    expect(shouldShowIntro(at('/'))).toBe(true)
+    expect(shouldShowIntro(at('/', '?intro=1'))).toBe(true)
   })
 
   it('skips the intro for deep links with a hash (PR57 behavior preserved)', () => {

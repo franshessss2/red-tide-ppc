@@ -4,6 +4,11 @@
 
 A public map of coastal zones colour-coded by advisory status, an anonymous way for anyone on the water to report what they are seeing, and a passcode-gated admin view that turns a credible report into a zone-wide advisory.
 
+
+For the school presentation, see [Presentation review](docs/presentation-review.md).
+The first-visit intro plays automatically and exits with one click; ↻ in the landing
+header reopens it. The public map uses a zone list and responsive details panel.
+
 ---
 
 ## 1. The problem, in plain English
