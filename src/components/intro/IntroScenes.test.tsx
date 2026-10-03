@@ -49,7 +49,7 @@ describe('fixed copy', () => {
     }
   })
 
-  it('staggers the three scene-2 lines 450ms apart via CSS, with no timers', () => {
+  it('orders the three scene-2 lines for the shared CSS stagger, with no timers', () => {
     const { container } = render(<IntroScene scene={2} state="in" />)
     const lines = [...container.querySelectorAll<HTMLElement>('.tide-scene__line')]
     expect(lines).toHaveLength(3)
@@ -86,7 +86,9 @@ describe('phone mock', () => {
     const reportPhone = report.container.querySelector('.intro-phone--report')!
     expect(reportPhone.getAttribute('aria-hidden')).toBe('true')
     expect(reportPhone.textContent).toBe('')
-    expect(reportPhone.querySelector('.intro-phone__status-swap')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__receipt')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__pending')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__status-swap')).toBeNull()
   })
 })
 

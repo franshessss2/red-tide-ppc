@@ -5,6 +5,8 @@ import { Landing } from '../pages/Landing'
 import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
+import { PhoneMock } from './intro/PhoneMock'
+import { motion } from 'motion/react'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
 import { INTRO_SCENE_COUNT, IntroScene, sceneAnnouncement } from './intro/IntroScenes'
 import { INTRO_COAST_PATH } from '../data/introCoast'
@@ -34,7 +36,7 @@ export function SplashScreen() {
   const reduce = useReducedMotion()
   const [run, setRun] = useState(0)
   const [scene, setScene] = useState(0)
-  // The 220ms ghost of the outgoing scene. A tap mid-transition drops it
+  // The short exit of the outgoing scene. A tap mid-transition drops it
   // immediately (the transition "completes") and advances exactly once.
   const [ghostScene, setGhostScene] = useState<number | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
@@ -89,13 +91,27 @@ export function SplashScreen() {
     // preventDefault stops the browser's own keyboard "click" on the button,
     // so Enter and Space advance exactly once — and Space never scrolls.
     event.preventDefault()
+    if (event.repeat) return
     advance()
   }, [advance])
 
   const handleOverlayKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape') return
-    event.preventDefault()
-    dismiss()
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      dismiss()
+      return
+    }
+    if (event.key !== 'Tab') return
+    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
   }, [dismiss])
 
   useEffect(() => {
@@ -231,7 +247,8 @@ export function SplashScreen() {
         </div>
       </div>
       {active && createPortal(
-        <div
+        <motion.div
+          layoutRoot
           ref={overlayRef}
           key={run}
           className={`tide-intro tide-intro--${phase}`}
@@ -271,11 +288,24 @@ export function SplashScreen() {
           {scene > 0 && (
             <div className="tide-scenes">
               {ghostScene !== null && ghostScene !== scene && (
-                <IntroScene key={`out-${ghostScene}`} scene={ghostScene} state="out" />
+                <IntroScene key={ghostScene} scene={ghostScene} state="out" showPhone={false} />
               )}
-              <IntroScene key={scene} scene={scene} state="in" />
+              <IntroScene key={scene} scene={scene} state="in" showPhone={false} />
             </div>
           )}
+          <div className="tide-phone-stage" aria-hidden="true">
+            <div className="tide-product-copy" />
+            <motion.div
+              className="tide-phone-carrier"
+              initial={{ opacity: 0, y: 40, scale: 0.94 }}
+              animate={scene === 3 || scene === 4
+                ? { opacity: 1, y: 0, scale: 1 }
+                : { opacity: 0, y: scene >= 5 ? -18 : 40, scale: scene >= 5 ? 0.85 : 0.94 }}
+              transition={{ duration: reduce ? 0 : MOTION.time.introScenePhone, ease: MOTION.ease.out }}
+            >
+              <PhoneMock variant={scene >= 4 ? 'report' : 'zones'} persistent />
+            </motion.div>
+          </div>
           <div className="sr-only" aria-live="polite">{sceneAnnouncement(scene)}</div>
           <button
             ref={advanceRef}
@@ -289,7 +319,7 @@ export function SplashScreen() {
             Skip
           </button>
           <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
-        </div>
+        </motion.div>
       , document.body)}
     </div>
   )

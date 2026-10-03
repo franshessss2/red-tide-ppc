@@ -1,4 +1,7 @@
 import type { CSSProperties } from 'react'
+import { motion } from 'motion/react'
+import { MOTION } from '../../motion/tokens'
+import { useReducedMotion } from '../../motion/preferences'
 import { PhoneMock } from './PhoneMock'
 import '../../styles/intro-scenes.css'
 
@@ -29,7 +32,7 @@ export function sceneAnnouncement(scene: number): string {
   return `Step ${scene} of ${INTRO_SCENE_COUNT}. ${copy.join(' ')}`
 }
 
-function SceneBody({ scene }: { scene: number }) {
+function SceneBody({ scene, showPhone }: { scene: number; showPhone: boolean }) {
   switch (scene) {
     case 1:
       return (
@@ -55,20 +58,21 @@ function SceneBody({ scene }: { scene: number }) {
     case 3:
       return (
         <>
-          <p className="tide-scene__headline tide-scene__headline--md">See every zone.</p>
-          <PhoneMock variant="zones" />
+          <div className="tide-product-copy"><p className="tide-scene__headline tide-scene__headline--md">See every zone.</p></div>
+          {showPhone ? <PhoneMock variant="zones" /> : <div className="tide-phone-space" aria-hidden="true" />}
         </>
       )
     case 4:
       return (
         <>
-          <p className="tide-scene__line tide-scene__line--lead" style={{ '--line-index': 0 } as CSSProperties}>
+          <div className="tide-product-copy"><p className="tide-scene__line tide-scene__line--lead" style={{ '--line-index': 0 } as CSSProperties}>
             Report what you see.
           </p>
           <p className="tide-scene__line" style={{ '--line-index': 1 } as CSSProperties}>
             Reviewed before an advisory is raised.
           </p>
-          <PhoneMock variant="report" />
+          </div>
+          {showPhone ? <PhoneMock variant="report" /> : <div className="tide-phone-space" aria-hidden="true" />}
         </>
       )
     case 5:
@@ -86,17 +90,22 @@ function SceneBody({ scene }: { scene: number }) {
 
 /**
  * One rendered scene. `state` is 'in' for the current scene and 'out' for
- * the 220ms ghost of the previous one; a tap mid-transition simply drops the
+ * the retained outgoing panel; a tap mid-transition simply drops the
  * ghost (the transition "completes") and shows the next scene.
  */
-export function IntroScene({ scene, state }: { scene: number; state: 'in' | 'out' }) {
+export function IntroScene({ scene, state, showPhone = true }: { scene: number; state: 'in' | 'out'; showPhone?: boolean }) {
+  const reduce = useReducedMotion()
   if (scene < 1 || scene > INTRO_SCENE_COUNT) return null
   return (
-    <div
+    <motion.div
+      initial={reduce ? false : { opacity: 0, y: 18 }}
+      animate={state === 'in' ? { opacity: 1, y: 0 } : { opacity: 0, y: reduce ? 0 : -12 }}
+      transition={{ duration: reduce ? 0 : state === 'in' ? MOTION.time.introSceneIn : MOTION.time.introSceneOut, ease: MOTION.ease.out }}
+      aria-hidden={state === 'out' ? true : undefined}
       className={`tide-scene tide-scene--${state}${scene === INTRO_SCENE_COUNT ? ' tide-scene--final' : ''}`}
       data-scene-panel={scene}
     >
-      <SceneBody scene={scene} />
-    </div>
+      <SceneBody scene={scene} showPhone={showPhone} />
+    </motion.div>
   )
 }
