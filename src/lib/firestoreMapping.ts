@@ -11,7 +11,7 @@ import type { LatLng, Report, ReportStatus, Zone, ZoneStatus } from '../types'
  *   - statuses typed by hand into a document that are not in the union;
  *   - documents created before a field existed.
  *
- * Nothing here throws: a malformed field degrades to a safe default rather
+ * Nothing here throws: a malformed field preserves uncertainty rather
  * than taking the whole map down.
  */
 
@@ -22,11 +22,11 @@ const REPORT_STATUSES: readonly ReportStatus[] = [
   'rejected',
 ]
 
-/** Anything unrecognised is treated as `safe` — the least alarming default. */
+/** Unrecognised data cannot establish the absence of a warning. */
 export function normalizeZoneStatus(value: unknown): ZoneStatus {
   return ZONE_STATUSES.includes(value as ZoneStatus)
     ? (value as ZoneStatus)
-    : 'safe'
+    : 'unknown'
 }
 
 export function normalizeReportStatus(value: unknown): ReportStatus {
@@ -39,20 +39,24 @@ export function normalizeReportStatus(value: unknown): ReportStatus {
  * Firestore Timestamp, GeoPoint-ish object, ISO string, epoch number or
  * `null` (a locally-pending `serverTimestamp()`) → epoch milliseconds.
  */
-export function toMillis(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value === 'string') {
-    const parsed = Date.parse(value)
-    if (!Number.isNaN(parsed)) return parsed
-  }
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>
-    if (typeof record.toMillis === 'function') {
-      return (record.toMillis as () => number)()
+export function toMillis(value: unknown): number | null {
+  let parsed: unknown = null
+  try {
+    if (typeof value === 'number') parsed = value
+    else if (typeof value === 'string') parsed = Date.parse(value)
+    else if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>
+      if (typeof record.toMillis === 'function') parsed = record.toMillis.call(value)
+      else if (typeof record.seconds === 'number') {
+        parsed = record.seconds * 1000 +
+          (typeof record.nanoseconds === 'number' ? record.nanoseconds / 1e6 : 0)
+      }
     }
-    if (typeof record.seconds === 'number') return record.seconds * 1000
+  } catch {
+    return null
   }
-  return Date.now()
+  return typeof parsed === 'number' && Number.isFinite(parsed) &&
+    parsed > 0 && parsed <= 8.64e15 ? parsed : null
 }
 
 /** Accepts `[[lat, lng], ...]` or `[{latitude, longitude}, ...]` (GeoPoint). */
@@ -118,7 +122,7 @@ export function containsNestedArrays(value: unknown): boolean {
   return false
 }
 
-export function mapZone(id: string, data: Record<string, unknown>): Zone {
+export function mapZone(id: string, data: Record<string, unknown>, hasPendingWrites = false): Zone {
   return {
     id,
     name: typeof data.name === 'string' ? data.name : 'Unnamed zone',
@@ -126,10 +130,11 @@ export function mapZone(id: string, data: Record<string, unknown>): Zone {
     polygon: normalizePolygon(data.polygon),
     status: normalizeZoneStatus(data.status),
     lastUpdated: toMillis(data.lastUpdated),
+    ...(hasPendingWrites && data.lastUpdated === null ? { lastUpdatedPending: true } : {}),
   }
 }
 
-export function mapReport(id: string, data: Record<string, unknown>): Report {
+export function mapReport(id: string, data: Record<string, unknown>, hasPendingWrites = false): Report {
   return {
     id,
     zoneId: typeof data.zoneId === 'string' ? data.zoneId : '',
@@ -139,6 +144,7 @@ export function mapReport(id: string, data: Record<string, unknown>): Report {
         ? data.photoUrl
         : null,
     submittedAt: toMillis(data.submittedAt),
+    ...(hasPendingWrites && data.submittedAt === null ? { submittedAtPending: true } : {}),
     status: normalizeReportStatus(data.status),
   }
 }

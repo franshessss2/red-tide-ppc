@@ -1,23 +1,15 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { motion, useTransform } from 'motion/react'
-import { useReducedMotion } from '../motion/preferences'
-import { MOTION, tween } from '../motion/tokens'
-import { CountUp } from './CountUp'
 import { MorphChevronIcon } from './MorphChevron'
-import {
-  advisoryShare,
-  tideBaselinePath,
-  tideWavePath,
-} from '../motion/readouts'
 import { isDragTail } from '../motion/sidePanelAnchors'
 import { useClipWindowWidth, useSidePanel } from '../motion/useSidePanel'
 
 /**
- * The advisory-signal gauge card as a collapsible side drawer.
+ * The community zone-count card as a collapsible side drawer.
  *
  * WHAT IT IS
  * ----------
- * The "Advisory signal" card (the 0% gauge + 0/7 ADV · 0 PEND readout) sits
+ * The community zone-count card sits
  * in the top-right control column, between the zoom buttons and the zone
  * drawer's tab. On a phone it permanently covers that corner of the map, so
  * it tucks away into the RIGHT edge, leaving only a grab tab.
@@ -109,15 +101,23 @@ export interface AdvisoryDrawerProps {
   advisory: number
   zones: number
   pending: number
+  unavailable?: number
+  ready?: boolean
+  reportsReady?: boolean
 }
 
 const TAB_LABEL: Record<'open' | 'collapsed', string> = {
-  open: 'Collapse advisory signal panel',
-  collapsed: 'Expand advisory signal panel',
+  open: 'Collapse zone counts panel',
+  collapsed: 'Expand zone counts panel',
 }
 
-export function AdvisoryDrawer({ advisory, zones, pending }: AdvisoryDrawerProps) {
-  const panel = useSidePanel('open', { edge: 'right' })
+export function AdvisoryDrawer({ advisory, zones, pending, unavailable = 0, ready = true, reportsReady = true }: AdvisoryDrawerProps) {
+  const panel = useSidePanel(typeof window !== 'undefined' && window.innerHeight <= 480 ? 'collapsed' : 'open', { edge: 'right' })
+  useEffect(() => {
+    const compact = () => { if (window.innerHeight <= 480) panel.goTo('collapsed') }
+    window.addEventListener('resize', compact)
+    return () => window.removeEventListener('resize', compact)
+  }, [panel.goTo])
   const open = panel.state === 'open'
   const tabLabel = TAB_LABEL[panel.state]
 
@@ -161,9 +161,9 @@ export function AdvisoryDrawer({ advisory, zones, pending }: AdvisoryDrawerProps
 
   return (
     <div
-      className="pointer-events-none flex items-stretch justify-end"
+      className="zone-count-drawer pointer-events-none flex items-stretch justify-end"
       role="region"
-      aria-label="Advisory signal"
+      aria-label="Community zone counts"
       data-testid="advisory-drawer"
       data-state={panel.state}
       data-dragging={panel.dragging || undefined}
@@ -185,14 +185,14 @@ export function AdvisoryDrawer({ advisory, zones, pending }: AdvisoryDrawerProps
         title={tabLabel}
         data-testid="advisory-drawer-tab"
         style={{ marginRight: tabGap }}
-        className="pointer-events-auto flex w-11 shrink-0 select-none flex-col items-center justify-center gap-2 self-start rounded-lg border border-line bg-ink-2/88 py-3 backdrop-blur-md transition-colors [touch-action:none] hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="zone-count-tab pointer-events-auto flex w-11 shrink-0 select-none flex-col items-center justify-center gap-2 self-start rounded-lg border border-line bg-ink-2/88 py-3 backdrop-blur-md transition-colors [touch-action:none] hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         {/* Geometry morph, not a rotation: the arms fold through a vertical
             stroke between ‹ and › (see MorphChevron). */}
         <MorphChevronIcon open={open} className="h-3.5 w-3.5 text-paper/70" />
         <span
           aria-hidden="true"
-          className="block h-8 w-1 rounded-full bg-line-soft"
+          className="drawer-grip block h-8 w-1 rounded-full bg-line-soft"
         />
       </motion.button>
 
@@ -233,87 +233,21 @@ export function AdvisoryDrawer({ advisory, zones, pending }: AdvisoryDrawerProps
           onDragEnd={(_event, info) => panel.onDragEnd(info)}
           className="w-max"
         >
-          <AdvisoryGauge advisory={advisory} zones={zones} pending={pending} />
+          <AdvisoryGauge advisory={advisory} zones={zones} pending={pending} unavailable={unavailable} ready={ready} reportsReady={reportsReady} />
         </motion.div>
       </motion.div>
     </div>
   )
 }
 
-/**
- * Advisory signal gauge. The same instrument as the old floating card: it
- * plots the share of zones under advisory — the waveform collapses to a flat
- * line when nothing is flagged and rises as the share grows. Explicitly NOT
- * a tide prediction.
- *
- * The card is a read-only instrument, pointer-transparent so the map beneath
- * stays interactive (pan/zoom/tap zones). Its background is deliberately
- * SOLID (`bg-ink-2`, no `backdrop-blur`): this card lives inside the drawer's
- * translated track, and translucent blurred layers inside a transformed
- * ancestor detach on mobile GPUs — that was the floating-text bleed the old
- * merged panel shipped. See the module doc above.
- */
-function AdvisoryGauge({
-  advisory,
-  zones,
-  pending,
-}: {
-  advisory: number
-  zones: number
-  pending: number
-}) {
-  const reduce = useReducedMotion()
-  const share = advisoryShare(advisory, zones)
-  const wave = tideWavePath({ scale: share })
-  const baseline = tideBaselinePath()
-
+/** Exact record counts, without implying a tide forecast or probability. */
+function AdvisoryGauge({ advisory, zones, pending, unavailable, ready, reportsReady }: Required<AdvisoryDrawerProps>) {
   return (
-    <div
-      className="pointer-events-none w-[172px] rounded-lg border border-line bg-ink-2 p-2.5"
-      data-testid="advisory-gauge"
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-faint">
-          Advisory signal
-        </span>
-        <span className="font-mono text-[10px] leading-none tabular-nums text-accent">
-          <CountUp to={Math.round(share * 100)} duration={MOTION.time.count} suffix="%" />
-        </span>
-      </div>
-
-      <svg
-        viewBox="0 0 120 18"
-        preserveAspectRatio="none"
-        className="mt-1.5 block h-4 w-full overflow-hidden"
-        aria-hidden="true"
-      >
-        <path
-          d={baseline}
-          stroke="var(--color-line)"
-          strokeWidth="1"
-          strokeDasharray="2 3"
-          fill="none"
-        />
-        {/* Two tiles, drifted -50% on a loop: seamless because the wave is
-            periodic. The trace is amber until something is actually flagged. */}
-        <g className="animate-tide-drift" style={{ color: share > 0 ? 'var(--color-advisory)' : 'var(--color-line)' }}>
-          <motion.path d={wave} initial={false} animate={{ d: wave }} transition={tween(reduce, MOTION.time.reveal)} stroke="currentColor" strokeWidth="1.4" fill="none" />
-          <motion.path
-            d={wave}
-            initial={false}
-            animate={{ d: wave }}
-            transition={tween(reduce, MOTION.time.reveal)}
-            stroke="currentColor"
-            strokeWidth="1.4"
-            fill="none"
-            transform="translate(120 0)"
-          />
-        </g>
-      </svg>
-
-      <p className="mt-1.5 font-mono text-[9px] uppercase leading-none tracking-[0.14em] text-muted">
-        {advisory}/{zones} adv · {pending} pend
-      </p>
+    <div className="pointer-events-none w-[172px] rounded-lg border border-line bg-ink-2 p-2.5" data-testid="advisory-gauge">
+      <p className="text-xs font-medium text-paper">Community warnings</p>
+      <p className="mt-1 text-sm tabular-nums text-paper">{ready ? zones > 0 ? `${advisory} of ${zones} zones flagged` : 'No zone records' : 'Loading zone records'}</p>
+      <p className="mt-1 text-xs tabular-nums text-muted">{ready ? `${unavailable} status unavailable` : 'Status not received'}</p>
+      <p className="mt-1 text-xs tabular-nums text-muted">{reportsReady ? `${pending} pending reports` : 'Reports loading'}</p>
     </div>
   )
 }

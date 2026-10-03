@@ -90,7 +90,7 @@ describe('landing motion pass — safety content is never gated on animation', (
       'Watch the water, report what you see, and warn Puerto Princesa',
     )
     expect(container.textContent).toContain('Find your shore')
-    expect(container.textContent).toContain('A local admin verifies it')
+    expect(container.textContent).toContain('An admin reviews community reports')
   })
 
   it('keeps the headline readable as "Red Tide" to assistive tech', () => {
@@ -106,6 +106,6 @@ describe('landing motion pass — safety content is never gated on animation', (
     const text = container.textContent ?? ''
     expect(text).toContain('seven zones cover the coast, from the city bay to St. Paul Bay.')
     expect(text).toContain('water colour, dead shellfish; ten words is enough.')
-    expect(text).toContain('if it checks out, the zone goes under advisory.')
+    expect(text).toContain('a reviewed report can prompt a community warning.')
   })
 })

@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { useReducedMotion } from '../motion/preferences'
 import { MOTION, tween } from '../motion/tokens'
 import { StatusPip } from './StatusPip'
-import { formatDateTime, formatRelative } from '../lib/format'
+import { formatRecordTime, formatRelative } from '../lib/format'
 import { reportLabel, reportTheme } from '../styles/statusTheme'
 import type { Report } from '../types'
 
@@ -93,7 +93,7 @@ export function ReportCard({
             {reportLabel(report.status)}
           </span>
           <span className="ml-auto font-mono text-[10px] text-faint">
-            {formatRelative(report.submittedAt)}
+            {report.submittedAtPending ? 'Awaiting server timestamp' : report.submittedAt === null ? 'Date unavailable' : formatRelative(report.submittedAt)}
           </span>
         </div>
 
@@ -118,7 +118,7 @@ export function ReportCard({
         )}
 
         <p className="mt-3 font-mono text-[10px] text-faint">
-          Submitted {formatDateTime(report.submittedAt)} PHT · id{' '}
+          Submitted {formatRecordTime(report.submittedAt, report.submittedAtPending)} · id{' '}
           <span className="text-faint/80">{report.id}</span>
         </p>
 

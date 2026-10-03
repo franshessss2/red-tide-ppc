@@ -57,12 +57,12 @@ describe('AdvisoryDrawer resting state', () => {
     expect(drawer().dataset.state).toBe('open')
 
     // Gauge: the instrument readout.
-    expect(screen.getByText('Advisory signal')).toBeTruthy()
-    expect(screen.getByText('1/6 adv · 2 pend')).toBeTruthy()
+    expect(screen.getByText('Community warnings')).toBeTruthy()
+    expect(screen.getByText('1 of 6 zones flagged')).toBeTruthy()
 
     // Tab: expanded, labelled with what it will do next.
     expect(tab().getAttribute('aria-expanded')).toBe('true')
-    expect(tab().getAttribute('aria-label')).toBe('Collapse advisory signal panel')
+    expect(tab().getAttribute('aria-label')).toBe('Collapse zone counts panel')
     expect(tab().getAttribute('aria-controls')).toBe('advisory-drawer-body')
   })
 
@@ -70,7 +70,7 @@ describe('AdvisoryDrawer resting state', () => {
     render(
       <>
         <AdvisoryDrawer advisory={1} zones={6} pending={2} />
-        <StatusKey counts={{ safe: 4, unconfirmed: 1, advisory: 1 }} />
+        <StatusKey counts={{ safe: 4, unconfirmed: 1, advisory: 1, unknown: 0 }} />
       </>,
     )
 
@@ -110,12 +110,12 @@ describe('AdvisoryDrawer tap path', () => {
     await user.click(tab())
     await waitFor(() => expect(drawer().dataset.state).toBe('collapsed'))
     expect(tab().getAttribute('aria-expanded')).toBe('false')
-    expect(tab().getAttribute('aria-label')).toBe('Expand advisory signal panel')
+    expect(tab().getAttribute('aria-label')).toBe('Expand zone counts panel')
 
     await user.click(tab())
     await waitFor(() => expect(drawer().dataset.state).toBe('open'))
     expect(tab().getAttribute('aria-expanded')).toBe('true')
-    expect(tab().getAttribute('aria-label')).toBe('Collapse advisory signal panel')
+    expect(tab().getAttribute('aria-label')).toBe('Collapse zone counts panel')
   })
 
   it('still toggles on a tap fired right after a drag (tap-after-drag regression)', async () => {
@@ -316,8 +316,8 @@ describe('AdvisoryDrawer on the map page', () => {
     const live = await screen.findByTestId('advisory-drawer')
     expect(live.dataset.state).toBe('open')
     // Seeded demo data: 7 zones, none under advisory.
-    expect(screen.getByText('Advisory signal')).toBeTruthy()
-    expect(screen.getByText('0/7 adv · 0 pend')).toBeTruthy()
+    expect(screen.getByText('Community warnings')).toBeTruthy()
+    expect(screen.getByText('0 of 7 zones flagged')).toBeTruthy()
 
     // The drawer lives in the top-right control column now, under the zoom.
     const column = screen.getByTestId('map-control-column')

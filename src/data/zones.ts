@@ -1,4 +1,4 @@
-import type { LatLng, ZoneStatus } from '../types'
+import type { LatLng, KnownZoneStatus } from '../types'
 
 /**
  * Pre-seeded zones for the Puerto Princesa coastline.
@@ -95,7 +95,7 @@ export interface SeedZone {
   name: string
   description: string
   polygon: LatLng[]
-  status: ZoneStatus
+  status: KnownZoneStatus
 }
 
 export const SEED_ZONES: SeedZone[] = [

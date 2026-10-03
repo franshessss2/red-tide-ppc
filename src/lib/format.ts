@@ -32,20 +32,20 @@ const STEPS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
 ]
 
 /** "13 Sep 2026, 4:30 pm" (PHT) */
-export function formatDateTime(epochMs: number): string {
-  if (!Number.isFinite(epochMs) || epochMs <= 0) return '—'
+export function formatDateTime(epochMs: number | null): string {
+  if (epochMs === null || !Number.isFinite(epochMs) || epochMs <= 0 || epochMs > 8.64e15) return '—'
   return absoluteFormatter.format(new Date(epochMs))
 }
 
 /** "13 Sep 2026" (PHT) */
-export function formatDay(epochMs: number): string {
-  if (!Number.isFinite(epochMs) || epochMs <= 0) return '—'
+export function formatDay(epochMs: number | null): string {
+  if (epochMs === null || !Number.isFinite(epochMs) || epochMs <= 0 || epochMs > 8.64e15) return '—'
   return dayFormatter.format(new Date(epochMs))
 }
 
 /** "12 minutes ago" / "yesterday" / "3 days ago" */
-export function formatRelative(epochMs: number, now: number = Date.now()): string {
-  if (!Number.isFinite(epochMs) || epochMs <= 0) return '—'
+export function formatRelative(epochMs: number | null, now: number = Date.now()): string {
+  if (epochMs === null || !Number.isFinite(epochMs) || epochMs <= 0 || epochMs > 8.64e15) return '—'
   const diff = epochMs - now
   const abs = Math.abs(diff)
 
@@ -71,4 +71,11 @@ export function formatBytes(bytes: number): string {
     unit += 1
   }
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`
+}
+
+/** Explicitly separate unavailable dates from unresolved local timestamps. */
+export function formatRecordTime(epochMs: number | null, pending = false): string {
+  if (pending) return 'Awaiting server timestamp'
+  const formatted = formatDateTime(epochMs)
+  return formatted === '—' ? 'Date unavailable' : `${formatted} PHT`
 }

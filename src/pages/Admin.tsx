@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { useReducedMotion } from '../motion/preferences'
 import { MOTION, spring, tween } from '../motion/tokens'
-import { CountUp } from '../components/CountUp'
 import { usePulse } from '../motion/usePulse'
 import { AdminGate } from '../components/AdminGate'
+import { DataProvenance } from '../components/DataProvenance'
 import { Header } from '../components/Header'
 import { Notice } from '../components/Notice'
 import { ReportQueueSkeleton } from '../components/LoadingState'
@@ -21,7 +21,7 @@ import {
   useAppStore,
   zoneNameFor,
 } from '../store'
-import type { ZoneStatus } from '../types'
+import type { KnownZoneStatus } from '../types'
 
 type Tab = 'pending' | 'reviewed' | 'zones'
 
@@ -35,7 +35,7 @@ const ADMIN_CONTAINER =
   'w-full max-w-3xl px-5 min-[400px]:px-6 md:max-w-4xl md:px-8 lg:max-w-6xl xl:max-w-7xl xl:px-10 2xl:max-w-[100rem] 2xl:px-12'
 const REPORT_GRID = 'grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3'
 
-const ZONE_STATUS_CHOICES: ZoneStatus[] = ['safe', 'unconfirmed', 'advisory']
+const ZONE_STATUS_CHOICES: KnownZoneStatus[] = ['safe', 'unconfirmed', 'advisory']
 
 /**
  * /admin — passcode-gated review queue.
@@ -70,6 +70,7 @@ export function Admin() {
 function AdminDashboard() {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
+  const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
   const busyReportId = useAppStore((state) => state.busyReportId)
   const busyZoneId = useAppStore((state) => state.busyZoneId)
@@ -116,10 +117,10 @@ function AdminDashboard() {
         }
       />
       <main className={`mx-auto pb-16 pt-5 sm:pt-7 ${ADMIN_CONTAINER}`}>
-        <div className="mb-5 grid grid-cols-3 gap-3 md:gap-4">
-          <Stat label="Pending" value={pendingReports.length} tone="amber" />
-          <Stat label="Under advisory" value={advisoryZones.length} tone="red" />
-          <Stat label="Total reports" value={reports.length} tone="slate" />
+        <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,8em),1fr))] gap-3 md:gap-4">
+          <Stat label="Pending" value={pendingReports.length} ready={reportsReady} tone="amber" />
+          <Stat label="Community warnings" value={advisoryZones.length} ready={zonesReady} tone="red" />
+          <Stat label="Total reports" value={reports.length} ready={reportsReady} tone="slate" />
         </div>
 
         <LayoutGroup id={tabGroup}>
@@ -158,6 +159,8 @@ function AdminDashboard() {
 
         </LayoutGroup>
 
+        <div className="mt-4"><DataProvenance /></div>
+
         {tab === 'pending' && (
           <section className="mt-5" aria-label="Pending reports">
             {!reportsReady ? <ReportQueueSkeleton className={REPORT_GRID} /> : (
@@ -173,8 +176,8 @@ function AdminDashboard() {
                   <motion.div key="queue" initial={false} animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: tween(reduceMotion, MOTION.time.emptyDelay) }}>
                     <p className="mb-3 text-xs leading-relaxed text-muted">
-                      Approving confirms the report and puts its zone under advisory
-                      immediately. Rejecting dismisses the report and leaves the zone unchanged.
+                      Approving marks the report reviewed and adds a community warning to its zone.
+                      It does not establish laboratory confirmation. Rejecting dismisses the report and leaves the zone unchanged.
                     </p>
                     <ul className={REPORT_GRID}>
                       <AnimatePresence initial={false} propagate>
@@ -221,8 +224,8 @@ function AdminDashboard() {
         {tab === 'zones' && (
           <section className="mt-5" aria-label="Zone status control">
             <p className="mb-3 text-xs leading-relaxed text-muted">
-              Zone status only changes here — there is no automatic expiry. Revert
-              a zone to <strong>Safe</strong> yourself once the water is cleared.
+              Community status has no automatic expiry. Mark <strong>No alert recorded</strong>
+              only after reviewing the warning; this does not establish official clearance.
             </p>
             <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {zones.map((zone) => {
@@ -300,9 +303,11 @@ function Stat({
   label,
   value,
   tone,
+  ready,
 }: {
   label: string
   value: number
+  ready: boolean
   tone: 'amber' | 'red' | 'slate'
 }) {
   const valueRef = usePulse<HTMLParagraphElement>(value, 1.08, true, MOTION.time.statAck)
@@ -318,7 +323,7 @@ function Stat({
       {/* Bebas Neue for the number: at a glance, the count is what an admin
           needs, and the condensed face reads larger in the same space. */}
       <p ref={valueRef} className={`origin-left font-display text-3xl leading-none tabular-nums lg:text-5xl ${toneClass}`}>
-        <CountUp to={value} duration={MOTION.time.count} />
+        {ready ? value : '—'}
       </p>
       <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-faint">
         {label}

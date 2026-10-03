@@ -24,12 +24,12 @@ describe('normalizeZoneStatus', () => {
     expect(normalizeZoneStatus('advisory')).toBe('advisory')
   })
 
-  it('falls back to safe for typos, casing and missing values', () => {
-    expect(normalizeZoneStatus('Advisory')).toBe('safe')
-    expect(normalizeZoneStatus('danger')).toBe('safe')
-    expect(normalizeZoneStatus(undefined)).toBe('safe')
-    expect(normalizeZoneStatus(null)).toBe('safe')
-    expect(normalizeZoneStatus(1)).toBe('safe')
+  it('preserves unknown status for typos, casing and missing values', () => {
+    expect(normalizeZoneStatus('Advisory')).toBe('unknown')
+    expect(normalizeZoneStatus('danger')).toBe('unknown')
+    expect(normalizeZoneStatus(undefined)).toBe('unknown')
+    expect(normalizeZoneStatus(null)).toBe('unknown')
+    expect(normalizeZoneStatus(1)).toBe('unknown')
   })
 })
 
@@ -54,19 +54,19 @@ describe('toMillis', () => {
     expect(toMillis({ toMillis: () => 1_234_567_890 })).toBe(1_234_567_890)
   })
 
-  it('uses "now" for an unresolved serverTimestamp or garbage', () => {
-    const before = Date.now()
-    expect(toMillis(null)).toBeGreaterThanOrEqual(before)
-    expect(toMillis(undefined)).toBeGreaterThanOrEqual(before)
-    expect(toMillis('not a date')).toBeGreaterThanOrEqual(before)
-    expect(toMillis({})).toBeGreaterThanOrEqual(before)
+  it.each([null, undefined, 'not a date', {}, NaN, Infinity, -1, 0, 9e15,
+    { seconds: Infinity }, { toMillis: () => NaN }, { toMillis: () => '123' },
+    { toMillis: () => { throw new Error('Bad timestamp') } },
+  ])('keeps an unavailable or invalid timestamp null: %j', (value) => {
+    expect(toMillis(value)).toBeNull()
   })
 
-  it('ignores NaN and Infinity', () => {
-    const before = Date.now()
-    expect(toMillis(Number.NaN)).toBeGreaterThanOrEqual(before)
-    expect(toMillis(Number.POSITIVE_INFINITY)).toBeGreaterThanOrEqual(before)
+  it('retains Firestore subsecond precision and the Timestamp receiver', () => {
+    expect(toMillis({ seconds: 1700000000, nanoseconds: 250000000 })).toBe(1700000000250)
+    const timestamp = { millis: 1700000000123, toMillis() { return this.millis } }
+    expect(toMillis(timestamp)).toBe(timestamp.millis)
   })
+
 })
 
 describe('normalizePolygon', () => {
@@ -216,14 +216,30 @@ describe('mapZone', () => {
     })
   })
 
-  it('degrades a half-written document to safe defaults', () => {
+  it('preserves unknown status and date in a half-written document', () => {
     const zone = mapZone('broken', {})
 
     expect(zone.name).toBe('Unnamed zone')
     expect(zone.description).toBe('')
     expect(zone.polygon).toEqual([])
-    expect(zone.status).toBe('safe')
-    expect(zone.lastUpdated).toBeGreaterThan(0)
+    expect(zone.status).toBe('unknown')
+    expect(zone.lastUpdated).toBeNull()
+  })
+})
+
+describe('pending server timestamps', () => {
+  it('keeps a warning visible while its timestamp awaits acknowledgement', () => {
+    expect(mapZone('a', { status: 'advisory', lastUpdated: null }, true)).toMatchObject({
+      status: 'advisory', lastUpdated: null, lastUpdatedPending: true,
+    })
+    expect(mapReport('r', { submittedAt: null }, true)).toMatchObject({
+      submittedAt: null, submittedAtPending: true,
+    })
+  })
+  it('does not describe a missing or malformed field as a pending timestamp', () => {
+    expect(mapZone('a', {}, true).lastUpdatedPending).toBeUndefined()
+    expect(mapZone('a', { lastUpdated: 'bad' }, true).lastUpdatedPending).toBeUndefined()
+    expect(mapZone('a', { lastUpdated: null }, false).lastUpdatedPending).toBeUndefined()
   })
 })
 

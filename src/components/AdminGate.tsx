@@ -86,7 +86,7 @@ export function AdminGate() {
             Enter admin passcode
           </h1>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            Approving a report puts a whole zone under advisory, so this view is
+            Approving a report adds a community warning to its zone, so this view is
             locked. There are no user accounts in this MVP — just a shared
             passcode.
           </p>

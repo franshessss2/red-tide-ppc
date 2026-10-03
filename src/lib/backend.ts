@@ -3,11 +3,12 @@ import type {
   Report,
   ReportStatus,
   Zone,
-  ZoneStatus,
+  KnownZoneStatus,
 } from '../types'
 import { createDemoBackend } from './backend.demo'
 import { createFirebaseBackend } from './backend.firebase'
 import { hasFirebaseConfig } from './firebase'
+import type { FeedMetadata } from './feed'
 
 /**
  * Everything the app knows how to do with a datastore.
@@ -22,18 +23,18 @@ import { hasFirebaseConfig } from './firebase'
  * datastore-agnostic.
  */
 export interface Backend {
-  /** Which implementation is active — surfaced in the UI as a banner. */
+  /** Which implementation is active — surfaced in the source row. */
   readonly kind: 'firebase' | 'demo'
 
   /** Live zone feed. Returns an unsubscribe function. */
   subscribeToZones(
-    onChange: (zones: Zone[]) => void,
+    onChange: (zones: Zone[], metadata: FeedMetadata) => void,
     onError?: (error: unknown) => void,
   ): () => void
 
   /** Live report feed. Returns an unsubscribe function. */
   subscribeToReports(
-    onChange: (reports: Report[]) => void,
+    onChange: (reports: Report[], metadata: FeedMetadata) => void,
     onError?: (error: unknown) => void,
   ): () => void
 
@@ -47,7 +48,7 @@ export interface Backend {
   setReportStatus(reportId: string, status: ReportStatus): Promise<void>
 
   /** Admin: change a zone's advisory status (and bump `lastUpdated`). */
-  setZoneStatus(zoneId: string, status: ZoneStatus): Promise<void>
+  setZoneStatus(zoneId: string, status: KnownZoneStatus): Promise<void>
 }
 
 // ---------------------------------------------------------------------------

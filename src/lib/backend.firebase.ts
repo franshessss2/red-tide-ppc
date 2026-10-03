@@ -6,7 +6,7 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore'
-import type { NewReport, Report, ReportStatus, ZoneStatus } from '../types'
+import type { NewReport, Report, ReportStatus, KnownZoneStatus } from '../types'
 import type { Backend } from './backend'
 import { firestore } from './firebase'
 import { mapReport, mapZone } from './firestoreMapping'
@@ -82,8 +82,9 @@ export function createFirebaseBackend(): Backend {
       // Sorting happens in the store instead.
       return onSnapshot(
         collection(firestore(), ZONES_COLLECTION),
+        { includeMetadataChanges: true },
         (snapshot) => {
-          onChange(snapshot.docs.map((d) => mapZone(d.id, d.data())))
+          onChange(snapshot.docs.map((d) => mapZone(d.id, d.data(), d.metadata.hasPendingWrites)), snapshot.metadata)
         },
         (error) => onError?.(error),
       )
@@ -92,8 +93,9 @@ export function createFirebaseBackend(): Backend {
     subscribeToReports(onChange, onError) {
       return onSnapshot(
         collection(firestore(), REPORTS_COLLECTION),
+        { includeMetadataChanges: true },
         (snapshot) => {
-          onChange(snapshot.docs.map((d) => mapReport(d.id, d.data())))
+          onChange(snapshot.docs.map((d) => mapReport(d.id, d.data(), d.metadata.hasPendingWrites)), snapshot.metadata)
         },
         (error) => onError?.(error),
       )
@@ -116,7 +118,7 @@ export function createFirebaseBackend(): Backend {
         description: input.description,
         photoUrl: input.photoUrl,
         status: 'pending',
-        submittedAt: Date.now(),
+        submittedAt: null, // The server value arrives through the report feed.
       }
     },
 
@@ -131,7 +133,7 @@ export function createFirebaseBackend(): Backend {
       })
     },
 
-    async setZoneStatus(zoneId: string, status: ZoneStatus) {
+    async setZoneStatus(zoneId: string, status: KnownZoneStatus) {
       await updateDoc(doc(firestore(), ZONES_COLLECTION, zoneId), {
         status,
         lastUpdated: serverTimestamp(),

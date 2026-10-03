@@ -6,8 +6,7 @@ import { StatusKey } from './StatusKey'
 
 /**
  * Phase-2 pill-row motion wiring: the shared layoutId indicator lives in
- * exactly one chip (the active status), and the counts tick through CountUp
- * instead of cutting. The slide itself is measured in the real-browser pass;
+ * exactly one chip (the active status), and critical counts appear immediately. The slide itself is measured in the real-browser pass;
  * here we pin the DOM contract.
  */
 
@@ -15,6 +14,7 @@ const COUNTS: Record<ZoneStatus, number> = {
   safe: 4,
   unconfirmed: 1,
   advisory: 1,
+  unknown: 0,
 }
 
 afterEach(() => {
@@ -53,41 +53,17 @@ describe('shared active indicator', () => {
   })
 })
 
-describe('ticking counts', () => {
-  it('animates through intermediate values when a count changes', async () => {
-    const { container, rerender } = render(
-      <StatusKey counts={{ ...COUNTS, safe: 4 }} activeStatus="advisory" />,
-    )
-    // Scoped to the count container — the StatusPip wrapper is aria-hidden
-    // too and comes first in the chip.
-    const shown = () =>
-      chipFor(container, 'safe').querySelector('.font-mono span[aria-hidden="true"]')
-        ?.textContent ?? ''
-
-    rerender(<StatusKey counts={{ ...COUNTS, safe: 7 }} activeStatus="advisory" />)
-
-    const seen = new Set<string>()
-    const deadline = Date.now() + 1500
-    while (Date.now() < deadline) {
-      seen.add(shown())
-      if (seen.has('7')) break
-      await new Promise((resolve) => setTimeout(resolve, 40))
-    }
-
-    // Landed on the target...
-    await waitFor(() => expect(shown()).toBe('7'))
-    // ...and the tween passed through at least one intermediate integer,
-    // i.e. it ticked rather than cut.
-    const intermediates = [...seen].filter((v) => v !== '4' && v !== '7')
-    expect(intermediates.length).toBeGreaterThan(0)
+describe('immediate critical counts', () => {
+  it('shows the final count on the same render as a status update', () => {
+    const { container, rerender } = render(<StatusKey counts={COUNTS} />)
+    rerender(<StatusKey counts={{ ...COUNTS, safe: 7 }} />)
+    const count = chipFor(container, 'safe').querySelector('.font-mono')!
+    expect(count.textContent).toBe('7')
+    expect(count.hasAttribute('aria-hidden')).toBe(false)
+    expect(chipFor(container, 'safe').querySelector('.sr-only')).toBeNull()
   })
-
-  it('shows the source value to assistive tech immediately', () => {
-    const { container } = render(
-      <StatusKey counts={{ ...COUNTS, safe: 9 }} activeStatus="advisory" />,
-    )
-    expect(
-      chipFor(container, 'safe').querySelector('.sr-only')?.textContent,
-    ).toBe('9')
+  it('does not show zero counts while records are still loading', () => {
+    const { container } = render(<StatusKey counts={COUNTS} ready={false} />)
+    expect(chipFor(container, 'safe').querySelector('.font-mono')?.textContent).toBe('—')
   })
 })

@@ -3,9 +3,10 @@ import type {
   Report,
   ReportStatus,
   Zone,
-  ZoneStatus,
+  KnownZoneStatus,
 } from '../types'
 import type { Backend } from './backend'
+import { mapReport, mapZone } from './firestoreMapping'
 import { SEED_ZONES } from '../data/zones'
 import { fileToCompressedDataUrl, MAX_PHOTO_BYTES } from './image'
 
@@ -56,7 +57,12 @@ function readStorage(): DemoData | null {
     if (!Array.isArray(parsed.zones) || !Array.isArray(parsed.reports)) {
       return null
     }
-    return { zones: parsed.zones, reports: parsed.reports }
+    return {
+      zones: parsed.zones.filter((zone) => zone && typeof zone.id === 'string')
+        .map((zone) => mapZone(zone.id, zone as unknown as Record<string, unknown>)),
+      reports: parsed.reports.filter((report) => report && typeof report.id === 'string')
+        .map((report) => mapReport(report.id, report as unknown as Record<string, unknown>)),
+    }
   } catch {
     return null
   }
@@ -105,7 +111,7 @@ export function createDemoBackend(): Backend {
     kind: 'demo',
 
     subscribeToZones(onChange) {
-      const listener: Listener = () => onChange(clone(data.zones))
+      const listener: Listener = () => onChange(clone(data.zones), { fromCache: false, hasPendingWrites: false })
       zoneListeners.add(listener)
       listener()
       return () => {
@@ -114,7 +120,7 @@ export function createDemoBackend(): Backend {
     },
 
     subscribeToReports(onChange) {
-      const listener: Listener = () => onChange(clone(data.reports))
+      const listener: Listener = () => onChange(clone(data.reports), { fromCache: false, hasPendingWrites: false })
       reportListeners.add(listener)
       listener()
       return () => {
@@ -155,7 +161,7 @@ export function createDemoBackend(): Backend {
       emitReports()
     },
 
-    async setZoneStatus(zoneId: string, status: ZoneStatus): Promise<void> {
+    async setZoneStatus(zoneId: string, status: KnownZoneStatus): Promise<void> {
       const found = data.zones.some((zone) => zone.id === zoneId)
       if (!found) throw new Error(`No zone with id "${zoneId}".`)
       data = {
