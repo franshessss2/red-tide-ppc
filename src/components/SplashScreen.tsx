@@ -5,13 +5,14 @@ import { Landing } from '../pages/Landing'
 import { useReducedMotion, prefersReducedMotion } from '../motion/preferences'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
+import { INTRO_COAST_PATH } from '../data/introCoast'
 import '../styles/tide-intro.css'
 
 const SEEN_KEY = 'red-tide-ppc:splash:v1'
-export const INTRO_ENTRANCE_MS = 1900
-export const INTRO_EXIT_MS = MOTION.time.introExit * 1000
-export const INTRO_TITLE_HANDOFF_MS = 700
-export const INTRO_TITLE_HANDOFF_DELAY_MS = 80
+export const INTRO_ENTRANCE_MS = 1100
+export const INTRO_EXIT_MS = 650
+export const INTRO_TITLE_HANDOFF_MS = 550
+export const INTRO_TITLE_HANDOFF_DELAY_MS = 40
 
 type Phase = 'entrance' | 'idle' | 'leaving' | 'done'
 
@@ -21,7 +22,7 @@ function initialPhase(): Phase {
   return 'entrance'
 }
 
-/** Brand entrance -> looping idle -> explicit user-driven exit. Data fetching never controls it. */
+/** Finite coastal reveal -> still composition -> user-driven title handoff. */
 export function SplashScreen() {
   const [phase, setPhase] = useState<Phase>(initialPhase)
   const reduce = useReducedMotion()
@@ -29,6 +30,7 @@ export function SplashScreen() {
   const pageRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const entryRef = useRef<HTMLButtonElement>(null)
   const replayRef = useRef<HTMLButtonElement>(null)
   const replaying = useRef(false)
   const dismissedRef = useRef(false)
@@ -55,12 +57,13 @@ export function SplashScreen() {
   }, [])
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape' && (event.target as HTMLElement).closest('a')) return
     if (!['Enter', 'Escape', ' ', 'Spacebar'].includes(event.key)) return
     event.preventDefault()
     dismiss()
   }, [dismiss])
 
-  const handlePointerUp = useCallback((_event: PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = useCallback((_event: PointerEvent<HTMLButtonElement>) => {
     dismiss()
   }, [dismiss])
 
@@ -73,7 +76,7 @@ export function SplashScreen() {
     const oldOverflow = document.body.style.overflow
     const overlay = overlayRef.current
     document.body.style.overflow = 'hidden'
-    overlay?.focus({ preventScroll: true })
+    entryRef.current?.focus({ preventScroll: true })
     const visibility = () => {
       overlay?.classList.toggle('tide-intro--hidden', document.hidden)
     }
@@ -112,6 +115,9 @@ export function SplashScreen() {
     // Do not wait for fonts: if metrics are unstable, dissolve on the same deadline.
     const fontsReady = !document.fonts || document.fonts.status === 'loaded'
     if (title && destination && heading && fontsReady && typeof title.animate === 'function') {
+      // Finish the child reveal before measuring: early input must not hand off
+      // a partly hidden title. Resize during flight uses the dissolve fallback.
+      title.classList.add('tide-intro__title--ready')
       const from = title.getBoundingClientRect()
       const to = destination.getBoundingClientRect()
       if (from.width > 0 && from.height > 0 && to.width > 0 && to.height > 0) {
@@ -132,9 +138,18 @@ export function SplashScreen() {
       }
     }
     if (!hidingTwin) overlay?.setAttribute('data-handoff', 'fade')
+    const resize = () => {
+      animation?.cancel()
+      if (hidingTwin && heading) heading.style.visibility = previousVisibility
+      hidingTwin = false
+      overlay?.setAttribute('data-handoff', 'fade')
+    }
+    window.addEventListener('resize', resize)
     scope.timeout(finish, INTRO_EXIT_MS)
     return () => {
       scope.dispose()
+      window.removeEventListener('resize', resize)
+      title?.classList.remove('tide-intro__title--ready')
       animation?.cancel()
       if (hidingTwin && heading) heading.style.visibility = previousVisibility
       overlay?.removeAttribute('data-handoff')
@@ -177,81 +192,43 @@ export function SplashScreen() {
           ref={overlayRef}
           key={run}
           className={`tide-intro tide-intro--${phase}`}
-          role="button"
-          aria-label="Enter Red Tide PPC"
-          tabIndex={0}
           onClick={dismiss}
-          onPointerUp={handlePointerUp}
           onKeyDown={handleKeyDown}
         >
           <div className="tide-intro__curtain" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
-            <svg className="tide-intro__curtain-edge" viewBox="0 0 1600 160" preserveAspectRatio="none">
-              <path d="M0 82C320 150 540 10 820 62S1290 150 1600 50V160H0Z" fill="currentColor" />
-            </svg>
             <div className="tide-intro__light" />
           </div>
           <div className="tide-intro__top tide-intro__chrome">
             <span className="tide-intro__location">PUERTO PRINCESA <span>/</span> PALAWAN</span>
           </div>
           <div className="tide-intro__center">
-            <div className="tide-intro__depth tide-intro__depth--far" aria-hidden="true" />
-            <div className="tide-intro__depth tide-intro__depth--near" aria-hidden="true" />
-            <div className="tide-intro__loop-ripple" aria-hidden="true" />
-            <div className="tide-intro__surface" data-intro-exit-duration={INTRO_EXIT_MS} aria-hidden="true">
-              <div className="tide-intro__horizon" />
-              <div className="tide-intro__ripple"><span /></div>
-              <div className="tide-intro__surface-glow" />
-              <div className="tide-intro__wave-stack" aria-hidden="true">
-                <div className="tide-intro__wave-layer tide-intro__wave-layer--back">
-                  <div className="tide-intro__wave-bob tide-intro__wave-bob--back">
-                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
-                      <path d="M0 130 C125 70 250 190 375 130 S625 70 750 130 S875 190 1000 130 C1125 70 1250 190 1375 130 S1625 70 1750 130 S1875 190 2000 130 L2000 360 L0 360 Z" fill="#ff525209" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="tide-intro__wave-layer tide-intro__wave-layer--mid">
-                  <div className="tide-intro__wave-bob tide-intro__wave-bob--mid">
-                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
-                      <path d="M0 110 C125 42 250 178 375 110 S625 42 750 110 S875 178 1000 110 C1125 42 1250 178 1375 110 S1625 42 1750 110 S1875 178 2000 110 L2000 360 L0 360 Z" fill="#ff525213" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="tide-intro__wave-layer tide-intro__wave-layer--front">
-                  <div className="tide-intro__wave-bob tide-intro__wave-bob--front">
-                    <svg viewBox="0 0 2000 360" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="tide-front-crest" x1="0" x2="1000" gradientUnits="userSpaceOnUse" spreadMethod="repeat">
-                          <stop offset="0" stopColor="#f0a50000" />
-                          <stop offset=".46" stopColor="#f0a500" stopOpacity=".88" />
-                          <stop offset=".72" stopColor="#ff5252" stopOpacity=".74" />
-                          <stop offset="1" stopColor="#ff525200" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0 92 C125 48 250 136 375 92 S625 48 750 92 S875 136 1000 92 C1125 48 1250 136 1375 92 S1625 48 1750 92 S1875 136 2000 92 L2000 360 L0 360 Z" fill="#f0a5000f" />
-                      <path d="M0 92 C125 48 250 136 375 92 S625 48 750 92 S875 136 1000 92 C1125 48 1250 136 1375 92 S1625 48 1750 92 S1875 136 2000 92" fill="none" stroke="url(#tide-front-crest)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <svg className="tide-intro__coast" viewBox="0 0 800 420" aria-hidden="true">
+              <path d={INTRO_COAST_PATH} pathLength="1" />
+            </svg>
+            <div className="tide-intro__waterline" aria-hidden="true" />
             <div className="tide-intro__title-clip">
-              <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" aria-label="Red Tide">
+              <div ref={titleRef} id="tide-intro-label" className="tide-intro__title" role="heading" aria-level={1} aria-label="Red Tide">
                 <span aria-hidden="true">RED TIDE</span>
               </div>
             </div>
             <div className="tide-intro__copy tide-intro__chrome">
-              <p className="tide-intro__eyebrow">COMMUNITY EARLY WARNING</p>
-              <p className="tide-intro__line">One coast. A shared watch.</p>
+              <p className="tide-intro__eyebrow">COMMUNITY COASTAL MONITORING</p>
             </div>
-            <div
+            <button
+              ref={entryRef}
+              type="button"
               className="tide-intro__hint"
-              data-hint-state={phase === 'idle' ? 'visible' : phase === 'leaving' ? 'exiting' : 'hidden'}
-              aria-hidden="true"
+              aria-label="Enter Red Tide PPC"
+              data-hint-state={phase === 'leaving' ? 'exiting' : 'visible'}
+              onPointerUp={handlePointerUp}
+              onClick={dismiss}
             >
-              TAP TO ENTER
-            </div>
+              <span className="tide-intro__enter-desktop">ENTER SITE</span>
+              <span className="tide-intro__enter-touch">TAP TO ENTER</span>
+              <span aria-hidden="true">↗</span>
+            </button>
           </div>
-          <div className="tide-intro__bottom tide-intro__chrome"><span>WATCH THE WATER.</span><span>PROTECT THE COAST.</span></div>
+          <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
         </div>
       , document.body)}
     </div>

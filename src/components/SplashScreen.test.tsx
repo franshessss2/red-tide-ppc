@@ -3,7 +3,6 @@ import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  INTRO_ENTRANCE_MS,
   INTRO_EXIT_MS,
   INTRO_TITLE_HANDOFF_DELAY_MS,
   INTRO_TITLE_HANDOFF_MS,
@@ -40,14 +39,6 @@ afterEach(() => {
 function splash() {
   render(<SplashScreen />)
   return screen.getByRole('button', { name: 'Enter Red Tide PPC' })
-}
-
-function enterIdle() {
-  const button = splash()
-  act(() => vi.advanceTimersByTime(INTRO_ENTRANCE_MS))
-  expect(document.querySelector('.tide-experience--idle')).toBeTruthy()
-  expect(document.querySelector('[data-hint-state="visible"]')).toBeTruthy()
-  return button
 }
 
 function triggerExitByEscape() {
@@ -171,14 +162,21 @@ describe('cinematic entrance', () => {
 
   it('exposes a focused, focusable role=button with the expected accessible name', () => {
     const button = splash()
-    expect(button.getAttribute('role')).toBe('button')
+    expect(button.tagName).toBe('BUTTON')
     expect(button.getAttribute('aria-label')).toBe('Enter Red Tide PPC')
-    expect(button.getAttribute('tabindex')).toBe('0')
+    expect(button.tabIndex).toBe(0)
     expect(document.activeElement).toBe(button)
   })
 
-  it('shows the hint after entrance and changes it to exiting on dismiss', () => {
-    const button = enterIdle()
+  it('keeps the coastline attribution link usable by keyboard', () => {
+    splash()
+    const credit = screen.getByRole('link', { name: '© OpenStreetMap contributors' })
+    fireEvent.keyDown(credit, { key: 'Enter' })
+    expect(document.querySelector('.tide-experience--entrance')).toBeTruthy()
+  })
+
+  it('shows entry from the first frame and changes it to exiting on dismiss', () => {
+    const button = splash()
     expect(document.querySelector('[data-hint-state="visible"]')).toBeTruthy()
     fireEvent.click(button)
     expect(document.querySelector('[data-hint-state="exiting"]')).toBeTruthy()
@@ -224,6 +222,17 @@ describe('First Ripple handoff', () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 
+  it('restores the landing title and dissolves if resized during handoff', () => {
+    const { heading, cancel } = measuredIntro()
+    triggerExitByEscape()
+    fireEvent(window, new Event('resize'))
+    expect(cancel).toHaveBeenCalled()
+    expect(heading.style.visibility).toBe('')
+    expect(document.querySelector('[data-handoff="fade"]')).toBeTruthy()
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
+    expect(screen.queryByRole('button', { name: 'Enter Red Tide PPC' })).toBeNull()
+  })
+
   it('uses an on-time dissolve when fonts are still loading', () => {
     Object.defineProperty(document, 'fonts', { configurable: true, value: { status: 'loading' } })
     const { heading, animate } = measuredIntro()
@@ -256,7 +265,7 @@ describe('First Ripple handoff', () => {
 
   it('pauses loops on visibilitychange and resumes them when visible', () => {
     render(<SplashScreen />)
-    const overlay = screen.getByRole('button', { name: 'Enter Red Tide PPC' })
+    const overlay = document.querySelector('.tide-intro')!
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
     fireEvent(document, new Event('visibilitychange'))
     expect(overlay.classList.contains('tide-intro--hidden')).toBe(true)

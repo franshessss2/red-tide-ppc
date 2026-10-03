@@ -1,321 +1,130 @@
-/* Intro surface: finite entrance, continuous idle water, explicit user-driven exit. */
+/* One finite reveal; the resting composition is deliberately still. */
 .tide-intro {
   position: fixed; inset: 0; z-index: var(--layer-intro, 1200); isolation: isolate;
-  overflow: hidden; color: var(--color-paper); height: 100dvh; min-height: 20rem;
+  overflow: hidden; color: var(--color-paper); height: 100dvh;
 }
-.tide-intro__curtain {
-  position: absolute; inset: 0; z-index: -1; background: var(--color-ink);
-  color: var(--color-ink);
-}
-.tide-intro__curtain-edge { position: absolute; top: -12vh; left: 0; width: 100%; height: calc(12vh + 1px); }
+.tide-intro__curtain { position: absolute; inset: 0; z-index: -1; background: var(--color-ink); }
 .tide-intro__light {
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse at 50% 50%, #f0a50008, transparent 55%), radial-gradient(ellipse at 65% 70%, #ff525205, transparent 60%);
+  background: radial-gradient(ellipse at 50% 48%, #4a8a7515, transparent 65%);
 }
 .tide-intro__top, .tide-intro__bottom {
-  position: absolute; left: clamp(1.25rem, 4vw, 5rem); right: clamp(1.25rem, 4vw, 5rem);
-  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  position: absolute; left: max(clamp(1.25rem, 4vw, 5rem), env(safe-area-inset-left));
+  right: max(clamp(1.25rem, 4vw, 5rem), env(safe-area-inset-right));
+  display: flex; justify-content: space-between; gap: 1rem;
 }
-.tide-intro__top { top: max(1.4rem, env(safe-area-inset-top)); padding-bottom: 1.2rem; border-bottom: 1px solid #ffffff16; }
-.tide-intro__location { font: 400 .75rem/1.7 var(--font-mono); letter-spacing: .12em; color: #ababab; }
-.tide-intro__location span { color: var(--color-accent); padding: 0 .55rem; }
+.tide-intro__top { top: max(1.5rem, env(safe-area-inset-top)); }
+.tide-intro__location {
+  font: 400 .7rem/1.7 var(--font-mono); letter-spacing: .12em; color: #ababab;
+  animation: tide-copy-in 250ms var(--ease-out-quint) both;
+}
+.tide-intro__location span { color: var(--color-accent); padding: 0 .5rem; }
 .tide-intro__center {
-  position: absolute; top: 43%; left: 50%; width: max-content; max-width: calc(100% - 2.5rem);
-  transform: translate(-50%, -50%); text-align: center;
-  z-index: 2;
+  position: absolute; top: 43%; left: 50%; width: max-content;
+  max-width: calc(100% - 2.5rem); transform: translate(-50%, -50%); text-align: center;
 }
 .tide-intro__title-clip { position: relative; overflow: hidden; z-index: 3; }
 .tide-intro__title {
   width: max-content; margin: 0; font-family: var(--font-display);
-  font-size: clamp(4rem, 19vw, 18rem); font-weight: 400; line-height: .9;
-  transform-origin: top left; white-space: nowrap;
+  font-size: clamp(3rem, 19vw, 18rem); font-weight: 400; line-height: .95;
+  transform-origin: top left; white-space: nowrap; letter-spacing: -.015em;
 }
-.tide-intro__title span {
-  display: block;
-  text-shadow: 0 0 0 transparent, 0 18px 50px #00000066;
-  animation: tide-word-in var(--motion-intro-word, 500ms) var(--ease-out-quint)
-    var(--motion-intro-word-start, 500ms) both;
+.tide-intro__title span { display: block; animation: tide-word-in 600ms var(--ease-out-quint) 150ms both; }
+.tide-intro__title--ready span, .tide-intro--leaving .tide-intro__title span {
+  animation: none; transform: none; opacity: 1;
+}
+.tide-intro__coast {
+  position: absolute; width: min(110vw, 950px); height: min(65vh, 500px);
+  left: 50%; top: 50%; transform: translate(-50%, -50%); overflow: visible;
+  pointer-events: none; color: #4a8a75; opacity: .38;
+}
+.tide-intro__coast path {
+  fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1; animation: tide-coast-in 800ms var(--ease-out-quint) 100ms both;
+}
+.tide-intro__waterline {
+  position: absolute; inset: auto -8% 0; height: 1px; z-index: 4; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #f0a500b0 35%, #f0a500 50%, #ff525260 72%, transparent);
+  transform-origin: center; animation: tide-waterline-in 750ms var(--ease-out-quint) 150ms both;
 }
 .tide-intro__copy {
-  position: absolute; top: calc(100% + 2rem); left: 50%; width: max-content; max-width: 90vw;
-  transform: translateX(-50%); z-index: 3;
+  position: absolute; top: calc(100% + 1.6rem); left: 50%; width: max-content;
+  max-width: 90vw; transform: translateX(-50%);
 }
 .tide-intro__eyebrow {
-  margin: 0; color: var(--color-accent); font: 400 .75rem/1.6 var(--font-mono); letter-spacing: .24em;
-  animation: tide-copy-in var(--motion-reveal, 380ms) var(--ease-out-quint) var(--motion-intro-copy-start, 850ms) both;
-}
-.tide-intro__line {
-  margin: .75rem 0 0; color: #b0a5a3; font-size: clamp(.875rem, 1.2vw, 1rem); letter-spacing: .015em;
-  animation: tide-copy-in var(--motion-reveal, 380ms) var(--ease-out-quint) calc(var(--motion-intro-copy-start, 850ms) + var(--motion-fast, 140ms)) both;
+  margin: 0; color: #b5b5af; font: 400 .7rem/1.7 var(--font-mono); letter-spacing: .2em;
+  animation: tide-copy-in 350ms var(--ease-out-quint) 650ms both;
 }
 .tide-intro__hint {
-  position: absolute; left: 50%; top: calc(100% + 7.1rem);
-  transform: translateX(-50%); z-index: 3;
-  color: #9e9794; font: 400 .66rem/1.5 var(--font-mono);
-  letter-spacing: .22em; white-space: nowrap; pointer-events: none;
-  opacity: 0;
-  transition: opacity 700ms var(--ease-out-quint);
+  position: absolute; left: 50%; top: calc(100% + 5.5rem); transform: translateX(-50%);
+  display: inline-flex; align-items: center; justify-content: center; gap: 1.5rem;
+  min-height: 48px; min-width: 165px; padding: .8rem 1.2rem; border: 1px solid #ffffff35;
+  border-radius: 2px; background: #ffffff05; color: var(--color-paper);
+  font: 400 .65rem/1.5 var(--font-mono); letter-spacing: .16em; white-space: nowrap;
+  cursor: pointer; transition: background 140ms, border-color 140ms, opacity 140ms;
 }
-.tide-intro--idle .tide-intro__hint {
-  opacity: .34;
-  animation: tide-hint-pulse 4.2s ease-in-out 700ms infinite alternate;
+.tide-intro__hint:hover { background: #f0a50010; border-color: #f0a50099; }
+.tide-intro__hint:active { background: #f0a50020; }
+.tide-intro__hint:focus-visible, .tide-replay:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 5px;
 }
-.tide-intro--leaving .tide-intro__hint {
-  opacity: 0;
-  animation: none;
-  transition-duration: 260ms;
+.tide-intro__enter-touch { display: none; }
+@media (pointer: coarse) {
+  .tide-intro__enter-desktop { display: none; }
+  .tide-intro__enter-touch { display: inline; }
 }
-
-/* Acquisition remains finite and quiet during the entrance. */
-.tide-intro__center::before {
-  content: "";
-  position: absolute;
-  left: 50%; top: 50%;
-  width: clamp(12rem, 42vw, 34rem); height: clamp(3rem, 13vw, 9rem);
-  transform: translate(-50%, -50%) scale(.45);
-  border: 1px solid #f0a5002b; border-radius: 50%; opacity: 0;
-  pointer-events: none; z-index: 0;
-  animation: tide-acquisition 300ms var(--ease-out-quint) 400ms both;
-}
-.tide-intro__eyebrow::before {
-  content: "///"; display: inline-block; margin-right: .7rem; color: #ff5252;
-  opacity: 0; transform: translateX(-8px);
-  animation: tide-marker-in 360ms var(--ease-out-quint) 900ms both;
-}
-
-/* Layered intro atmosphere: restrained, pre-loop reveal only. */
-.tide-intro::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; opacity: 0;
-  background:
-    linear-gradient(90deg, transparent 0 49.8%, #f0a5000d 50%, transparent 50.2%),
-    linear-gradient(0deg, transparent 0 49.8%, #f0a5000a 50%, transparent 50.2%);
-  background-size: 100% 100%, 100% 100%;
-  animation: tide-grid-in 900ms var(--ease-out-quint) 120ms both;
-}
-.tide-intro::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0;
-  background:
-    radial-gradient(circle at 50% 43%, transparent 0 16%, #f0a5000b 16.2%, transparent 34%),
-    repeating-linear-gradient(180deg, transparent 0, transparent 3px, #ffffff04 4px, transparent 5px);
-  mix-blend-mode: screen;
-  animation: tide-atmosphere-in 1600ms var(--ease-out-quint) 300ms both;
-}
-
-/* The three independent wave layers are the only will-change surfaces. */
-.tide-intro__surface {
-  position: absolute; bottom: 0; left: 50%;
-  width: 100vw; height: clamp(13rem, 38vh, 25rem);
-  transform: translateX(-50%); pointer-events: none; z-index: 0;
-}
-.tide-intro__horizon {
-  position: absolute; top: 0; left: 10%; width: 80%; height: 1px; z-index: 4;
-  background: linear-gradient(90deg, transparent, #f0a500b3 48%, #f0a50030 72%, transparent);
-  transform-origin: center;
-  animation: tide-horizon-in 1200ms var(--ease-out-quint) 420ms both;
-}
-.tide-intro__ripple {
-  position: absolute; top: 0; left: 50%; width: min(72vw, 760px); height: clamp(28px, 6vw, 70px);
-  transform: translate(-50%, -50%); z-index: 3;
-}
-.tide-intro__ripple span {
-  display: block; width: 100%; height: 100%; border: 1px solid #f0a50080; border-radius: 50%;
-  animation: tide-ripple var(--motion-intro-ripple, 650ms) var(--ease-out-quint) var(--motion-intro-ripple-start, 180ms) both;
-}
-.tide-intro__ripple::before,
-.tide-intro__ripple::after {
-  content: ""; position: absolute; inset: 0; border: 1px solid #ff525212; border-radius: 50%;
-  opacity: 0; transform: scale(.1);
-  animation: tide-ripple-secondary 900ms var(--ease-out-quint) 280ms both;
-}
-.tide-intro__ripple::after { animation-delay: 440ms; }
-
-.tide-intro__surface-glow {
-  position: absolute; left: 0; bottom: 0; width: 100%; height: 62%;
-  pointer-events: none; opacity: 0; z-index: 0;
-  background: radial-gradient(ellipse at 50% 92%, #ff525225 0%, #ff525210 32%, transparent 72%);
-}
-.tide-intro--idle .tide-intro__surface-glow {
-  opacity: .2;
-  animation: tide-surface-glow-breathe 5.6s ease-in-out infinite alternate;
-}
-
-.tide-intro__wave-stack {
-  position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none;
-}
-.tide-intro__wave-layer {
-  position: absolute; left: 0; bottom: -2%; width: 200%; height: 100%;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-}
-.tide-intro__wave-layer svg {
-  display: block; width: 100%; height: 100%; overflow: visible;
-}
-.tide-intro--idle .tide-intro__wave-layer--back { animation: tide-wave-back-x 24s linear infinite; opacity: .68; }
-.tide-intro--idle .tide-intro__wave-layer--mid { animation: tide-wave-mid-x 16s linear infinite; opacity: .82; }
-.tide-intro--idle .tide-intro__wave-layer--front { animation: tide-wave-front-x 10s linear infinite; opacity: 1; }
-.tide-intro__wave-bob {
-  position: absolute; inset: 0;
-  transform: translate3d(0, 0, 0);
-}
-.tide-intro--idle .tide-intro__wave-bob--back { animation: tide-wave-back-y 11.3s ease-in-out infinite alternate; }
-.tide-intro--idle .tide-intro__wave-bob--mid { animation: tide-wave-mid-y 7.1s ease-in-out infinite alternate; }
-.tide-intro--idle .tide-intro__wave-bob--front { animation: tide-wave-front-y 5.3s ease-in-out infinite alternate; }
-
-/* One ring every 5.2s; the ring is behind the wordmark and fully fades before restart. */
-.tide-intro__loop-ripple {
-  position: absolute; left: 50%; top: 50%; width: clamp(10rem, 40vw, 32rem); height: clamp(3rem, 11vw, 8rem);
-  border: 1px solid #f0a5002b; border-radius: 50%;
-  transform: translate(-50%, -50%) scale(.72); opacity: 0; z-index: 0; pointer-events: none;
-}
-.tide-intro--idle .tide-intro__loop-ripple {
-  animation: tide-loop-ripple 5.2s ease-out infinite;
-}
-
 .tide-intro__bottom {
-  bottom: max(1.8rem, env(safe-area-inset-bottom)); padding-top: 1.2rem; border-top: 1px solid #ffffff16;
-  font: 400 .75rem/1.5 var(--font-mono); letter-spacing: .12em; color: #8c8582; z-index: 2;
+  bottom: max(1.5rem, env(safe-area-inset-bottom)); padding-top: 1rem; border-top: 1px solid #ffffff16;
+  font: 400 .65rem/1.5 var(--font-mono); letter-spacing: .1em; color: #93938e;
 }
-
-.tide-intro--leaving .tide-intro__curtain { animation: tide-curtain-out var(--motion-intro-exit, 800ms) var(--ease-tide) both; }
-.tide-intro--leaving .tide-intro__surface { animation: tide-surface-out var(--motion-intro-exit, 800ms) var(--ease-tide) both; }
+.tide-intro__bottom a { color: inherit; text-decoration: none; }
+.tide-intro__bottom a:hover { color: var(--color-paper); }
+.tide-intro__bottom a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+.tide-intro--leaving .tide-intro__curtain { animation: tide-curtain-out 650ms var(--ease-tide) both; }
 .tide-intro--leaving .tide-intro__title-clip { overflow: visible; }
-.tide-intro--leaving .tide-intro__chrome:not(.tide-intro__top),
-.tide-intro--leaving .tide-intro__location { opacity: 0; transition: opacity var(--dur-base, 220ms); }
-.tide-intro--leaving .tide-intro__top {
-  opacity: 0; pointer-events: none; border-color: transparent;
-  transition: opacity var(--dur-base, 220ms) var(--ease-out-quint);
+.tide-intro--leaving .tide-intro__chrome, .tide-intro--leaving .tide-intro__hint {
+  opacity: 0; transition: opacity 140ms; pointer-events: none;
 }
-.tide-intro[data-handoff="fade"] .tide-intro__title { opacity: 0; transition: opacity var(--motion-reveal, 380ms); }
-
-/* Exit starts by freezing and clearing every infinite loop. */
-.tide-intro--leaving .tide-intro__wave-layer,
-.tide-intro--leaving .tide-intro__wave-bob,
-.tide-intro--leaving .tide-intro__surface-glow,
-.tide-intro--leaving .tide-intro__loop-ripple,
-.tide-intro--leaving .tide-intro__hint {
-  animation: none !important;
+.tide-intro--leaving .tide-intro__coast, .tide-intro--leaving .tide-intro__waterline {
+  animation: tide-decoration-out 180ms ease-out both;
 }
-
-.tide-intro--leaving::before,
-.tide-intro--leaving::after,
-.tide-intro--leaving .tide-intro__depth,
-.tide-intro--leaving .tide-intro__surface-glow {
-  animation: tide-atmosphere-out 260ms ease-in both;
-}
+.tide-intro[data-handoff="fade"] .tide-intro__title { opacity: 0; transition: opacity 350ms; }
 .tide-replay-wrap { background: var(--color-ink); padding: 0 1.25rem max(1.4rem, env(safe-area-inset-bottom)); text-align: center; }
 .tide-replay {
   display: inline-flex; align-items: center; gap: .6rem; min-height: 44px; border: 1px solid var(--color-line);
   border-radius: 999px; padding: .6rem 1rem; background: var(--color-ink-2); color: var(--color-muted); font-size: .875rem; cursor: pointer;
-  transition: color var(--dur-fast, 140ms), border-color var(--dur-fast, 140ms);
+  transition: color 140ms, border-color 140ms;
 }
 .tide-replay:hover { color: var(--color-paper); border-color: var(--color-accent); }
 .tide-replay:disabled { cursor: default; opacity: .6; }
 .tide-replay svg { width: 16px; height: 16px; }
-
-@keyframes tide-word-in { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-@keyframes tide-copy-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes tide-horizon-in {
-  0% { opacity: .18; transform: scaleX(.08); }
-  28% { opacity: .72; transform: scaleX(.55); }
-  54% { opacity: .9; transform: scaleX(1); }
-  100% { opacity: .34; transform: scaleX(1); }
+@keyframes tide-word-in { from { transform: translateY(105%); } to { transform: translateY(0); } }
+@keyframes tide-copy-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tide-coast-in { from { stroke-dashoffset: 1; opacity: 0; } to { stroke-dashoffset: 0; opacity: 1; } }
+@keyframes tide-waterline-in {
+  0% { transform: translateY(-8px) scaleX(.05); opacity: 0; }
+  35% { opacity: 1; }
+  100% { transform: translateY(0) scaleX(1); opacity: .65; }
 }
-@keyframes tide-ripple { from { opacity: .55; transform: scale(.08); } to { opacity: 0; transform: scale(1); } }
-@keyframes tide-curtain-out { from { transform: translateY(0); } to { transform: translateY(115dvh); } }
-@keyframes tide-surface-out { from { transform: translateX(-50%) translateY(0); } to { transform: translateX(-50%) translateY(115dvh); } }
-@keyframes tide-depth-far {
-  0% { opacity: 0; transform: translate3d(-1.5%, 0, 0); }
-  45% { opacity: .14; }
-  100% { opacity: .22; transform: translate3d(1.5%, -1.2%, 0); }
-}
-@keyframes tide-depth-near {
-  0% { opacity: 0; transform: translate3d(1.2%, .6%, 0) scale(1.02); }
-  50% { opacity: .16; }
-  100% { opacity: .11; transform: translate3d(-1%, -1.5%, 0) scale(1); }
-}
-@keyframes tide-grid-in { from { opacity: 0; transform: scale(1.08); } to { opacity: .2; transform: scale(1); } }
-@keyframes tide-atmosphere-in { from { opacity: 0; transform: scale(1.06); } to { opacity: .16; transform: scale(1); } }
-@keyframes tide-atmosphere-out { from { opacity: .24; } to { opacity: 0; } }
-@keyframes tide-marker-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: .9; transform: translateX(0); } }
-@keyframes tide-ripple-secondary {
-  0% { opacity: 0; transform: scale(.1); }
-  18% { opacity: .28; }
-  100% { opacity: 0; transform: scale(1.45); }
-}
-@keyframes tide-acquisition {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.45); }
-  34% { opacity: .28; transform: translate(-50%, -50%) scale(.64); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
-}
-@keyframes tide-surface-glow-breathe {
-  0% { opacity: .14; }
-  45% { opacity: .23; }
-  100% { opacity: .34; }
-}
-@keyframes tide-wave-back-x {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
-}
-@keyframes tide-wave-mid-x {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
-}
-@keyframes tide-wave-front-x {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
-}
-@keyframes tide-wave-back-y {
-  0% { transform: translate3d(0, -4px, 0); }
-  100% { transform: translate3d(0, 4px, 0); }
-}
-@keyframes tide-wave-mid-y {
-  0% { transform: translate3d(0, 5px, 0); }
-  100% { transform: translate3d(0, -6px, 0); }
-}
-@keyframes tide-wave-front-y {
-  0% { transform: translate3d(0, -7px, 0); }
-  100% { transform: translate3d(0, 8px, 0); }
-}
-@keyframes tide-loop-ripple {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(.72); }
-  9% { opacity: .24; }
-  76% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
-}
-@keyframes tide-hint-pulse {
-  0% { opacity: .2; }
-  100% { opacity: .38; }
-}
-
+@keyframes tide-curtain-out { to { opacity: 0; } }
+@keyframes tide-decoration-out { to { opacity: 0; } }
 @media (max-width: 600px) {
-  .tide-intro__location { max-width: 10rem; letter-spacing: .055em; }
-  .tide-intro__location span { padding: 0 .2rem; }
-  .tide-intro__top { top: max(.9rem, env(safe-area-inset-top)); padding-bottom: .85rem; }
-  .tide-intro__eyebrow { letter-spacing: .12em; }
-  .tide-intro__copy { top: calc(100% + 1.5rem); }
-  .tide-intro__hint { top: calc(100% + 5.6rem); letter-spacing: .14em; }
-  .tide-intro__bottom { letter-spacing: .015em; align-items: flex-start; }
+  .tide-intro__location { font-size: .6rem; letter-spacing: .06em; }
+  .tide-intro__eyebrow { font-size: .6rem; letter-spacing: .1em; }
+  .tide-intro__bottom { font-size: .55rem; letter-spacing: .03em; }
   .tide-intro__bottom span:last-child { text-align: right; }
 }
 @media (max-height: 450px) {
-  .tide-intro { min-height: 0; }
-  .tide-intro__center { top: 43%; }
+  .tide-intro__center { top: 38%; }
   .tide-intro__title { font-size: clamp(3rem, 12vw, 7rem); }
-  .tide-intro__copy { top: calc(100% + .75rem); }
-  .tide-intro__hint { top: calc(100% + 4.8rem); }
-  .tide-intro__line { margin-top: .25rem; }
-  .tide-intro__bottom { bottom: .8rem; padding-top: .6rem; }
-  .tide-intro__top { top: .6rem; padding-bottom: .5rem; }
+  .tide-intro__copy { top: calc(100% + .6rem); }
+  .tide-intro__hint { top: calc(100% + 2.5rem); }
+  .tide-intro__bottom { bottom: .6rem; padding-top: .5rem; }
+  .tide-intro__top { top: .6rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tide-intro { display: none; }
   .tide-intro * { animation: none !important; transition: none !important; }
   .tide-replay { transition: none; }
 }
-.tide-intro--hidden .tide-intro__wave-layer,
-.tide-intro--hidden .tide-intro__wave-bob,
-.tide-intro--hidden .tide-intro__surface-glow,
-.tide-intro--hidden .tide-intro__loop-ripple,
-.tide-intro--hidden .tide-intro__hint {
-  animation-play-state: paused !important;
-}
+.tide-intro--hidden * { animation-play-state: paused !important; }
