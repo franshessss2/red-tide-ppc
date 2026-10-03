@@ -36,13 +36,12 @@ function renderMap({
   return render(
     <Map
       zones={zones}
-      reports={[]} pendingCounts={{}}
+      reports={[]}
       selectedZoneId={selectedZoneId}
       resetToken={0}
       focusZoneId={null}
       focusToken={0}
       onSelectZone={NOOP}
-      onReport={NOOP}
     />,
   )
 }
@@ -111,14 +110,13 @@ describe('advisory modifier', () => {
     rerender(
       <Map
         zones={flipped}
-        reports={[]} pendingCounts={{}}
+        reports={[]}
         selectedZoneId={null}
         resetToken={0}
         focusZoneId={null}
         focusToken={0}
         onSelectZone={NOOP}
-        onReport={NOOP}
-      />,
+        />,
     )
 
     await waitFor(() => {
@@ -159,14 +157,13 @@ describe('selection dimming', () => {
     rerender(
       <Map
         zones={zones}
-        reports={[]} pendingCounts={{}}
+        reports={[]}
         selectedZoneId={null}
         resetToken={0}
         focusZoneId={null}
         focusToken={0}
         onSelectZone={NOOP}
-        onReport={NOOP}
-      />,
+        />,
     )
 
     await waitFor(() => {

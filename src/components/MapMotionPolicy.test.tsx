@@ -11,7 +11,7 @@ it('settles an active camera and disables native inertia when the OS preference 
   const map = { options: {}, getContainer: () => container, getPane: () => ({}), stop: vi.fn(), on: vi.fn(), off: vi.fn(), panBy: vi.fn() }
   state.map = map
   const view = render(<MapMotionPolicy />)
-  expect(map.options).toMatchObject({ zoomAnimation: false, inertia: true })
+  expect(map.options).toMatchObject({ zoomAnimation: true, inertia: true })
   state.reduce = true; view.rerender(<MapMotionPolicy />)
   expect(map.options).toMatchObject({ zoomAnimation: false, inertia: false, markerZoomAnimation: false })
   expect(map.stop).toHaveBeenCalled()

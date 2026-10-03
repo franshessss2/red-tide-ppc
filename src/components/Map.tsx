@@ -5,7 +5,7 @@ import { cameraFor } from '../motion/camera'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
 import { MapMotionPolicy } from './MapMotionPolicy'
-import { MapContainer, Pane, Polygon, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Pane, Polygon, TileLayer, useMap } from 'react-leaflet'
 import { MAP_CENTER, MAP_DEFAULT_ZOOM, MAP_MAX_BOUNDS, zonesBoundingBox } from '../data/zones'
 import {
   FOCUS_FLIGHT_SECONDS,
@@ -14,19 +14,16 @@ import {
   zoneLoadDelayMs,
 } from '../motion/mapMotion'
 import { ZONE_CASING, zonePaint, zoneTheme } from '../styles/statusTheme'
-import { IntroGlide, ReportPins, UserLocationDot } from './MapMarkers'
+import { ReportPins, UserLocationDot } from './MapMarkers'
 import '../styles/map-motion.css'
 // `LatLng` here is our own [lat, lng] tuple, which Leaflet accepts directly.
 import type { LatLng, Report, Zone, ZoneStatus } from '../types'
 import { ShippingLayer } from './ShippingLayer'
-import { ZonePopup } from './ZonePopup'
 
 export interface MapProps {
   zones: Zone[]
   /** Live report feed — pins land on zone centroids (see MapMarkers.tsx). */
   reports: Report[]
-  /** zoneId → number of pending reports, for the popup hint. */
-  pendingCounts: Record<string, number>
   selectedZoneId: string | null
   /** Bump this to re-fit the view on every zone (the "Reset view" button). */
   resetToken: number
@@ -53,8 +50,10 @@ export interface MapProps {
    * rendered — see below).
    */
   onMapReady?: (map: LeafletMap) => void
+  onClearSelection?: () => void
+  onTileStatus?: (status: 'loading' | 'ready' | 'error') => void
+  tileRetry?: number
   onSelectZone: (zoneId: string) => void
-  onReport: (zoneId: string) => void
 }
 
 /**
@@ -183,9 +182,11 @@ function MapReadyBridge({
 function FitToBounds({
   box,
   resetToken,
+  reserveRightPx,
 }: {
   box: [LatLng, LatLng] | null
   resetToken: number
+  reserveRightPx: number
 }) {
   const map = useMap()
   const lastReset = useRef<number | null>(null)
@@ -196,12 +197,13 @@ function FitToBounds({
     if (lastReset.current === resetToken) return
     const initial = lastReset.current === null
     lastReset.current = resetToken
-    const settle = () => map.fitBounds(box, { padding: [28, 28], maxZoom: 12, animate: false })
+    const padding = focusPaddingFor(map.getSize().x, reserveRightPx)
+    const settle = () => map.fitBounds(box, { ...padding, maxZoom: 12, animate: false })
     cameraFor(map).run(
-      () => map.fitBounds(box, { padding: [28, 28], maxZoom: 12, animate: !reduceMotion && !initial, duration: MOTION.time.camera }),
+      () => map.fitBounds(box, { ...padding, maxZoom: 12, animate: !reduceMotion && !initial, duration: MOTION.time.camera }),
       settle, !reduceMotion && !initial,
     )
-  }, [box, map, resetToken, reduceMotion])
+  }, [box, map, resetToken, reduceMotion, reserveRightPx])
 
   return null
 }
@@ -557,8 +559,6 @@ function ZonePolygon({
   onSelectZone,
   onHover,
   onLeave,
-  pendingCount,
-  onReport,
   pingRef,
 }: {
   zone: Zone
@@ -570,8 +570,6 @@ function ZonePolygon({
   onSelectZone: (zoneId: string) => void
   onHover: (zoneId: string) => void
   onLeave: (zoneId: string) => void
-  pendingCount: number
-  onReport: (zoneId: string) => void
   /**
    * Written by `ZonePingBridge` after mount. Read at click time so the first
    * render's no-op is not captured into the handler.
@@ -750,6 +748,7 @@ function ZonePolygon({
       positions={zone.polygon}
       // Constructor prop — applied by Leaflet when the path is created.
       className="zone-path"
+      bubblingMouseEvents={false}
       pathOptions={{
         color: paint.hex,
         fillColor: paint.hex,
@@ -776,30 +775,14 @@ function ZonePolygon({
         mouseover: () => onHover(zone.id),
         mouseout: () => onLeave(zone.id),
       }}
-    >
-      <Popup
-        // The class lands on Leaflet's `.leaflet-popup` container and is
-        // what lets index.css tint the card, tip and glow per status.
-        className={`zone-popup zone-popup--${zone.status}`}
-        maxWidth={340}
-        minWidth={260}
-        autoPanPadding={[16, 16]}
-        autoPan={!reduceMotion}
-      >
-        <ZonePopup
-          zone={zone}
-          pendingCount={pendingCount}
-          onReport={() => onReport(zone.id)}
-        />
-      </Popup>
-    </Polygon>
+    />
     </>
   )
 }
 
 /**
- * The public map: one Leaflet polygon per zone, coloured by status, with a
- * popup that carries the "Report something here" call to action.
+ * The public map: one Leaflet polygon per zone. MapPage owns the stable
+ * details panel and report action, so zoom never clips a floating popup.
  *
  * THE BASE LAYER
  * --------------
@@ -827,7 +810,6 @@ function ZonePolygon({
 export function Map({
   zones,
   reports,
-  pendingCounts,
   selectedZoneId,
   resetToken,
   focusZoneId,
@@ -837,7 +819,9 @@ export function Map({
   focusReserveRight = 0,
   onMapReady,
   onSelectZone,
-  onReport,
+  onClearSelection,
+  onTileStatus,
+  tileRetry = 0,
 }: MapProps) {
   const reduceMotion = useReducedMotion()
   const box = useMemo(
@@ -849,8 +833,7 @@ export function Map({
     [zones, focusZoneId],
   )
 
-  // Hover drives the polygon's fill up a step so the popup lands on a lit
-  // polygon. On a phone this alone is not enough: Leaflet forwards only *mouse*
+  // Hover drives the polygon's fill up a step. On a phone this alone is not enough: Leaflet forwards only *mouse*
   // events to layers, so a tap delivers mouseover, mousedown and click in one
   // batch when the finger lifts (measured within 4ms of each other, ~113ms after
   // touchdown) and the ramp has no head start. `<ZonePressFeedback/>` covers
@@ -865,31 +848,29 @@ export function Map({
       center={MAP_CENTER}
       zoom={MAP_DEFAULT_ZOOM}
       maxBounds={MAP_MAX_BOUNDS}
+      minZoom={8}
+      maxZoom={18}
+      maxBoundsViscosity={1}
+      bounceAtZoomLimits={false}
       scrollWheelZoom
       // Zoom lives in the control column (see module doc); Leaflet's own
       // control is never rendered.
       zoomControl={false}
       attributionControl={false}
-      // Tile fade-in is ours, not Leaflet's 200ms JS loop: the map is created
-      // with its fade disabled and tiles fade via CSS instead
-      // (`map-motion.css`, 0.3s opacity on `.leaflet-tile-loaded`).
-      fadeAnimation={false}
-      zoomAnimation={false}
+      // Leaflet retains the previous zoom's tiles until replacements load.
+      // Do not add a competing opacity transition in CSS.
+      fadeAnimation={!reduceMotion}
+      zoomAnimation={!reduceMotion}
       markerZoomAnimation={!reduceMotion}
       inertia={!reduceMotion}
       className="h-full w-full"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <Basemap key={tileRetry} onStatus={onTileStatus} />
+      <MapInteractions onClear={onClearSelection} />
 
       <MapMotionPolicy />
       <MapReadyBridge onMapReady={onMapReady} />
-      <FitToBounds box={box} resetToken={resetToken} />
-      {/* After FitToBounds: on a session's first load the glide overrides the
-          initial fit with the wide-to-bay establishing shot (MapMarkers). */}
-      <IntroGlide />
+      <FitToBounds box={box} resetToken={resetToken} reserveRightPx={focusReserveRight} />
       <FocusZone zone={focusZone} token={focusToken} reserveRightPx={focusReserveRight} />
       <ZonePressFeedback />
       <ZoneHoverGlowBridge />
@@ -920,11 +901,36 @@ export function Map({
           onLeave={(zoneId) =>
             setHoveredZoneId((current) => (current === zoneId ? null : current))
           }
-          pendingCount={pendingCounts[zone.id] ?? 0}
-          onReport={onReport}
           pingRef={pingRef}
         />
       ))}
     </MapContainer>
   )
+}
+
+/** Background clicks clear selection; zone paths explicitly stop bubbling. */
+function MapInteractions({ onClear }: { onClear?: () => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const clear = () => onClear?.()
+    const container = map.getContainer()
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') clear() }
+    map.on('click', clear)
+    container.addEventListener('keydown', key)
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => map.invalidateSize({ pan: false, debounceMoveend: true })) : null
+    observer?.observe(container)
+    return () => { map.off('click', clear); container.removeEventListener('keydown', key); observer?.disconnect() }
+  }, [map, onClear])
+  return null
+}
+
+function Basemap({ onStatus }: { onStatus?: (status: 'loading' | 'ready' | 'error') => void }) {
+  const failed = useRef(false)
+  return <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={18} keepBuffer={3}
+    updateWhenIdle updateWhenZooming={false}
+    eventHandlers={{
+      loading: () => { failed.current = false; onStatus?.('loading') },
+      tileerror: () => { failed.current = true; onStatus?.('error') },
+      load: () => onStatus?.(failed.current ? 'error' : 'ready'),
+    }} />
 }

@@ -21,7 +21,7 @@ import { createMotionScope } from '../motion/scope'
 
 const PIN_COLORS: Record<Report['status'], string> = {
   pending: zoneTheme('unconfirmed').hex,
-  confirmed: zoneTheme('safe').hex,
+  confirmed: '#93b7d5',
   rejected: '#8a8f98',
 }
 
@@ -70,7 +70,7 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
           html:
             `<span class="report-pin${fresh ? ' report-pin--fresh' : ''}" style="color:${color}">` +
             (fresh ? '<span class="report-ring" aria-hidden="true"></span>' : '') +
-            '<span class="report-pin-body" aria-hidden="true"></span></span>',
+            `<span class="report-pin-body${report.status === 'confirmed' ? ' report-pin-body--reviewed' : ''}" aria-hidden="true"></span></span>`,
         }) },
       )
     }

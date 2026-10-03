@@ -36,13 +36,12 @@ function renderMap(selectedZoneId: string | null = null) {
   return render(
     <Map
       zones={ZONES}
-      reports={[]} pendingCounts={{}}
+      reports={[]}
       selectedZoneId={selectedZoneId}
       resetToken={0}
       focusZoneId={null}
       focusToken={0}
       onSelectZone={NOOP}
-      onReport={NOOP}
     />,
   )
 }
@@ -96,14 +95,13 @@ describe('zone-path class application (production single-pass render)', () => {
     rerender(
       <Map
         zones={ZONES}
-        reports={[]} pendingCounts={{}}
+        reports={[]}
         selectedZoneId='honda-outer'
         resetToken={0}
         focusZoneId={null}
         focusToken={0}
         onSelectZone={NOOP}
-        onReport={NOOP}
-      />,
+        />,
     )
 
     await waitFor(() => {
@@ -129,14 +127,13 @@ describe('zone-path class application (production single-pass render)', () => {
     rerender(
       <Map
         zones={ZONES}
-        reports={[]} pendingCounts={{}}
+        reports={[]}
         selectedZoneId={null}
         resetToken={0}
         focusZoneId={null}
         focusToken={0}
         onSelectZone={NOOP}
-        onReport={NOOP}
-      />,
+        />,
     )
 
     await waitFor(() => {

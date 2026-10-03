@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import App from '../App'
-import { clearDemoData, createDemoBackend } from '../lib/backend.demo'
+import { afterEach, describe, expect, it } from 'vitest'
 import { setBackendForTesting } from '../lib/backend'
 import type { SidePanelState } from '../motion/sidePanelAnchors'
 import { useSidePanel } from '../motion/useSidePanel'
-import { useAppStore } from '../store'
 import { ZONE_PANEL_FALLBACK_WIDTH, ZoneDrawer } from './ZoneDrawer'
 import type { Zone } from '../types'
 
@@ -339,146 +336,5 @@ describe('ZoneDrawer content parity with the sheet', () => {
     expect(compact.getAttribute('href')).toBe('https://www.openstreetmap.org/copyright')
     const full = within(drawer()).getByRole('link', { name: '© OpenStreetMap', hidden: true })
     expect(full.getAttribute('href')).toBe('https://www.openstreetmap.org/copyright')
-  })
-})
-
-describe('ZoneDrawer on the map page', () => {
-  beforeEach(() => {
-  localStorage.setItem('red-tide-ppc:intro:v2', 'seen') // PR59: the intro gate moved to versioned localStorage (introGate.ts)
-    clearDemoData()
-    setBackendForTesting(createDemoBackend())
-    useAppStore.setState({
-      zones: [],
-      reports: [],
-      zonesReady: false,
-      reportsReady: false,
-      error: null,
-      formError: null,
-      notice: null,
-      submitting: false,
-      busyReportId: null,
-      busyZoneId: null,
-      selectedZoneId: null,
-      reportZoneId: null,
-      adminUnlocked: false,
-    })
-  })
-
-  async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-    render(<App />)
-    await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
-  }
-
-  it('replaces the bottom strip entirely: no sheet anchors, no 01/03 readout', async () => {
-    const user = userEvent.setup()
-    await openMap(user)
-
-    // The drawer exists, in the control column, under the advisory tab.
-    const live = await screen.findByTestId('zone-drawer')
-    const column = screen.getByTestId('map-control-column')
-    expect(column.contains(live)).toBe(true)
-    const rows = Array.from(column.children)
-    expect(rows.indexOf(screen.getByTestId('advisory-drawer'))).toBeLessThan(
-      rows.indexOf(live),
-    )
-    expect(rows.indexOf(screen.getByTestId('zoom-controls'))).toBeLessThan(
-      rows.indexOf(screen.getByTestId('advisory-drawer')),
-    )
-
-    // The bottom sheet's contract is gone from the document.
-    expect(document.querySelector('[data-anchor]')).toBeNull()
-    expect(document.querySelector('.sheet-ticks')).toBeNull()
-    expect(screen.queryByText('01 / 03')).toBeNull()
-    expect(screen.queryByText('02 / 03')).toBeNull()
-    expect(screen.queryByText('03 / 03')).toBeNull()
-
-    // And its content lives in the drawer instead.
-    expect(
-      within(live).getByText('7 zones · 0 warnings'),
-    ).toBeTruthy()
-  })
-
-  it('toggles from the tab, keeping the pills row and attribution fixed', async () => {
-    const user = userEvent.setup()
-    await openMap(user)
-
-    const live = await screen.findByTestId('zone-drawer')
-    const attribution = screen.getByTestId('map-attribution')
-
-    await user.click(screen.getByTestId('zone-drawer-tab'))
-    await waitFor(() => expect(live.dataset.state).toBe('open'))
-    expect(within(live).getByText('02 / 02')).toBeTruthy()
-    // Attribution present and the same element across the state change.
-    expect(screen.getByTestId('map-attribution')).toBe(attribution)
-
-    await user.click(screen.getByTestId('zone-drawer-tab'))
-    await waitFor(() => expect(live.dataset.state).toBe('collapsed'))
-    expect(within(live).getByText('01 / 02')).toBeTruthy()
-    expect(screen.getByTestId('map-attribution')).toBe(attribution)
-  })
-
-  it('keeps the OSM attribution present in open AND collapsed states', async () => {
-    const user = userEvent.setup()
-    await openMap(user)
-
-    const attribution = await screen.findByTestId('map-attribution')
-    expect(attribution.getAttribute('href')).toBe(
-      'https://www.openstreetmap.org/copyright',
-    )
-    expect(attribution.textContent).toContain('OpenStreetMap')
-
-    // Collapsed (default on a phone viewport): present.
-    const live = await screen.findByTestId('zone-drawer')
-    expect(live.dataset.state).toBe('collapsed')
-    expect(attribution.isConnected).toBe(true)
-
-    // Open: still present — it sits outside every clip window.
-    await user.click(screen.getByTestId('zone-drawer-tab'))
-    await waitFor(() => expect(live.dataset.state).toBe('open'))
-    expect(attribution.isConnected).toBe(true)
-  })
-
-  it('tucks the drawer when a zone row is tapped below the drawer breakpoint', async () => {
-    // Drive the breakpoint explicitly: jsdom has no matchMedia by default.
-    const originalMatchMedia = (window as unknown as { matchMedia?: unknown }).matchMedia
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      configurable: true,
-      value: (query: string) => ({
-        matches: false, // below 768px
-        media: query,
-        onchange: null,
-        addListener() {},
-        removeListener() {},
-        addEventListener() {},
-        removeEventListener() {},
-        dispatchEvent: () => false,
-      }),
-    })
-    try {
-      const user = userEvent.setup()
-      await openMap(user)
-
-      const live = await screen.findByTestId('zone-drawer')
-      await user.click(screen.getByTestId('zone-drawer-tab'))
-      await waitFor(() => expect(live.dataset.state).toBe('open'))
-
-      await user.click(
-        within(live).getByRole('heading', { name: 'Honda Bay — Inner Islands' }),
-      )
-      await waitFor(() => expect(live.dataset.state).toBe('collapsed'))
-      expect(useAppStore.getState().selectedZoneId).toBe('honda-inner')
-    } finally {
-      if (originalMatchMedia === undefined) {
-        delete (window as unknown as { matchMedia?: unknown }).matchMedia
-      } else {
-        Object.defineProperty(window, 'matchMedia', {
-          writable: true,
-          configurable: true,
-          value: originalMatchMedia,
-        })
-      }
-    }
   })
 })

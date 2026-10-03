@@ -1,7 +1,6 @@
-import { prefersReducedMotion } from '../../motion/preferences'
 
 /**
- * First-visit gate for the tap-to-advance intro (PR59).
+ * First-visit gate for the finite showroom intro.
  *
  * All gate logic lives here so the storage policy is a one-constant change:
  * PR57 gated per tab via `sessionStorage` ('red-tide-ppc:splash:v1'); PR59
@@ -12,7 +11,7 @@ import { prefersReducedMotion } from '../../motion/preferences'
  * the visitor lands directly on the content. A broken intro must never stand
  * between someone and the map.
  */
-export const INTRO_SEEN_KEY = 'red-tide-ppc:intro:v2'
+export const INTRO_SEEN_KEY = 'red-tide-ppc:intro:v3'
 
 /** The one constant to change when reverting to per-tab (session) gating. */
 const INTRO_STORAGE_AREA: 'localStorage' | 'sessionStorage' = 'localStorage'
@@ -30,7 +29,7 @@ export function hasSeenIntro(): boolean {
   }
 }
 
-/** Called on exit and on skip. Private browsing may refuse the write; the app continues. */
+/** Called on exit. Private browsing may refuse the write; the app continues. */
 export function markIntroSeen(): void {
   try {
     storage().setItem(INTRO_SEEN_KEY, 'seen')
@@ -39,7 +38,7 @@ export function markIntroSeen(): void {
 
 /**
  * `?intro=1` forces the intro once without clearing storage — the same
- * contract as the existing "Replay intro" button under the landing page.
+ * contract as the existing header intro control.
  */
 export function introReplayRequested(search: string = window.location.search): boolean {
   try {
@@ -52,7 +51,6 @@ export function introReplayRequested(search: string = window.location.search): b
 /**
  * The intro renders only when:
  *  - the pathname is exactly "/" (never on /map or /admin),
- *  - reduced motion is not preferred (existing behavior: no intro at all),
  *  - there is no deep-link hash (PR57 behavior, preserved),
  *  - and the seen key is absent — or a replay was explicitly requested.
  */
@@ -60,7 +58,6 @@ export function shouldShowIntro(
   location: Pick<Location, 'pathname' | 'search' | 'hash'> = window.location,
 ): boolean {
   if (location.pathname !== '/') return false
-  if (prefersReducedMotion()) return false
   if (location.hash) return false
   if (introReplayRequested(location.search)) return true
   return !hasSeenIntro()

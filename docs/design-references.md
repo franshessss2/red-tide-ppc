@@ -1369,3 +1369,53 @@ unmounted — so a missed one could never be recovered.
 - The `AdminGate` page's "Public map" link points at `/` rather than `/map` (pre-existing label
   mismatch, `src/components/AdminGate.tsx`). Left alone; the pass walks the path the app
   actually offers.
+
+## 23. PR62 presentation experience (supersedes the earlier intro and drawer layouts)
+
+The school prototype opens with a finite showroom sequence: identity, coastal
+zones, observations, community warnings, then a resting title. A click anywhere,
+Enter, Space or Escape exits from every scene. There is no Skip or boxed start
+control. The header's accessible icon-only ↻ control restarts it. Version 3 of the
+first-visit gate shows this updated sequence once; `/map`, `/admin`, hash deep links
+and unreadable storage bypass it. Reduced motion presents the same purpose and
+review/advisory distinction statically. Timers pause while hidden and are cancelled
+on exit and unmount. The landing is already mounted during the overlapping dissolve.
+
+Motion remains the existing animation dependency for the coast trace, shared phone
+geometry and route handoff. The showroom copy uses finite CSS crossfades with visible
+DOM content as its resting state. Existing React Bits-derived landing components
+remain in place with their attribution; no new animation package was added. Library
+ideas are used selectively rather than combining several animation engines.
+
+The map now has a status strip, grouped controls and one details surface: a desktop
+panel or a scrollable mobile bottom sheet. List selection changes details without
+moving the camera. Locate on map is explicit and tucks the phone sheet. Empty map
+clicks, Escape and closing the panel clear selection. Leaflet popups are no longer
+used by the public page, removing the offscreen popup failure mode. Reset view only
+changes the camera and selection; it preserves reports and warning records.
+
+Leaflet owns raster tile opacity and native zoom transitions. The former CSS tile
+fade competed with disabled Leaflet fading and could reveal the dark container
+before replacement tiles became opaque. Keeping previous zoom tiles, a three-tile
+buffer, bounded zoom and resize invalidation address that mechanism; this is not a
+claim that every device-specific compositor flicker has been reproduced. Tile errors
+and slow loading have a separate notice and tile-only retry. They never imply a
+Firestore outage. No offline tile packs or bulk tile prefetching were introduced.
+
+Reviewed pins use a blue diamond, pending pins an amber circle. Neither establishes
+shellfish safety; pins are approximate zone centres, not observation coordinates.
+Sample-data provenance, unavailable status and the official BFAR distinction remain
+visible. Landing copy now matches the form's minimum of 10 characters.
+
+References checked for this pass:
+
+- [Leaflet 1.9.4 API](https://leafletjs.com/reference.html): tile fading, zoom,
+  buffering, mouse-event bubbling and `invalidateSize`.
+- [Motion accessibility](https://motion.dev/docs/react-accessibility): reduced motion.
+- [CDC harmful algal blooms](https://www.cdc.gov/harmful-algal-blooms/about/index.html)
+  and [prevention](https://www.cdc.gov/harmful-algal-blooms/prevention/index.html):
+  toxins, food exposure, cooking and following official advisories. The landing
+  avoids deterministic symptom timelines and visual safety claims.
+
+Firebase settings, rules, storage and authentication are unchanged. This pass is
+presentation/demo work and does not resolve the deferred production security issues.
