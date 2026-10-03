@@ -122,12 +122,9 @@
     clamp(1.25rem, 6vw, 3rem)
     calc(max(1.8rem, env(safe-area-inset-bottom)) + 7.5rem);
 }
-.tide-scene--in {
-  animation: tide-scene-in var(--motion-intro-scene-in, 420ms) var(--ease-out-quint, ease-out) both;
-}
-.tide-scene--out {
-  animation: tide-scene-out var(--motion-intro-scene-out, 220ms) var(--ease-in, ease-in) both;
-}
+/* Motion owns the outer transform and opacity, retaining current values on
+   interruption. Outgoing children keep their reveal position instead of restarting. */
+.tide-scene--out .tide-scene__line { animation-play-state: paused; }
 
 /* The final frame sits under the returned wordmark (top: 43% of the
    viewport, like the PR57 copy block) instead of dead center. The wordmark
@@ -209,8 +206,7 @@
   font: 400 0.66rem/1.5 var(--font-mono);
   letter-spacing: 0.22em;
   white-space: nowrap;
-  opacity: 0.34;
-  animation: tide-hint-pulse 4.2s ease-in-out 700ms infinite alternate;
+  opacity: .85;
 }
 @keyframes tide-scene-line-in {
   from { opacity: 0; transform: translateY(10px); }
@@ -234,6 +230,7 @@
   animation: tide-phone-rise var(--motion-intro-scene-phone, 700ms) var(--ease-out-quint, ease-out) 120ms both;
 }
 .intro-phone__screen {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: clamp(0.6rem, 1.5dvh, 0.95rem);
@@ -292,8 +289,7 @@
   display: block;
   background: var(--color-advisory);
   opacity: 0;
-  animation: tide-status-swap var(--motion-intro-scene-in, 420ms) var(--ease-out-quint, ease-out)
-    calc(var(--motion-intro-scene-stagger, 450ms) * 3) both;
+  animation: tide-status-swap 380ms var(--ease-out-quint, ease-out) 650ms both;
 }
 @keyframes tide-status-swap {
   from { opacity: 0; }
@@ -353,4 +349,58 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Shared product geometry: identical copy slot + handset dimensions in both
+   scenes keep the persistent device still while screen contents change. */
+.tide-product-copy {
+  height: clamp(4.5rem, 13dvh, 7.5rem);
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: .6rem;
+}
+.tide-phone-space { height: clamp(8.5rem, 36dvh, 19rem); aspect-ratio: 9 / 18.5; }
+.tide-phone-stage {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  display: grid; place-content: center; justify-items: center;
+  row-gap: clamp(.9rem, 2.5dvh, 1.5rem);
+  padding: calc(max(1.4rem, env(safe-area-inset-top)) + 3.25rem)
+    clamp(1.25rem, 6vw, 3rem)
+    calc(max(1.8rem, env(safe-area-inset-bottom)) + 7.5rem);
+}
+.intro-phone--persistent { opacity: 1; animation: none; }
+.intro-phone__content {
+  position: absolute; inset: clamp(.4rem, 1.1dvh, .6rem);
+  display: flex; flex-direction: column; gap: clamp(.3rem, .9dvh, .5rem);
+  transition: opacity 450ms var(--ease-out-quint), transform 500ms var(--ease-out-quint);
+}
+.intro-phone--zones .intro-phone__content--zones,
+.intro-phone--report .intro-phone__content--report { opacity: 1; transform: translateY(0); }
+.intro-phone--zones .intro-phone__content--report { opacity: 0; transform: translateY(16px); }
+.intro-phone--report .intro-phone__content--zones { opacity: 0; transform: translateY(-12px); }
+.intro-phone--zones .intro-phone__status-swap { animation: none; opacity: 0; }
+.tide-intro--leaving .tide-phone-stage { opacity: 0; transition: opacity 140ms; }
+@media (max-height: 450px) {
+  .tide-product-copy { height: 3.2rem; gap: .35rem; }
+  .tide-phone-space { height: clamp(5.5rem, 34dvh, 9rem); }
+  .tide-phone-stage {
+    row-gap: .55rem;
+    padding-top: calc(max(.9rem, env(safe-area-inset-top)) + 2.1rem);
+    padding-bottom: calc(max(.9rem, env(safe-area-inset-bottom)) + 5.4rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-phone__content { transition: none; }
+}
+
+/* The selected zone remains visible as the report header while the rest of
+   the screen crossfades. Motion's layout animation uses transforms. */
+.intro-phone__selected-zone {
+  position: absolute; left: 8%; z-index: 2; border-radius: 4px;
+  background: var(--color-unconfirmed); opacity: .9;
+}
+.intro-phone__content--zones .intro-phone__band--amber { background: transparent; }
+.intro-phone__content--report .intro-phone__line:first-child { opacity: 0; }
+
+.tide-product-copy .tide-scene__line:not(.tide-scene__line--lead) {
+  font-size: clamp(.75rem, 1.8vw, 1rem); max-width: 38ch;
 }

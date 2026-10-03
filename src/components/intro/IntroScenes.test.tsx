@@ -49,7 +49,7 @@ describe('fixed copy', () => {
     }
   })
 
-  it('staggers the three scene-2 lines 450ms apart via CSS, with no timers', () => {
+  it('orders the three scene-2 lines for the shared CSS stagger, with no timers', () => {
     const { container } = render(<IntroScene scene={2} state="in" />)
     const lines = [...container.querySelectorAll<HTMLElement>('.tide-scene__line')]
     expect(lines).toHaveLength(3)

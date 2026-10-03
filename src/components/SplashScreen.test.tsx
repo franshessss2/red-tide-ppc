@@ -244,6 +244,30 @@ describe('tap-to-advance scenes', () => {
     expect(document.querySelectorAll('.tide-scene--in')).toHaveLength(1)
   })
 
+  it('retains the actual outgoing panel through exit instead of recreating it', () => {
+    splash()
+    fireEvent.click(advanceButton())
+    const first = document.querySelector('[data-scene-panel="1"]')
+    fireEvent.click(advanceButton())
+    expect(document.querySelector('[data-scene-panel="1"]')).toBe(first)
+    expect(first?.getAttribute('aria-hidden')).toBe('true')
+    fireEvent.click(advanceButton())
+    expect(document.querySelectorAll('.tide-scene--out')).toHaveLength(1)
+  })
+
+  it('keeps one handset and selected zone mounted across the product screens', () => {
+    splash()
+    for (let i = 0; i < 3; i++) fireEvent.click(advanceButton())
+    const phone = document.querySelector('.intro-phone--persistent')
+    const selected = phone?.querySelector('.intro-phone__selected-zone')
+    fireEvent.click(advanceButton())
+    expect(document.querySelector('.intro-phone--report')).toBe(phone)
+    expect(phone?.querySelector('.intro-phone__selected-zone')).toBe(selected)
+    expect(document.querySelectorAll('.intro-phone')).toHaveLength(1)
+    fireEvent.click(advanceButton())
+    expect(document.querySelector('.intro-phone--persistent')).toBe(phone)
+  })
+
   it('never auto-advances: a scene holds for 30s until the next tap', () => {
     const overlay = splash()
     fireEvent.click(advanceButton())

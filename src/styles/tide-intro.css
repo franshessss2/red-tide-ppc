@@ -134,8 +134,8 @@
 .tide-intro__hint { pointer-events: none; }
 .tide-intro__bottom { z-index: 5; pointer-events: none; }
 .tide-intro__bottom a { pointer-events: auto; }
-.tide-intro:not([data-scene="0"]) .tide-intro__coast,
-.tide-intro:not([data-scene="0"]) .tide-intro__waterline {
-  opacity: 0; transition: opacity 220ms;
-}
+.tide-intro__coast { transition: opacity 500ms var(--ease-out-quint); }
+.tide-intro:not([data-scene="0"]) .tide-intro__coast { opacity: .16; }
+.tide-intro__waterline { transition: opacity 500ms, transform 500ms var(--ease-out-quint); }
+.tide-intro:not([data-scene="0"]) .tide-intro__waterline { animation: none; transform: scaleX(1); opacity: .15; }
 .tide-intro--leaving[data-handoff="measured"] .tide-intro__title-clip { opacity: 1; transition: none; }
