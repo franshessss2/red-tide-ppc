@@ -12,6 +12,8 @@ export const MOTION = {
     successHold: 1.6, noticeHold: 7, advisoryLoop: 3.5, statusLoop: 2.4,
     waveTint: 1.5, observerFallback: 0.7, idle: 1.2, sheen: 1.1,
     tideDrift: 9, scan: 14, ambient: 44, ambientSecond: 52, ambientPanel: 60,
+    // PR59 tap-to-advance intro scenes. New tokens only — nothing above changed.
+    introSceneOut: 0.22, introSceneIn: 0.42, introSceneStagger: 0.45, introScenePhone: 0.7,
   },
   ease: {
     out: [0.22, 1, 0.36, 1] as const,
