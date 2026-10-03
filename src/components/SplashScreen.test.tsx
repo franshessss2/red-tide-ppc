@@ -438,6 +438,24 @@ describe('First Ripple handoff', () => {
     expect(intro()).toBeNull()
   })
 
+  it('restores the heading on resize during the handoff', () => {
+    const { heading, cancel } = measuredIntro()
+    triggerExitByEscape()
+    fireEvent(window, new Event('resize'))
+    expect(cancel).toHaveBeenCalled()
+    expect(heading.style.visibility).toBe('')
+    expect(document.querySelector('[data-handoff="fade"]')).toBeTruthy()
+    act(() => vi.advanceTimersByTime(INTRO_EXIT_MS))
+    expect(intro()).toBeNull()
+  })
+
+  it('makes the beginning hint available before the entrance completes', () => {
+    splash()
+    expect(document.querySelector('[data-hint-state="visible"]')?.textContent?.trim()).toBe('TAP TO BEGIN')
+    fireEvent.click(skipButton())
+    expect(document.querySelector('.tide-experience--leaving')).toBeTruthy()
+  })
+
   it('uses an on-time dissolve when fonts are still loading', () => {
     Object.defineProperty(document, 'fonts', { configurable: true, value: { status: 'loading' } })
     const { heading, animate } = measuredIntro()
