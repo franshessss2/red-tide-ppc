@@ -86,7 +86,9 @@ describe('phone mock', () => {
     const reportPhone = report.container.querySelector('.intro-phone--report')!
     expect(reportPhone.getAttribute('aria-hidden')).toBe('true')
     expect(reportPhone.textContent).toBe('')
-    expect(reportPhone.querySelector('.intro-phone__status-swap')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__receipt')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__pending')).toBeTruthy()
+    expect(reportPhone.querySelector('.intro-phone__status-swap')).toBeNull()
   })
 })
 

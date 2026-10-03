@@ -91,13 +91,27 @@ export function SplashScreen() {
     // preventDefault stops the browser's own keyboard "click" on the button,
     // so Enter and Space advance exactly once — and Space never scrolls.
     event.preventDefault()
+    if (event.repeat) return
     advance()
   }, [advance])
 
   const handleOverlayKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape') return
-    event.preventDefault()
-    dismiss()
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      dismiss()
+      return
+    }
+    if (event.key !== 'Tab') return
+    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), a[href]')]
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
   }, [dismiss])
 
   useEffect(() => {
@@ -233,7 +247,8 @@ export function SplashScreen() {
         </div>
       </div>
       {active && createPortal(
-        <div
+        <motion.div
+          layoutRoot
           ref={overlayRef}
           key={run}
           className={`tide-intro tide-intro--${phase}`}
@@ -286,7 +301,7 @@ export function SplashScreen() {
               animate={scene === 3 || scene === 4
                 ? { opacity: 1, y: 0, scale: 1 }
                 : { opacity: 0, y: scene >= 5 ? -18 : 40, scale: scene >= 5 ? 0.85 : 0.94 }}
-              transition={{ duration: reduce ? 0 : 0.6, ease: MOTION.ease.out }}
+              transition={{ duration: reduce ? 0 : MOTION.time.introScenePhone, ease: MOTION.ease.out }}
             >
               <PhoneMock variant={scene >= 4 ? 'report' : 'zones'} persistent />
             </motion.div>
@@ -304,7 +319,7 @@ export function SplashScreen() {
             Skip
           </button>
           <div className="tide-intro__bottom tide-intro__chrome"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a><span>PROTECT THE COAST.</span></div>
-        </div>
+        </motion.div>
       , document.body)}
     </div>
   )
