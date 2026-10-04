@@ -10,8 +10,9 @@ export function MapMotionPolicy() {
   const map = useMap()
   const reduce = useReducedMotion()
   useEffect(() => {
-    // Leaflet checks this option before starting native zoom transitions.
-    map.options.zoomAnimation = !reduce
+    // Native CSS zoom is disabled at construction: Leaflet caches that flag.
+    // Owned camera flights provide motion without a stale OS preference.
+    map.options.zoomAnimation = false
     map.options.markerZoomAnimation = !reduce
     map.options.inertia = !reduce
     if (reduce) cameraFor(map).settle()

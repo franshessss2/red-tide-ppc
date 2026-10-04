@@ -31,7 +31,7 @@ async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> 
   await user.click(screen.getByRole('link', { name: /open the map/i }))
   // The map page is lazy; wait for it to mount.
   await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
-  const tab = screen.getByRole('button', { name: /Coastal zones/ })
+  const tab = screen.getByTestId('zone-drawer-tab')
   if (tab.getAttribute('aria-expanded') === 'false') await user.click(tab)
 }
 
@@ -40,11 +40,6 @@ function zoneCard(name: string): HTMLElement {
   const card = heading.closest('li')
   if (!card) throw new Error(`No card found for zone "${name}"`)
   return card
-}
-
-async function openReport(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(within(zoneCard(ZONE)).getByRole('button'))
-  await user.click(screen.getByRole('button', { name: 'Report an observation' }))
 }
 
 beforeEach(() => {
@@ -160,7 +155,7 @@ describe('map page (/map)', () => {
     }
 
     // All zones start safe, so the "no advisories" panel is shown.
-    expect(screen.getByLabelText('Community zone status summary')).toBeTruthy()
+    expect(screen.getByText('No community warnings recorded')).toBeTruthy()
   })
 
   it('rejects a report that is too short', async () => {
@@ -168,7 +163,11 @@ describe('map page (/map)', () => {
     render(<App />)
     await openMap(user)
 
-    await openReport(user)
+    await user.click(
+      within(zoneCard(ZONE)).getByRole('button', {
+        name: /Report here/i,
+      }),
+    )
 
     const dialog = await screen.findByRole('dialog')
     await user.type(within(dialog).getByLabelText('What did you see?'), 'red')
@@ -187,7 +186,11 @@ describe('the full report → approve loop', () => {
     await openMap(user)
 
     // --- 1. public user files a report -------------------------------
-    await openReport(user)
+    await user.click(
+      within(zoneCard(ZONE)).getByRole('button', {
+        name: /Report here/i,
+      }),
+    )
 
     const dialog = await screen.findByRole('dialog')
     await user.type(
@@ -237,13 +240,12 @@ describe('the full report → approve loop', () => {
     // --- 3. the public map now shows the advisory ---------------------
     await user.click(screen.getByRole('link', { name: 'Public map' }))
     expect(
-      await screen.findByText('Community warning'),
+      await screen.findByText(/1 community warning/i),
     ).toBeTruthy()
 
-    const toggle = screen.getByRole('button', { name: /Coastal zones/ })
-    if (toggle.getAttribute('aria-expanded') === 'false') await user.click(toggle)
-    if (useAppStore.getState().selectedZoneId !== 'honda-inner') await user.click(within(zoneCard(ZONE)).getByRole('button'))
-    expect(within(screen.getByRole('complementary', { name: 'Coastal zones and details' })).getByText('Community warning')).toBeTruthy()
+    await user.click(screen.getByTestId('zone-drawer-tab'))
+    const card = zoneCard(ZONE)
+    expect(within(card).getByText('Community warning')).toBeTruthy()
   })
 })
 
@@ -272,7 +274,11 @@ describe('photo attachment', () => {
     render(<App />)
     await openMap(user)
 
-    await openReport(user)
+    await user.click(
+      within(zoneCard(ZONE)).getByRole('button', {
+        name: /Report here/i,
+      }),
+    )
 
     const dialog = await screen.findByRole('dialog')
     await user.type(

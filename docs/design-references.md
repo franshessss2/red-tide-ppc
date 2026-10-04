@@ -1370,7 +1370,7 @@ unmounted — so a missed one could never be recovered.
   mismatch, `src/components/AdminGate.tsx`). Left alone; the pass walks the path the app
   actually offers.
 
-## 23. PR62 presentation experience (supersedes the earlier intro and drawer layouts)
+## 23. PR62 intro and landing experience (original map preserved)
 
 The school prototype opens with a finite showroom sequence: identity, coastal
 zones, observations, community warnings, then a resting title. A click anywhere,
@@ -1387,30 +1387,16 @@ DOM content as its resting state. Existing React Bits-derived landing components
 remain in place with their attribution; no new animation package was added. Library
 ideas are used selectively rather than combining several animation engines.
 
-The map now has a status strip, grouped controls and one details surface: a desktop
-panel or a scrollable mobile bottom sheet. List selection changes details without
-moving the camera. Locate on map is explicit and tucks the phone sheet. Empty map
-clicks, Escape and closing the panel clear selection. Leaflet popups are no longer
-used by the public page, removing the offscreen popup failure mode. Reset view only
-changes the camera and selection; it preserves reports and warning records.
-
-Leaflet owns raster tile opacity and native zoom transitions. The former CSS tile
-fade competed with disabled Leaflet fading and could reveal the dark container
-before replacement tiles became opaque. Keeping previous zoom tiles, a three-tile
-buffer, bounded zoom and resize invalidation address that mechanism; this is not a
-claim that every device-specific compositor flicker has been reproduced. Tile errors
-and slow loading have a separate notice and tile-only retry. They never imply a
-Firestore outage. No offline tile packs or bulk tile prefetching were introduced.
-
-Reviewed pins use a blue diamond, pending pins an amber circle. Neither establishes
-shellfish safety; pins are approximate zone centres, not observation coordinates.
-Sample-data provenance, unavailable status and the official BFAR distinction remain
-visible. Landing copy now matches the form's minimum of 10 characters.
+The public map retains the implementation from before PR #70: its animated zone
+and advisory drawers, swipe interactions, spring motion, ambient graphics, map
+camera behavior and report markers. The map workspace rebuild was withdrawn in
+the restoration PR at the project owner's request. Earlier map reference sections
+continue to describe the active implementation. Map-selection and tile-loading
+changes from PR #70 are also withdrawn; this is an exact restoration, not a new
+map bug-fix pass. Landing copy still matches the form's 10-character minimum.
 
 References checked for this pass:
 
-- [Leaflet 1.9.4 API](https://leafletjs.com/reference.html): tile fading, zoom,
-  buffering, mouse-event bubbling and `invalidateSize`.
 - [Motion accessibility](https://motion.dev/docs/react-accessibility): reduced motion.
 - [CDC harmful algal blooms](https://www.cdc.gov/harmful-algal-blooms/about/index.html)
   and [prevention](https://www.cdc.gov/harmful-algal-blooms/prevention/index.html):

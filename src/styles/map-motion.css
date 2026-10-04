@@ -194,7 +194,20 @@
   opacity: 0.6;
 }
 
-/* Tile opacity belongs to Leaflet. Custom fades exposed dark seams on zoom. */
+/* --- 5. Tile fade-in ------------------------------------------------------
+   Leaflet's own tile fade is a 200ms JS rAF loop; the map is created with
+   `fadeAnimation: false` so tiles are ours to fade instead. A tile starts at
+   opacity 0 and transitions to 1 when Leaflet marks it loaded — panning
+   brings new tiles in softly instead of popping them. */
+.leaflet-map-pane .leaflet-tile {
+  opacity: 0;
+  transition: opacity var(--motion-base, 220ms) var(--ease-out-quint);
+}
+
+.leaflet-map-pane .leaflet-tile.leaflet-tile-loaded {
+  opacity: 1;
+}
+
 /* --- Loop gate: no decoration moves while the camera does -----------------
    Applied by <MapLoopGate/> on movestart/zoomstart, cleared on moveend/
    zoomend. Later phases add their loop selectors to this same rule. */
@@ -407,7 +420,3 @@ body.map-motion-paused .loc-halo,
 body.map-motion-paused .orb {
   animation-play-state: paused;
 }
-
-/* Map records remain still: warnings are conveyed by text and colour. */
-.leaflet-container .zone-path--advisory,
-.leaflet-container .zone-path--advisory-breathe { animation: none !important; }
