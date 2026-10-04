@@ -7,7 +7,7 @@ A public map of coastal zones colour-coded by advisory status, an anonymous way 
 
 For the school presentation, see [Presentation review](docs/presentation-review.md).
 The first-visit intro plays automatically and exits with one click; ↻ in the landing
-header reopens it. The public map uses a zone list and responsive details panel.
+header reopens it. The public map retains its original animated zone and advisory drawers.
 
 ---
 
