@@ -410,6 +410,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
           </div>
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-line py-7 text-xs text-faint sm:mt-8 sm:gap-1.5 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
+            <Link to="/devices" className="inline-flex min-h-11 items-center text-muted hover:text-paper">Device simulation</Link>
             <p>School presentation prototype · Community records, not an official BFAR advisory</p>
             <p>
               Map data ©{' '}

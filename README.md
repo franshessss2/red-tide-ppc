@@ -6,6 +6,8 @@ A public map of coastal zones colour-coded by advisory status, an anonymous way 
 
 
 For the school presentation, see [Presentation review](docs/presentation-review.md).
+For the optional virtual ESP32, see [Virtual device setup](docs/virtual-device-setup.md).
+The separate `/devices` page supports local rehearsal without accounts or hardware.
 The first-visit intro plays automatically and exits with one click; ↻ in the landing
 header reopens it. The public map retains its original animated zone and advisory drawers.
 
