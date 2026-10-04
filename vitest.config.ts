@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'node',
     // Needed so @testing-library/react's automatic DOM cleanup runs.
     globals: true,
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'server/**/*.test.ts'],
     restoreMocks: true,
   },
 })

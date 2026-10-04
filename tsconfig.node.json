@@ -24,6 +24,9 @@
     "vite.config.ts",
     "vitest.config.ts",
     "scripts",
+    "api",
+    "server",
+    "src/devices/model.ts",
     "src/types.ts",
     "src/data/zones.ts",
     "src/lib/firestoreMapping.ts"

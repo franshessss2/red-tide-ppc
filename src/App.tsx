@@ -5,6 +5,7 @@ import { Admin } from './pages/Admin'
 import { SplashScreen } from './components/SplashScreen'
 import { RouteErrorBoundary } from './motion/RouteErrorBoundary'
 import { useAppStore } from './store'
+import { Devices } from './pages/Devices'
 
 /**
  * The map is the app's heaviest tree — Leaflet, react-leaflet, the zone sheet
@@ -104,6 +105,7 @@ export default function App() {
           }
         />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/devices" element={<Devices />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </RouteTransition>
           </RouteErrorBoundary>
