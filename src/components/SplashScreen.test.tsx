@@ -18,7 +18,7 @@ const dialog = () => screen.queryByRole('dialog', { name: 'Introduction' })
 const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
-describe('finite showroom intro', () => {
+describe('looping showroom intro', () => {
   it('keeps the outgoing title and layout until the fade has completed', () => {
     render(<SplashScreen />)
     tick(INTRO_SCENE_MS)
@@ -31,18 +31,21 @@ describe('finite showroom intro', () => {
     expect(dialog()?.getAttribute('data-scene')).toBe('1')
     expect(document.querySelector('.showroom-stage--out')).toBeNull()
   })
-  it('autoplays the three features once and settles without navigating', () => {
+  it('restores the closing title and loops through all five scenes', () => {
     render(<SplashScreen />)
-    expect(dialog()?.getAttribute('data-scene')).toBe('0')
-    for (const scene of [1, 2, 3]) { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS); expect(dialog()?.getAttribute('data-scene')).toBe(String(scene)) }
-    tick(60000)
-    expect(dialog()?.getAttribute('data-scene')).toBe('3')
-    expect(screen.getByText('Review community warnings.')).toBeTruthy()
-    expect(document.querySelector('.showroom-device--visible')).toBeTruthy()
+    for (let cycle = 0; cycle < 2; cycle++) {
+      for (const scene of [1, 2, 3, 4, 0]) {
+        tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS)
+        expect(dialog()?.getAttribute('data-scene')).toBe(String(scene))
+        if (scene === 4) {
+          expect(screen.getByText('RED TIDE')).toBeTruthy()
+          expect(document.querySelector('.showroom-device--visible')).toBeNull()
+        }
+      }
+    }
     expect(window.location.pathname).toBe('/')
-    expect(screen.queryByRole('button', { name: /skip|tap to begin/i })).toBeNull()
   })
-  it.each([0, 1, 2, 3])('one click exits from scene %s and cancels pending changes', scene => {
+  it.each([0, 1, 2, 3, 4])('one click exits from scene %s and cancels pending changes', scene => {
     render(<SplashScreen />)
     for (let i = 0; i < scene; i++) { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS) }
     fireEvent.click(enter()); fireEvent.click(enter())
