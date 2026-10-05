@@ -1,3 +1,4 @@
+import { StreetMapDialog } from '../components/StreetMapDialog'
 import { reportSuccessMessage } from '../lib/reportFeedback'
 import { MapFeedStatus } from '../components/DataProvenance'
 import { LiveDataStatus } from '../components/LiveDataStatus'
@@ -74,6 +75,7 @@ export function MapPage() {
   const closeReportForm = useAppStore((state) => state.closeReportForm)
   const reduceMotion = useReducedMotion()
 
+  const [streetMapOpen, setStreetMapOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<MobilePanelState>('peek')
   const [resetToken, setResetToken] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -187,6 +189,11 @@ export function MapPage() {
 
   const headerActions = (
     <>
+      <button type="button" aria-label="Open street map" title="Street map"
+        onClick={() => { setMobilePanel('peek'); dismissShippingHint(); setStreetMapOpen(true) }}
+        className="grid h-8 w-8 place-items-center rounded-md border border-line bg-ink-2/85 text-paper/75 hover:text-accent">
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z M9 3v16 M15 5v16" /></svg>
+      </button>
       <span className="relative inline-flex">
         <button
           type="button"
@@ -428,6 +435,7 @@ export function MapPage() {
       {/* ------------------------------------------------------------------
           Layer 4: modals.
           ------------------------------------------------------------------ */}
+      {streetMapOpen && <StreetMapDialog onClose={() => setStreetMapOpen(false)} />}
       {heldZone && (
         <ReportForm
           key={heldZone.id}

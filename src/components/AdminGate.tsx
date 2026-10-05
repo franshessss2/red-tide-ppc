@@ -1,3 +1,4 @@
+import { TextReveal } from './TextReveal'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
@@ -83,7 +84,7 @@ export function AdminGate() {
           </span>
 
           <h1 className="font-display mt-4 text-3xl leading-none text-paper">
-            Enter admin passcode
+            <TextReveal text="Enter admin passcode" trigger="mount" />
           </h1>
           <p className="mt-2 text-xs leading-relaxed text-muted">
             Approving a report adds a community warning to its zone, so this view is

@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Scoped mapcn tokens; the existing Red Tide theme remains authoritative. */
+@theme inline {
+  --color-background: var(--mapcn-background);
+  --color-foreground: var(--mapcn-foreground);
+  --color-muted-foreground: var(--mapcn-muted);
+  --color-border: var(--mapcn-border);
+  --color-ring: var(--mapcn-ring);
+  --color-popover: var(--mapcn-background);
+  --color-popover-foreground: var(--mapcn-foreground);
+}
+
 /* ===========================================================================
    Red Tide PPC — design tokens
 

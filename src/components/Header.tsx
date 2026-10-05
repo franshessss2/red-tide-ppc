@@ -1,3 +1,4 @@
+import { TextReveal } from './TextReveal'
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -65,7 +66,7 @@ export function Header({
             overlay ? 'text-[19px] text-paper' : 'text-[21px] text-paper'
           }`}
         >
-          {title}
+          {overlay ? title : <TextReveal text={title} trigger="mount" />}
         </span>
       </span>
     </>

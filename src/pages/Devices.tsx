@@ -1,3 +1,4 @@
+import { TextReveal } from '../components/TextReveal'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Header } from '../components/Header'
@@ -87,7 +88,7 @@ export function Devices() {
     <Header eyebrow="School prototype" title="Red Tide" right={<Link className="device-home" to="/">Home</Link>} />
     <main className="device-main">
       <p className="device-eyebrow">ENVIRONMENTAL MONITORING · SIMULATION</p>
-      <h1>Coastal device</h1>
+      <h1><TextReveal text="Coastal device" /></h1>
       <p className="device-intro">A virtual station for demonstrating how sensor readings reach Red Tide. These readings do not detect toxic algae or establish shellfish safety.</p>
       <div className="device-modes" role="group" aria-label="Reading source">
         <button aria-pressed={!rehearsal} onClick={() => setRehearsal(false)}>Wokwi connection</button>
@@ -106,14 +107,14 @@ export function Devices() {
         {!rehearsal && <button className="device-secondary" disabled={loading} onClick={() => setRefresh(value => value + 1)}>{loading ? 'Checking…' : 'Refresh readings'}</button>}
       </section>
       {rehearsal && <section className="device-rehearsal" aria-label="Rehearsal controls">
-        <h2>Rehearse without hardware</h2><p>Adjust the inputs, then send a local reading. This does not contact Wokwi, Firebase or the device endpoint. Readings clear when you leave this page.</p>
+        <h2><TextReveal text="Rehearse without hardware" /></h2><p>Adjust the inputs, then send a local reading. This does not contact Wokwi, Firebase or the device endpoint. Readings clear when you leave this page.</p>
         <label htmlFor="device-temperature">Temperature: {temperature.toFixed(1)} °C</label>
         <input id="device-temperature" type="range" min="0" max="50" step="0.5" value={temperature} onChange={event => setTemperature(Number(event.target.value))} />
         <label htmlFor="device-cloudiness">Simulated cloudiness: {cloudiness} %</label>
         <input id="device-cloudiness" type="range" min="0" max="100" value={cloudiness} onChange={event => setCloudiness(Number(event.target.value))} />
         <button className="device-primary" onClick={sendLocalReading}>Send local reading</button>
       </section>}
-      <section className="device-history" aria-label="Recent readings"><h2>Recent readings</h2><p>Latest 60 samples. Connection status uses the time Red Tide received a reading, not a laboratory test date.</p>
+      <section className="device-history" aria-label="Recent readings"><h2><TextReveal text="Recent readings" /></h2><p>Latest 60 samples. Connection status uses the time Red Tide received a reading, not a laboratory test date.</p>
         {readings.length ? <div className="device-table-scroll"><table><caption className="sr-only">{rehearsal ? 'Local rehearsal' : 'Wokwi'} reading history</caption><thead><tr><th scope="col">Received</th><th scope="col">Temperature</th><th scope="col">Cloudiness</th></tr></thead><tbody>{readings.map(reading => <tr key={`${reading.sessionId}-${reading.sequence}`}><td>{time(reading.receivedAt)}</td><td>{reading.temperatureC.toFixed(1)} °C</td><td>{reading.cloudinessPercent.toFixed(0)} %</td></tr>)}</tbody></table></div> : <p className="device-empty">Readings will appear here after the first sample arrives.</p>}
       </section>
       <footer className="device-footer"><a href="https://wokwi.com/projects/new/esp32" target="_blank" rel="noreferrer">Open Wokwi ESP32 simulator ↗</a><p>Community warnings remain a separate human review process. Simulated readings never change a zone’s status.</p></footer>

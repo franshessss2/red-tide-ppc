@@ -1,3 +1,4 @@
+import { TextReveal } from '../components/TextReveal'
 import { MOTION } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
@@ -307,7 +308,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               <motion.div
                 className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
               >
-                <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
+                <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block"><TextReveal text="Coastal overview" /></h2>
                 <CommunitySource />
                 <section aria-label="Community status" className="mt-4 text-sm leading-relaxed text-muted">
                   {zonesReady ? <div className="flex items-center gap-2.5">
@@ -377,7 +378,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
                 whileInView="show"
                 viewport={{ once: true, amount: 0.2 }}
               >
-                <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
+                <h2 className="text-base font-semibold text-paper lg:text-lg"><TextReveal text="What is red tide?" /></h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet variants={primerItemVariants}>
                     Some algal blooms produce toxins that can accumulate in shellfish —{' '}
@@ -394,7 +395,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               </motion.section>
             ) : (
               <section className="min-w-0" aria-label="What is red tide">
-                <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
+                <h2 className="text-base font-semibold text-paper lg:text-lg"><TextReveal text="What is red tide?" /></h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet>
                     Some algal blooms produce toxins that can accumulate in shellfish —{' '}
