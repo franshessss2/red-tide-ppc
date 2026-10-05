@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 import { INTRO_COAST_PATH } from "../../data/introCoast";
+import { REEL_SCENES, REEL_CLOSING_SCENE } from "./reelScenes";
+import { ReviewPreview, WarningPreview, SourcePreview, HardwarePreview } from "./IntroFeaturePreviews";
 
 const OBSERVATION = "Unusual water colour";
 const ZONES = [
@@ -117,34 +119,18 @@ export function ReportPreview() {
   );
 }
 
-const COPY = [
-  {
-    tag: "RED TIDE · PRODUCT OVERVIEW",
-    title: "Introducing",
-    description: "A shared view of the coast.",
-  },
-  {
-    tag: "PUERTO PRINCESA · PALAWAN",
-    title: "RED TIDE",
-    description: "Explore. Observe. Stay informed.",
-  },
-  {
-    tag: "01 / EXPLORE",
-    title: "Explore coastal zones.",
-    description: "Find your coastal area. Read the community record.",
-  },
-  {
-    tag: "02 / OBSERVE → REVIEW",
-    title: "Report observations.",
-    description: "Share what you notice. An admin reviews every report.",
-  },
-  {
-    tag: "COMMUNITY COASTAL MONITORING",
-    title: "RED TIDE",
-    description:
-      "Explore the coast. Share observations. Follow community warnings.",
-  },
-];
+function SceneVisual({ visual, animated }: { visual: (typeof REEL_SCENES)[number]['visual']; animated: boolean }) {
+  switch (visual) {
+    case 'orbit': return <div className="reel-orbit" aria-hidden="true"><span /><span /><span /></div>;
+    case 'coast': return <CoastPreview />;
+    case 'report': return <ReportPreview />;
+    case 'review': return <ReviewPreview />;
+    case 'warning': return <WarningPreview />;
+    case 'source': return <SourcePreview />;
+    case 'hardware': return <HardwarePreview />;
+    default: return <TideMark animated={visual === 'identity' && animated} />;
+  }
+}
 
 export function ReelStage({
   scene,
@@ -153,27 +139,16 @@ export function ReelStage({
   scene: number;
   reduced: boolean;
 }) {
-  const current = reduced ? 4 : scene;
-  const copy = COPY[current];
+  const current = reduced ? REEL_CLOSING_SCENE : scene;
+  const copy = REEL_SCENES[current];
+  const feature = current >= 2 && current < REEL_CLOSING_SCENE;
   return (
     <div
       key={current}
-      className={`reel-scene reel-scene--${current}${reduced ? " reel-scene--static" : ""}`}
+      className={`reel-scene reel-scene--${current}${feature ? " reel-scene--feature" : ""}${current === REEL_CLOSING_SCENE ? " reel-scene--closing" : ""}${reduced ? " reel-scene--static" : ""}`}
     >
       <div className="reel-scene__visual">
-        {current === 0 ? (
-          <div className="reel-orbit" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-        ) : current === 2 ? (
-          <CoastPreview />
-        ) : current === 3 ? (
-          <ReportPreview />
-        ) : (
-          <TideMark animated={current === 1 && !reduced} />
-        )}
+        <SceneVisual visual={copy.visual} animated={!reduced} />
       </div>
       <div className="reel-scene__copy">
         <p className="showroom-eyebrow">{copy.tag}</p>
@@ -181,15 +156,15 @@ export function ReelStage({
           <span>{copy.title}</span>
         </h1>
         <p className="showroom-description">{copy.description}</p>
-        {current === 4 && !reduced && (
+        {"detail" in copy && <p className="reel-scene__detail">{copy.detail}</p>}
+        {current === REEL_CLOSING_SCENE && !reduced && (
           <p className="reel-scene__disclaimer">
             School prototype · Check official BFAR advisories.
           </p>
         )}
         {reduced && (
           <p className="showroom-disclaimer">
-            Reports are reviewed by an admin. Check BFAR for official
-            advisories.
+            Reports are reviewed by an admin. Source labels identify sample or cached records. Arduino demonstrates distance sensing, LEDs and a buzzer. Check BFAR for official advisories.
           </p>
         )}
       </div>

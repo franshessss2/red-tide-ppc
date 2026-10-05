@@ -5,13 +5,13 @@ import { Landing } from '../pages/Landing'
 import { useReducedMotion } from '../motion/preferences'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
 import { ReelStage } from './intro/ReelStage'
+import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 import '../styles/showroom.css'
 
 export const INTRO_EXIT_MS = 650
-export const INTRO_SCENE_MS = 3600
+export const INTRO_SCENE_MS = REEL_SCENES[0].duration
 export const INTRO_TRANSITION_MS = 600
-export const INTRO_SCENE_COUNT = 5
-const CHAPTERS = ['Introducing', 'Identity', 'Coastal zones', 'Review', 'Community']
+export const INTRO_SCENE_COUNT = REEL_SCENES.length
 type Phase = 'playing' | 'leaving' | 'done'
 
 /** Looping showroom sequence. Every activation exits; timers never navigate. */
@@ -46,7 +46,7 @@ export function SplashScreen() {
   // tabs pause either phase; replay, dismissal and StrictMode clean it up.
   useEffect(() => {
     if (phase !== 'playing' || reduce) return
-    let remaining = transitioning ? INTRO_TRANSITION_MS : INTRO_SCENE_MS
+    let remaining = transitioning ? INTRO_TRANSITION_MS : REEL_SCENES[scene].duration
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
     const start = () => {
@@ -126,11 +126,13 @@ export function SplashScreen() {
       }}>
       <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
-      <div className={`showroom-stage${transitioning && !reduce ? ' showroom-stage--out' : ''}`}>
-        <ReelStage scene={scene} reduced={reduce} />
-      </div>
+      {(transitioning && !reduce ? [scene, (scene + 1) % INTRO_SCENE_COUNT] : [scene]).map(index => <div key={index}
+        className={`showroom-stage${transitioning && !reduce ? index === scene ? ' showroom-stage--out' : ' showroom-stage--incoming' : ''}`}
+        aria-hidden={index !== scene ? true : undefined}>
+        <ReelStage scene={index} reduced={reduce} />
+      </div>)}
       <div className="showroom-footer" aria-hidden="true">
-        <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? 4 : scene) + 1).padStart(2, '0')} / 05 · {CHAPTERS[reduce ? 4 : scene]}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={(reduce ? 4 : scene) >= index ? 'is-complete' : ''} />)}</div></div>
+        <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? REEL_CLOSING_SCENE : scene) + 1).padStart(2, '0')} / {String(INTRO_SCENE_COUNT).padStart(2, '0')} · {REEL_SCENES[reduce ? REEL_CLOSING_SCENE : scene].chapter}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={(reduce ? REEL_CLOSING_SCENE : scene) >= index ? 'is-complete' : ''} />)}</div></div>
         <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase === 'leaving'} />
