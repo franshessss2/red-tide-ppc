@@ -18,7 +18,7 @@ const dialog = () => screen.queryByRole('dialog', { name: 'Introduction' })
 const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
-describe('looping showroom intro', () => {
+describe('reel-inspired intro', () => {
   it('keeps the outgoing title and layout until the fade has completed', () => {
     render(<SplashScreen />)
     tick(INTRO_SCENE_MS)
@@ -37,9 +37,11 @@ describe('looping showroom intro', () => {
       for (const scene of [1, 2, 3, 4, 0]) {
         tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS)
         expect(dialog()?.getAttribute('data-scene')).toBe(String(scene))
+        if (scene === 2) expect(document.querySelector('.reel-map')).toBeTruthy()
+        if (scene === 3) expect(screen.getByText('Awaiting admin review')).toBeTruthy()
         if (scene === 4) {
           expect(screen.getByText('RED TIDE')).toBeTruthy()
-          expect(document.querySelector('.showroom-device--visible')).toBeNull()
+          expect(document.querySelector('.reel-mark')).toBeTruthy()
         }
       }
     }
@@ -102,6 +104,31 @@ describe('looping showroom intro', () => {
     const view = render(<StrictMode><SplashScreen /></StrictMode>)
     tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS); expect(dialog()?.getAttribute('data-scene')).toBe('1')
     view.unmount(); tick(60000); expect(document.body.style.overflow).toBe('')
+  })
+  it('pauses a fade while hidden and resumes its remaining duration', () => {
+    let hidden = false
+    vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden)
+    render(<SplashScreen />)
+    tick(INTRO_SCENE_MS); tick(200)
+    act(() => { hidden = true; document.dispatchEvent(new Event('visibilitychange')) })
+    expect(document.querySelector('.showroom--paused')).toBeTruthy()
+    tick(30000)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    act(() => { hidden = false; document.dispatchEvent(new Event('visibilitychange')) })
+    tick(INTRO_TRANSITION_MS - 201)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    tick(1)
+    expect(dialog()?.getAttribute('data-scene')).toBe('1')
+  })
+  it('cancels the outgoing fade when dismissed and replay starts cleanly', () => {
+    render(<SplashScreen />)
+    tick(INTRO_SCENE_MS)
+    fireEvent.click(enter())
+    tick(INTRO_EXIT_MS)
+    expect(dialog()).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Watch introduction' }))
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    expect(document.querySelector('.showroom-stage--out')).toBeNull()
   })
   it('pauses scene time while the tab is hidden', () => {
     let hidden = false
