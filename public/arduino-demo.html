@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Red Tide · USB demonstration</title>
+<style>
+body{margin:0;background:#101414;color:#edf2ee;font:16px system-ui}main{max-width:760px;margin:auto;padding:32px 20px}a{color:#efbc47}h1{font-size:32px}button,select{font:inherit;padding:12px;margin:4px;border:1px solid #62716a;border-radius:8px;background:#202b26;color:inherit}button:disabled{opacity:.4}button:focus-visible,select:focus-visible{outline:3px solid #efbc47}section{padding:20px 0;border-top:1px solid #39453e}output{display:block;font-size:24px;padding:16px 0}#log{white-space:pre-wrap;overflow-wrap:anywhere;color:#b8c9bf}p{line-height:1.6}
+</style>
+<main><a href="/">← Red Tide</a><h1>USB hardware demonstration</h1>
+<p>School prototype. Ultrasonic readings measure object distance. LED position and the buzzer are demonstration outputs, not red-tide measurements or official warnings. Data stays in this browser.</p>
+<p>Use desktop Chrome or Edge on HTTPS or localhost. Close Arduino Serial Monitor before connecting. Connect one board at a time.</p>
+<label>Board <select id="kind"><option value="LED">10-LED board</option><option value="SCANNER">Ultrasonic scanner</option></select></label>
+<button id="connect">Connect USB</button><button id="disconnect" disabled>Disconnect</button>
+<p id="status" role="status">Disconnected</p>
+<section><h2>LED test</h2><p>Choose a position; only that LED lights. It turns off after five seconds.</p><div id="leds"></div><button id="off" disabled>All off</button></section>
+<section><h2>Distance scanner</h2><button id="start" disabled>Start scan</button><button id="stop" disabled>Stop scan</button><button id="beep" disabled>Test buzzer</button><output id="reading">No readings</output></section>
+<section><h2>Last device message</h2><div id="log">—</div></section></main>
+<script type="module" src="/arduino-demo.js"></script></html>
