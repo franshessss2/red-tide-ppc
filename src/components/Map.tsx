@@ -23,6 +23,7 @@ import { ZonePopup } from './ZonePopup'
 
 export interface MapProps {
   zones: Zone[]
+  onEmptyClick?: () => void
   /** Live report feed — pins land on zone centroids (see MapMarkers.tsx). */
   reports: Report[]
   /** zoneId → number of pending reports, for the popup hint. */
@@ -838,6 +839,7 @@ export function Map({
   onMapReady,
   onSelectZone,
   onReport,
+  onEmptyClick,
 }: MapProps) {
   const reduceMotion = useReducedMotion()
   const box = useMemo(
@@ -885,6 +887,7 @@ export function Map({
       />
 
       <MapMotionPolicy />
+      <EmptyMapClick onEmptyClick={onEmptyClick} />
       <MapReadyBridge onMapReady={onMapReady} />
       <FitToBounds box={box} resetToken={resetToken} />
       {/* After FitToBounds: on a session's first load the glide overrides the
@@ -927,4 +930,27 @@ export function Map({
       ))}
     </MapContainer>
   )
+}
+
+/** Layer clicks must not be mistaken for empty-map taps. */
+function EmptyMapClick({ onEmptyClick }: { onEmptyClick?: () => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const click = (event: import('leaflet').LeafletMouseEvent) => {
+      const target = event.originalEvent.target
+      if (
+        target instanceof Element &&
+        target.closest(
+          '.leaflet-interactive, .leaflet-popup, .leaflet-marker-icon',
+        )
+      )
+        return
+      onEmptyClick?.()
+    }
+    map.on('click', click)
+    return () => {
+      map.off('click', click)
+    }
+  }, [map, onEmptyClick])
+  return null
 }
