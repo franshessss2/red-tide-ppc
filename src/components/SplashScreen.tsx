@@ -12,7 +12,7 @@ import '../styles/showroom.css'
 export const INTRO_EXIT_MS = 650
 export const INTRO_SCENE_MS = 3600
 export const INTRO_TRANSITION_MS = 600
-export const INTRO_SCENE_COUNT = 4
+export const INTRO_SCENE_COUNT = 5
 const FEATURES = [
   { title: 'Explore coastal zones.', copy: 'Seven coastal areas. Community records in one view.', tag: '01 / EXPLORE' },
   { title: 'Report observations.', copy: 'Share what you see. Each report waits for admin review.', tag: '02 / REPORT' },
@@ -20,7 +20,7 @@ const FEATURES = [
 ]
 type Phase = 'playing' | 'leaving' | 'done'
 
-/** Finite showroom sequence. Every activation exits; timers never navigate. */
+/** Looping showroom sequence. Every activation exits; timers never navigate. */
 export function SplashScreen() {
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'playing' : 'done')
@@ -44,7 +44,7 @@ export function SplashScreen() {
   // Pause the remaining scene time when hidden instead of returning to a
   // finished sequence after switching tabs. StrictMode owns one timer only.
   useEffect(() => {
-    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT - 1 || reduce || transitioning) return
+    if (phase !== 'playing' || reduce || transitioning) return
     let remaining = INTRO_SCENE_MS
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -70,7 +70,7 @@ export function SplashScreen() {
   useEffect(() => {
     if (!transitioning || phase !== 'playing') return
     const timer = setTimeout(() => {
-      setScene(value => Math.min(value + 1, INTRO_SCENE_COUNT - 1))
+      setScene(value => (value + 1) % INTRO_SCENE_COUNT)
       setTransitioning(false)
     }, reduce ? 0 : INTRO_TRANSITION_MS)
     return () => clearTimeout(timer)
