@@ -22,13 +22,15 @@ describe('finite showroom intro', () => {
   it('autoplays the three features once and settles without navigating', () => {
     render(<SplashScreen />)
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
-    for (const scene of [1, 2, 3, 4]) { tick(INTRO_SCENE_MS); expect(dialog()?.getAttribute('data-scene')).toBe(String(scene)) }
+    for (const scene of [1, 2, 3]) { tick(INTRO_SCENE_MS); expect(dialog()?.getAttribute('data-scene')).toBe(String(scene)) }
     tick(60000)
-    expect(dialog()?.getAttribute('data-scene')).toBe('4')
+    expect(dialog()?.getAttribute('data-scene')).toBe('3')
+    expect(screen.getByText('Review community warnings.')).toBeTruthy()
+    expect(document.querySelector('.showroom-device--visible')).toBeTruthy()
     expect(window.location.pathname).toBe('/')
     expect(screen.queryByRole('button', { name: /skip|tap to begin/i })).toBeNull()
   })
-  it.each([0, 1, 2, 3, 4])('one click exits from scene %s and cancels pending changes', scene => {
+  it.each([0, 1, 2, 3])('one click exits from scene %s and cancels pending changes', scene => {
     render(<SplashScreen />)
     for (let i = 0; i < scene; i++) tick(INTRO_SCENE_MS)
     fireEvent.click(enter()); fireEvent.click(enter())

@@ -43,7 +43,7 @@ export function SplashScreen() {
   // Pause the remaining scene time when hidden instead of returning to a
   // finished sequence after switching tabs. StrictMode owns one timer only.
   useEffect(() => {
-    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT || reduce) return
+    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT - 1 || reduce) return
     let remaining = INTRO_SCENE_MS
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
