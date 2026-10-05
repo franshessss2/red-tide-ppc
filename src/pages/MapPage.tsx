@@ -7,6 +7,12 @@ import type { Map as LeafletMap } from 'leaflet'
 import { AnimatePresence, motion } from 'motion/react'
 import { RegistrationMarks, Scanline } from '../components/Ambient'
 import { AdvisoryDrawer } from '../components/AdvisoryDrawer'
+import {
+  MobileMapPanel,
+  type MobilePanelState,
+} from '../components/MobileMapPanel'
+import { MobileMapActions } from '../components/MobileMapActions'
+import '../styles/mobile-map.css'
 import { Header } from '../components/Header'
 import { StatusKey } from '../components/StatusKey'
 import { MapLoadingOverlay } from '../components/LoadingState'
@@ -29,52 +35,19 @@ import { MOTION, spring, tween } from '../motion/tokens'
 import { selectPendingCountByZone, selectZoneById, useAppStore } from '../store'
 import type { Zone, ZoneStatus } from '../types'
 
-/**
- * The public view.
- *
- * LAYERS (back to front)
- * ----------------------
- *  1. The map, `fixed inset-0 h-[100dvh]` — the persistent base layer. It is
- *     never unmounted, never re-created and never transformed; every other
- *     element floats over it.
- *  2. Floating chrome: the app bar, the fixed status key (count pills,
- *     top-left), and the top-right control column — zoom buttons, then the
- *     advisory-signal drawer's tab, then the zone drawer's tab. Both drawers
- *     are right-edge side drawers on the same clip-window machinery
- *     (`useSidePanel`): swipe right to tuck, left to open.
- *  3. The always-visible OSM attribution pill, bottom-left, outside every
- *     clip window — the licence credit must survive the collapsed state.
- *  4. Modals: the report form, then toasts.
- *
- * THE SHEET IS GONE
- * -----------------
- * The three-anchor bottom sheet (peek/mid/full) was replaced by the right-edge
- * zone drawer per the screenshot markup, and — after the drawer passed the
- * real-browser pass at every width — its files were removed from the repo
- * (`ZoneSheet.tsx`, `useZoneSheet.ts`, `sheetAnchors.ts`, their tests and the
- * stale bottom-sheet scripts). The snap-maths pattern survives in
- * `sidePanelAnchors.ts`; the tap-after-drag guard `isDragTail` moved there.
- * Consequences:
- *   - no more sheet-driven recede: the map never scales/veils, and there is
- *     no sheet-progress to fade chrome with, so the header, pills and column
- *     are always visible — the stale-chrome failure mode the fade guarded
- *     against is removed with the sheet;
- *   - the map is interactive at every state except where a solid panel
- *     actually covers it (the clip windows and pointer-events layering are
- *     the same verified pattern as the advisory drawer);
- *   - the zone drawer's controller is LIFTED here (like the sheet's was) so
- *     tapping a zone row can tuck the drawer on phones and let the fly-to
- *     read on the map.
- *
- * There is still no page scroll: the drawer body scrolls internally, and the
- * zone list never competes with map gestures (drag surfaces are the tabs and
- * the panel's header strip only).
- */
+/** The map stays mounted and full size. Desktop uses the original side drawers;
+ * mobile groups status, zones and source details in a single bottom panel.
+ * Zoom, attribution and the compact header remain outside the panel. */
 
 /** Below 768 the drawer starts tucked (map is the hero); at ≥768 it starts open. */
 function initialZoneDrawerState(): SidePanelState {
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    return window.matchMedia('(min-width: 768px)').matches ? 'open' : 'collapsed'
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function'
+  ) {
+    return window.matchMedia('(min-width: 768px)').matches
+      ? 'open'
+      : 'collapsed'
   }
   return 'collapsed'
 }
@@ -101,6 +74,7 @@ export function MapPage() {
   const closeReportForm = useAppStore((state) => state.closeReportForm)
   const reduceMotion = useReducedMotion()
 
+  const [mobilePanel, setMobilePanel] = useState<MobilePanelState>('peek')
   const [resetToken, setResetToken] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
   // The Leaflet instance, published by the map once mounted so the control
@@ -110,7 +84,8 @@ export function MapPage() {
   // safety reference that must not compete with the advisory zones. Local UI
   // state on purpose: not app data, nothing to persist or sync.
   const [shippingLanesVisible, setShippingLanesVisible] = useState(false)
-  const { mounted: shippingMounted, progress: shippingOpacity } = usePresenceProgress(shippingLanesVisible)
+  const { mounted: shippingMounted, progress: shippingOpacity } =
+    usePresenceProgress(shippingLanesVisible)
 
   // One-time discoverability hint for the overlay toggle: the ship glyph is
   // icon-only, and "PCG shipping lane" is not guessable from an icon. Shown
@@ -118,14 +93,19 @@ export function MapPage() {
   // dismisses it too.
   const [shippingHintOpen, setShippingHintOpen] = useState(() => {
     try {
-      return localStorage.getItem('red-tide-ppc:hint:shipping:v1') !== 'dismissed'
+      return (
+        localStorage.getItem('red-tide-ppc:hint:shipping:v1') !== 'dismissed'
+      )
     } catch {
       return false // no storage — stay quiet rather than nag every load
     }
   })
   useEffect(() => {
     if (!shippingHintOpen) return
-    const timer = window.setTimeout(() => dismissShippingHint(), MOTION.time.noticeHold * 1000)
+    const timer = window.setTimeout(
+      () => dismissShippingHint(),
+      MOTION.time.noticeHold * 1000,
+    )
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shippingHintOpen])
@@ -156,9 +136,7 @@ export function MapPage() {
   // focused (see `focusZone` below), and below the breakpoint the flight
   // ignores this value anyway — so it is only ever the desktop constants.
   const focusReserveRight =
-    zonePanel.state === 'open'
-      ? DRAWER_RESERVE_OPEN
-      : DRAWER_RESERVE_COLLAPSED
+    zonePanel.state === 'open' ? DRAWER_RESERVE_OPEN : DRAWER_RESERVE_COLLAPSED
 
   const pendingCounts = useMemo(
     () => selectPendingCountByZone(reports),
@@ -166,7 +144,8 @@ export function MapPage() {
   )
 
   const pendingTotal = useMemo(
-    () => Object.values(pendingCounts).reduce((total, count) => total + count, 0),
+    () =>
+      Object.values(pendingCounts).reduce((total, count) => total + count, 0),
     [pendingCounts],
   )
 
@@ -200,13 +179,113 @@ export function MapPage() {
     setFocusToken((token) => token + 1)
     // Below the breakpoint the drawer covers most of the map, so tuck it and
     // let the fly-to read; at ≥768 the panel leaves the map fully visible.
+    setMobilePanel('peek')
     if (isBelowDrawerBreakpoint() && zonePanel.state !== 'collapsed') {
       zonePanel.goTo('collapsed')
     }
   }
 
+  const headerActions = (
+    <>
+      <span className="relative inline-flex">
+        <button
+          type="button"
+          onClick={toggleShippingLanes}
+          aria-pressed={shippingLanesVisible}
+          aria-label="Shipping channel overlay — show or hide the port traffic lanes"
+          title="Shipping channel overlay (PCG TSS) — where boats meet ship traffic"
+          className={`grid h-8 min-w-8 place-items-center rounded-md border px-1.5 backdrop-blur-md transition-colors ${
+            shippingLanesVisible
+              ? 'border-[#2e7cd6] bg-[#2e7cd6]/15 text-[#9cc4f7]'
+              : 'border-line bg-ink-2/85 text-paper/75 hover:border-accent/40 hover:text-accent'
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            {/* ship: hull + cargo + waterline */}
+            <path d="M3 17c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0" />
+            <path d="M5 13.5 6 8h12l1 5.5" />
+            <path d="M12 8V5m-3 3V6h6v2" />
+          </svg>
+        </button>
+        <AnimatePresence>
+          {shippingHintOpen && (
+            <motion.span
+              key="shipping-hint"
+              initial={{ scale: reduceMotion ? 1 : 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{
+                opacity: 0,
+                y: reduceMotion ? 0 : -4,
+                transition: {
+                  duration: reduceMotion ? 0 : MOTION.time.hintExit,
+                  ease: MOTION.ease.in,
+                },
+              }}
+              transition={spring(reduceMotion)}
+              style={{ transformOrigin: 'top right' }}
+              role="status"
+              className="hidden md:block absolute right-0 top-[calc(100%+10px)] z-[var(--layer-controls)] w-max max-w-[240px] rounded-lg border border-line bg-ink-2 px-3 py-2 text-left shadow-lg"
+            >
+              <span className="block font-display text-[11px] font-semibold leading-snug tracking-[0.02em] text-[#9cc4f7]">
+                New: shipping lane lines
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-paper/75">
+                Where ships transit the port approach — worth knowing before you
+                drift.
+              </span>
+              <button
+                type="button"
+                onClick={dismissShippingHint}
+                className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-paper/60 underline-offset-2 hover:text-paper"
+              >
+                Got it
+              </button>
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </span>
+      <button
+        type="button"
+        onClick={() => setResetToken((token) => token + 1)}
+        aria-label="Reset view"
+        title="Reset view"
+        className="grid h-8 w-8 place-items-center rounded-md border border-line bg-ink-2/85 text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="7" />
+          <path strokeLinecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+      </button>
+      <Link
+        to="/admin"
+        className="rounded-md border border-line bg-ink-2/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
+      >
+        Admin
+      </Link>
+    </>
+  )
+
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-ink">
+    <div
+      data-mobile-panel={mobilePanel}
+      className="map-page relative h-[100dvh] overflow-hidden bg-ink"
+    >
       <LiveDataStatus />
       {/* ------------------------------------------------------------------
           Layer 1: the map — static, full-bleed, never transformed.
@@ -224,7 +303,16 @@ export function MapPage() {
           reports={reports}
           focusReserveRight={focusReserveRight}
           onMapReady={setLeafletMap}
-          onSelectZone={selectZone}
+          onSelectZone={(id) => {
+            selectZone(id)
+            setMobilePanel('peek')
+          }}
+          onEmptyClick={() => {
+            if (isBelowDrawerBreakpoint()) {
+              selectZone(null)
+              setMobilePanel('peek')
+            }
+          }}
           onReport={openReportForm}
         />
 
@@ -242,98 +330,34 @@ export function MapPage() {
         title="Red Tide"
         right={
           <>
-            <span className="relative inline-flex">
-              <button
-                type="button"
-                onClick={toggleShippingLanes}
-                aria-pressed={shippingLanesVisible}
-                aria-label="Shipping channel overlay — show or hide the port traffic lanes"
-                title="Shipping channel overlay (PCG TSS) — where boats meet ship traffic"
-                className={`grid h-8 min-w-8 place-items-center rounded-md border px-1.5 backdrop-blur-md transition-colors ${
-                  shippingLanesVisible
-                    ? 'border-[#2e7cd6] bg-[#2e7cd6]/15 text-[#9cc4f7]'
-                    : 'border-line bg-ink-2/85 text-paper/75 hover:border-accent/40 hover:text-accent'
-                }`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  {/* ship: hull + cargo + waterline */}
-                  <path d="M3 17c1.5 1.6 3 1.6 4.5 0s3-1.6 4.5 0 3 1.6 4.5 0 3-1.6 4.5 0" />
-                  <path d="M5 13.5 6 8h12l1 5.5" />
-                  <path d="M12 8V5m-3 3V6h6v2" />
-                </svg>
-              </button>
-              <AnimatePresence>
-              {shippingHintOpen && (
-                <motion.span key="shipping-hint"
-                  initial={{ scale: reduceMotion ? 1 : 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: reduceMotion ? 0 : -4, transition: { duration: reduceMotion ? 0 : MOTION.time.hintExit, ease: MOTION.ease.in } }}
-                  transition={spring(reduceMotion)} style={{ transformOrigin: 'top right' }}
-                  role="status"
-                  className="absolute right-0 top-[calc(100%+10px)] z-[var(--layer-controls)] w-max max-w-[240px] rounded-lg border border-line bg-ink-2 px-3 py-2 text-left shadow-lg"
-                >
-                  <span className="block font-display text-[11px] font-semibold leading-snug tracking-[0.02em] text-[#9cc4f7]">
-                    New: shipping lane lines
-                  </span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-paper/75">
-                    Where ships transit the port approach — worth knowing before
-                    you drift.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={dismissShippingHint}
-                    className="mt-1 font-mono text-[10px] uppercase tracking-[0.1em] text-paper/60 underline-offset-2 hover:text-paper"
-                  >
-                    Got it
-                  </button>
-                </motion.span>
-              )}
-              </AnimatePresence>
-            </span>
-            <button
-              type="button"
-              onClick={() => setResetToken((token) => token + 1)}
-              aria-label="Reset view"
-              title="Reset view"
-              className="grid h-8 w-8 place-items-center rounded-md border border-line bg-ink-2/85 text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
+            <div className="hidden items-center gap-1.5 md:flex">
+              {headerActions}
+            </div>
+            <MobileMapActions
+              onOpen={() => setMobilePanel('peek')}
+              panelOpen={mobilePanel !== 'peek'}
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="7" />
-                <path strokeLinecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-              </svg>
-            </button>
-            <Link
-              to="/admin"
-              className="rounded-md border border-line bg-ink-2/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
-            >
-              Admin
-            </Link>
+              {headerActions}
+            </MobileMapActions>
           </>
         }
       />
 
       {/* Two kinds of chrome, two contracts: the pills row is fixed and never
           moves; the drawers tuck into the right edge behind their tabs. */}
-      <StatusKey counts={statusCounts} activeStatus={activeStatus} ready={zonesReady} />
+      <div className="hidden md:block">
+        <StatusKey
+          counts={statusCounts}
+          activeStatus={activeStatus}
+          ready={zonesReady}
+        />
+      </div>
 
-      {zonePanel.state === 'collapsed' && <div className="absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-3 z-[var(--layer-controls)] max-w-[calc(100vw-5rem)] sm:max-w-sm">
-        <MapFeedStatus />
-      </div>}
+      {zonePanel.state === 'collapsed' && (
+        <div className="hidden md:block absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-3 z-[var(--layer-controls)] max-w-[calc(100vw-5rem)] sm:max-w-sm">
+          <MapFeedStatus />
+        </div>
+      )}
 
       <MapControlColumn map={leafletMap}>
         <AdvisoryDrawer
@@ -355,6 +379,23 @@ export function MapPage() {
           onReport={openReportForm}
         />
       </MapControlColumn>
+
+      <MobileMapPanel
+        state={mobilePanel}
+        onStateChange={setMobilePanel}
+        zones={zones}
+        zonesReady={zonesReady}
+        reportsReady={reportsReady}
+        pendingCounts={pendingCounts}
+        counts={statusCounts}
+        pending={pendingTotal}
+        selectedZoneId={selectedZoneId}
+        onFocusZone={focusZone}
+        onReport={(id) => {
+          setMobilePanel('peek')
+          openReportForm(id)
+        }}
+      />
 
       {/* Layer 3: the licence credit — always visible in every drawer state,
           outside every clip window (bottom-LEFT: the toasts own bottom-right,
@@ -393,11 +434,17 @@ export function MapPage() {
           zone={heldZone}
           open={Boolean(reportZone)}
           onClose={closeReportForm}
-          onDismissed={() => { if (useAppStore.getState().reportZoneId === null) setHeldZone(null) }}
+          onDismissed={() => {
+            if (useAppStore.getState().reportZoneId === null) setHeldZone(null)
+          }}
         />
       )}
 
-      <Notice suppressNotice={heldZone ? reportSuccessMessage(heldZone.name) : undefined} />
+      <Notice
+        suppressNotice={
+          heldZone ? reportSuccessMessage(heldZone.name) : undefined
+        }
+      />
     </div>
   )
 }

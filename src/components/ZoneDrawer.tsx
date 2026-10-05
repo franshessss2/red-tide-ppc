@@ -123,7 +123,7 @@ function HeaderPipPulse({
   )
 }
 
-function ZoneCardItem({
+export function ZoneCardItem({
   zone,
   index,
   scrollRoot,
@@ -215,7 +215,7 @@ function ZoneCardItem({
 }
 
 /** Educational copy is always mounted; one reveal owner for the whole section. */
-function Primer({ scrollRoot, open }: { scrollRoot: Element | null; open: boolean }) {
+export function Primer({ scrollRoot, open }: { scrollRoot: Element | null; open: boolean }) {
   const sectionRef = useRef<HTMLElement>(null)
   const controls = useEntrance(sectionRef, open, scrollRoot)
   const paragraphs = useMemo(
@@ -557,7 +557,7 @@ export function ZoneDrawer({
 }
 
 /** Warnings survive feed failure; empty or incomplete records never mean all clear. */
-function AdvisoryBanner({ counts, total, ready }: { counts: Record<ZoneStatus, number>; total: number; ready: boolean }) {
+export function AdvisoryBanner({ counts, total, ready }: { counts: Record<ZoneStatus, number>; total: number; ready: boolean }) {
   const warning = counts.advisory > 0
   const title = warning ? `${counts.advisory} community ${counts.advisory === 1 ? 'warning' : 'warnings'}`
     : !ready ? 'Zone records loading'
