@@ -2,7 +2,7 @@
 import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { INTRO_EXIT_MS, INTRO_SCENE_MS, SplashScreen } from './SplashScreen'
+import { INTRO_EXIT_MS, INTRO_SCENE_MS, INTRO_TRANSITION_MS, SplashScreen } from './SplashScreen'
 import { INTRO_SEEN_KEY } from './intro/introGate'
 vi.mock('../pages/Landing', () => ({ Landing: ({ onReplay }: { onReplay: () => void }) => <main><h1>Red Tide</h1><button data-intro-replay aria-label="Watch introduction" onClick={onReplay}>↻</button><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 let reduced = false
@@ -19,10 +19,22 @@ const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
 describe('finite showroom intro', () => {
+  it('keeps the outgoing title and layout until the fade has completed', () => {
+    render(<SplashScreen />)
+    tick(INTRO_SCENE_MS)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    expect(document.querySelector('.showroom-stage--out')).toBeTruthy()
+    expect(screen.queryByText('Explore coastal zones.')).toBeNull()
+    tick(INTRO_TRANSITION_MS - 1)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    tick(1)
+    expect(dialog()?.getAttribute('data-scene')).toBe('1')
+    expect(document.querySelector('.showroom-stage--out')).toBeNull()
+  })
   it('autoplays the three features once and settles without navigating', () => {
     render(<SplashScreen />)
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
-    for (const scene of [1, 2, 3]) { tick(INTRO_SCENE_MS); expect(dialog()?.getAttribute('data-scene')).toBe(String(scene)) }
+    for (const scene of [1, 2, 3]) { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS); expect(dialog()?.getAttribute('data-scene')).toBe(String(scene)) }
     tick(60000)
     expect(dialog()?.getAttribute('data-scene')).toBe('3')
     expect(screen.getByText('Review community warnings.')).toBeTruthy()
@@ -32,7 +44,7 @@ describe('finite showroom intro', () => {
   })
   it.each([0, 1, 2, 3])('one click exits from scene %s and cancels pending changes', scene => {
     render(<SplashScreen />)
-    for (let i = 0; i < scene; i++) tick(INTRO_SCENE_MS)
+    for (let i = 0; i < scene; i++) { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS) }
     fireEvent.click(enter()); fireEvent.click(enter())
     expect(document.querySelector('.showroom-experience--leaving')).toBeTruthy()
     expect(localStorage.getItem(INTRO_SEEN_KEY)).toBe('seen')
@@ -65,7 +77,7 @@ describe('finite showroom intro', () => {
     fireEvent.click(enter()); tick(120); expect(dialog()).toBeNull()
   })
   it('halts autoplay if reduced motion is enabled during playback', () => {
-    render(<SplashScreen />); tick(INTRO_SCENE_MS)
+    render(<SplashScreen />); { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS) }
     act(() => { reduced = true; preferenceListeners.forEach(fn => fn()) })
     tick(20000); expect(dialog()?.getAttribute('data-scene')).toBe('1')
     expect(screen.getByText(/Reports are reviewed by an admin/)).toBeTruthy()
@@ -85,7 +97,7 @@ describe('finite showroom intro', () => {
   })
   it('cleans up timers and scroll locking on unmount, including StrictMode', () => {
     const view = render(<StrictMode><SplashScreen /></StrictMode>)
-    tick(INTRO_SCENE_MS); expect(dialog()?.getAttribute('data-scene')).toBe('1')
+    tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS); expect(dialog()?.getAttribute('data-scene')).toBe('1')
     view.unmount(); tick(60000); expect(document.body.style.overflow).toBe('')
   })
   it('pauses scene time while the tab is hidden', () => {
@@ -95,6 +107,6 @@ describe('finite showroom intro', () => {
     act(() => { hidden = true; document.dispatchEvent(new Event('visibilitychange')) })
     tick(30000); expect(dialog()?.getAttribute('data-scene')).toBe('0')
     act(() => { hidden = false; document.dispatchEvent(new Event('visibilitychange')) })
-    tick(INTRO_SCENE_MS); expect(dialog()?.getAttribute('data-scene')).toBe('1')
+    tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS); expect(dialog()?.getAttribute('data-scene')).toBe('1')
   })
 })

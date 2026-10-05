@@ -10,7 +10,8 @@ import '../styles/tide-intro.css'
 import '../styles/showroom.css'
 
 export const INTRO_EXIT_MS = 650
-export const INTRO_SCENE_MS = 2400
+export const INTRO_SCENE_MS = 3600
+export const INTRO_TRANSITION_MS = 600
 export const INTRO_SCENE_COUNT = 4
 const FEATURES = [
   { title: 'Explore coastal zones.', copy: 'Seven coastal areas. Community records in one view.', tag: '01 / EXPLORE' },
@@ -24,7 +25,7 @@ export function SplashScreen() {
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'playing' : 'done')
   const [scene, setScene] = useState(0)
-  const [previousScene, setPreviousScene] = useState<number | null>(null)
+  const [transitioning, setTransitioning] = useState(false)
   const [run, setRun] = useState(0)
   const phaseRef = useRef(phase)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -43,14 +44,14 @@ export function SplashScreen() {
   // Pause the remaining scene time when hidden instead of returning to a
   // finished sequence after switching tabs. StrictMode owns one timer only.
   useEffect(() => {
-    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT - 1 || reduce) return
+    if (phase !== 'playing' || scene >= INTRO_SCENE_COUNT - 1 || reduce || transitioning) return
     let remaining = INTRO_SCENE_MS
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
     const start = () => {
       started = performance.now()
       timer = setTimeout(() => {
-        if (phaseRef.current === 'playing') { setPreviousScene(scene); setScene(scene + 1) }
+        if (phaseRef.current === 'playing') setTransitioning(true)
       }, remaining)
     }
     const visibility = () => {
@@ -62,13 +63,18 @@ export function SplashScreen() {
     if (!document.hidden) start()
     document.addEventListener('visibilitychange', visibility)
     return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', visibility) }
-  }, [phase, scene, reduce, run])
+  }, [phase, scene, reduce, run, transitioning])
 
+  // Keep the outgoing layout intact until its fade completes. Changing the
+  // grid or typography while it is visible makes the title snap sideways.
   useEffect(() => {
-    if (previousScene === null) return
-    const timer = setTimeout(() => setPreviousScene(null), 400)
+    if (!transitioning || phase !== 'playing') return
+    const timer = setTimeout(() => {
+      setScene(value => Math.min(value + 1, INTRO_SCENE_COUNT - 1))
+      setTransitioning(false)
+    }, reduce ? 0 : INTRO_TRANSITION_MS)
     return () => clearTimeout(timer)
-  }, [previousScene])
+  }, [transitioning, phase, reduce])
 
   useEffect(() => {
     if (phase !== 'leaving') return
@@ -100,7 +106,7 @@ export function SplashScreen() {
     replaying.current = true
     phaseRef.current = 'playing'
     setScene(0)
-    setPreviousScene(null)
+    setTransitioning(false)
     setRun(value => value + 1)
     setPhase('playing')
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -126,13 +132,8 @@ export function SplashScreen() {
         <motion.path d={INTRO_COAST_PATH} fill="none" stroke="currentColor" strokeWidth="1.5"
           initial={{ pathLength: reduce ? 1 : 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduce ? 0 : 2, ease: 'easeInOut' }} />
       </svg>
-      <div className={`showroom-stage${feature && !reduce ? ' showroom-stage--feature' : ''}`}>
+      <div className={`showroom-stage${feature && !reduce ? ' showroom-stage--feature' : ''}${transitioning ? ' showroom-stage--out' : ''}`}>
         <div className="showroom-copy">
-          {previousScene !== null && !reduce && <div className="showroom-copy-out" aria-hidden="true">
-            <p className="showroom-eyebrow">{FEATURES[previousScene - 1]?.tag ?? 'COMMUNITY COASTAL MONITORING'}</p>
-            <h1>{FEATURES[previousScene - 1]?.title ?? 'RED TIDE'}</h1>
-            <p className="showroom-description">{FEATURES[previousScene - 1]?.copy ?? 'Explore the coast. Share observations. Follow community warnings.'}</p>
-          </div>}
           <div key={reduce ? 'static' : scene} className="showroom-copy-in">
             <p className="showroom-eyebrow">{feature && !reduce ? feature.tag : 'COMMUNITY COASTAL MONITORING'}</p>
             <h1>{feature && !reduce ? feature.title : 'RED TIDE'}</h1>

@@ -321,3 +321,11 @@
     animation:none;
   }
 }
+
+/* Fade the complete old stage before changing grid, title or phone content. */
+.showroom-stage { opacity:1; transition:opacity .6s ease; }
+.showroom-stage--out { opacity:0; }
+.showroom-copy-in { animation-duration:.6s; }
+@media(prefers-reduced-motion:reduce) {
+  .showroom-stage { transition:none; }
+}
