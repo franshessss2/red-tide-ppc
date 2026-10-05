@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { INTRO_EXIT_MS, INTRO_SCENE_MS, INTRO_TRANSITION_MS, SplashScreen } from './SplashScreen'
 import { INTRO_SEEN_KEY } from './intro/introGate'
+import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 vi.mock('../pages/Landing', () => ({ Landing: ({ onReplay }: { onReplay: () => void }) => <main><h1>Red Tide</h1><button data-intro-replay aria-label="Watch introduction" onClick={onReplay}>↻</button><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 let reduced = false
 let preferenceListeners: Set<() => void> = new Set()
@@ -19,27 +20,34 @@ const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
 describe('reel-inspired intro', () => {
-  it('keeps the outgoing title and layout until the fade has completed', () => {
+  it('crossfades overlapping chapters without remounting the incoming illustration', () => {
     render(<SplashScreen />)
     tick(INTRO_SCENE_MS)
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
     expect(document.querySelector('.showroom-stage--out')).toBeTruthy()
+    const incoming = document.querySelector('.showroom-stage--incoming')
+    const mark = incoming?.querySelector('.reel-mark')
+    expect(incoming?.getAttribute('aria-hidden')).toBe('true')
+    expect(screen.queryByRole('heading', { name: 'RED TIDE' })).toBeNull()
     expect(screen.queryByText('Explore coastal zones.')).toBeNull()
     tick(INTRO_TRANSITION_MS - 1)
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
     tick(1)
     expect(dialog()?.getAttribute('data-scene')).toBe('1')
     expect(document.querySelector('.showroom-stage--out')).toBeNull()
+    expect(document.querySelector('.reel-mark')).toBe(mark)
+    expect(document.querySelector('.showroom-stage--incoming')).toBeNull()
   })
-  it('restores the closing title and loops through all five scenes', () => {
+  it('restores the closing title and loops through all nine scenes with their own reading time', () => {
     render(<SplashScreen />)
     for (let cycle = 0; cycle < 2; cycle++) {
-      for (const scene of [1, 2, 3, 4, 0]) {
-        tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS)
+      for (let previous = 0; previous < REEL_SCENES.length; previous++) {
+        const scene = (previous + 1) % REEL_SCENES.length
+        tick(REEL_SCENES[previous].duration); tick(INTRO_TRANSITION_MS)
         expect(dialog()?.getAttribute('data-scene')).toBe(String(scene))
         if (scene === 2) expect(document.querySelector('.reel-map')).toBeTruthy()
         if (scene === 3) expect(screen.getByText('Awaiting admin review')).toBeTruthy()
-        if (scene === 4) {
+        if (scene === REEL_CLOSING_SCENE) {
           expect(screen.getByText('RED TIDE')).toBeTruthy()
           expect(document.querySelector('.reel-mark')).toBeTruthy()
         }
@@ -47,9 +55,9 @@ describe('reel-inspired intro', () => {
     }
     expect(window.location.pathname).toBe('/')
   })
-  it.each([0, 1, 2, 3, 4])('one click exits from scene %s and cancels pending changes', scene => {
+  it.each(REEL_SCENES.map((_, index) => index))('one click exits from scene %s and cancels pending changes', scene => {
     render(<SplashScreen />)
-    for (let i = 0; i < scene; i++) { tick(INTRO_SCENE_MS); tick(INTRO_TRANSITION_MS) }
+    for (let i = 0; i < scene; i++) { tick(REEL_SCENES[i].duration); tick(INTRO_TRANSITION_MS) }
     fireEvent.click(enter()); fireEvent.click(enter())
     expect(document.querySelector('.showroom-experience--leaving')).toBeTruthy()
     expect(localStorage.getItem(INTRO_SEEN_KEY)).toBe('seen')
@@ -58,7 +66,7 @@ describe('reel-inspired intro', () => {
     expect(document.querySelector('[inert]')).toBeNull()
     expect(document.body.style.overflow).toBe('')
     expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Open the map' }))
-    tick(20000); expect(dialog()).toBeNull()
+    tick(60000); expect(dialog()).toBeNull()
   })
   it.each(['Enter', ' ', 'Escape'])('supports %s without scrolling or double activation', key => {
     render(<SplashScreen />)
