@@ -1,7 +1,11 @@
+import { GitHubCalendar } from '../components/ui/git-hub-calendar'
+import { manilaDate, reportActivity } from '../lib/reportActivity'
+import { feedLabel } from '../lib/feed'
+import { TextReveal } from '../components/TextReveal'
 import { MOTION } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
 import { LiveDataStatus } from '../components/LiveDataStatus'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
@@ -90,6 +94,15 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
+  const reportsFeed = useAppStore((state) => state.reportsFeed)
+  const [activityNow, setActivityNow] = useState(Date.now)
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!document.hidden) setActivityNow(Date.now()) }, 60000)
+    const resume = () => { if (!document.hidden) setActivityNow(Date.now()) }
+    document.addEventListener('visibilitychange', resume)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', resume) }
+  }, [])
+  const activity = useMemo(() => reportActivity(reports, activityNow), [reports, activityNow])
   const reduceMotion = useReducedMotion()
   const [headlineDecrypted, setHeadlineDecrypted] = useState(false)
   const counts = useMemo(() => {
@@ -307,7 +320,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               <motion.div
                 className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
               >
-                <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block">Coastal overview</h2>
+                <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block"><TextReveal text="Coastal overview" /></h2>
                 <CommunitySource />
                 <section aria-label="Community status" className="mt-4 text-sm leading-relaxed text-muted">
                   {zonesReady ? <div className="flex items-center gap-2.5">
@@ -377,7 +390,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
                 whileInView="show"
                 viewport={{ once: true, amount: 0.2 }}
               >
-                <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
+                <h2 className="text-base font-semibold text-paper lg:text-lg"><TextReveal text="What is red tide?" /></h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet variants={primerItemVariants}>
                     Some algal blooms produce toxins that can accumulate in shellfish —{' '}
@@ -394,7 +407,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               </motion.section>
             ) : (
               <section className="min-w-0" aria-label="What is red tide">
-                <h2 className="text-base font-semibold text-paper lg:text-lg">What is red tide?</h2>
+                <h2 className="text-base font-semibold text-paper lg:text-lg"><TextReveal text="What is red tide?" /></h2>
                 <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
                   <Bullet>
                     Some algal blooms produce toxins that can accumulate in shellfish —{' '}
@@ -411,6 +424,18 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               </section>
             )}
           </div>
+
+          <section className="report-activity" aria-labelledby="report-activity-title">
+            <div className="report-activity__header">
+              <h2 id="report-activity-title"><TextReveal text="Report activity" /></h2>
+              <p>When community observations were submitted. These counts describe available records, not red-tide conditions or laboratory testing.</p>
+            </div>
+            <GitHubCalendar data={activity.data} today={manilaDate(activityNow)} available={reportsReady} />
+            <p className="report-activity__source">{feedLabel(reportsFeed)}. Dates use Philippine time.
+              {activity.undated > 0 && ` ${activity.undated} ${activity.undated === 1 ? 'record has' : 'records have'} no resolved submission date and ${activity.undated === 1 ? 'is' : 'are'} excluded.`}
+              {' '}A blank day means no reports in the available records; it does not establish coastal safety.
+            </p>
+          </section>
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-line py-7 text-xs text-faint sm:mt-8 sm:gap-1.5 sm:py-6 sm:flex-row sm:items-center sm:justify-between">
             <Link to="/devices" className="inline-flex min-h-11 items-center text-muted hover:text-paper">Device simulation</Link>

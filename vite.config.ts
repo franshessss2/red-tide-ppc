@@ -1,10 +1,12 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     // Bind to all interfaces so the app is reachable from the sandbox preview
     // proxy and from phones on the same network.
@@ -36,6 +38,7 @@ export default defineConfig({
           // a lie — measured at +12.7 kB gzip on the initial load. Returning
           // undefined lets rollup keep it in the dynamic Ferrofluid chunk.
           if (/[\\/]node_modules[\\/]ogl[\\/]/.test(id)) return undefined
+          if (id.includes('maplibre-gl') || id.includes('@maplibre')) return 'maplibre'
           if (id.includes('firebase')) return 'firebase'
           if (id.includes('leaflet')) return 'leaflet'
           if (id.includes('react-router')) return 'router'

@@ -48,7 +48,7 @@ describe('reel-inspired intro', () => {
         if (scene === 2) expect(document.querySelector('.reel-map')).toBeTruthy()
         if (scene === 3) expect(screen.getByText('Awaiting admin review')).toBeTruthy()
         if (scene === REEL_CLOSING_SCENE) {
-          expect(screen.getByText('RED TIDE')).toBeTruthy()
+          expect(screen.getByRole('heading', { name: 'RED TIDE' })).toBeTruthy()
           expect(document.querySelector('.reel-mark')).toBeTruthy()
         }
       }

@@ -1,3 +1,4 @@
+import { TextReveal } from "../TextReveal";
 import type { CSSProperties } from "react";
 import { INTRO_COAST_PATH } from "../../data/introCoast";
 import { REEL_SCENES, REEL_CLOSING_SCENE } from "./reelScenes";
@@ -153,7 +154,7 @@ export function ReelStage({
       <div className="reel-scene__copy">
         <p className="showroom-eyebrow">{copy.tag}</p>
         <h1>
-          <span>{copy.title}</span>
+          <TextReveal text={copy.title} effect="words" trigger="mount" className="reel-text-reveal" />
         </h1>
         <p className="showroom-description">{copy.description}</p>
         {"detail" in copy && <p className="reel-scene__detail">{copy.detail}</p>}

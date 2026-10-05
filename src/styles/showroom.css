@@ -826,7 +826,8 @@
   padding-block: 0.12em;
   margin-block: -0.12em;
 }
-.reel-scene__copy h1 > span {
+.reel-text-reveal { display: block; }
+.reel-scene__copy h1 > span:not(.reel-text-reveal) {
   display: block;
   animation: reel-heading-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
 }
