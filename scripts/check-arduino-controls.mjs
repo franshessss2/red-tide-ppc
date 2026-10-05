@@ -1,0 +1,18 @@
+import vm from 'node:vm';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const elements=new Map();
+const element=id=>{if(!elements.has(id))elements.set(id,{value:id==='kind'?'COMBINED':'',disabled:false,textContent:'',children:[],append(b){this.children.push(b);}});return elements.get(id);};
+const context=vm.createContext({document:{getElementById:element,createElement:()=>({}),addEventListener(){}},clearTimeout(){},Date,TextEncoder,Promise});
+vm.runInContext(fs.readFileSync('public/arduino-demo.js','utf8'),context);
+assert(element('start').disabled);
+vm.runInContext("lineReceived('RT1 COMBINED READY')",context);
+assert(!element('start').disabled && !element('off').disabled);
+assert(element('leds').children.every(b=>!b.disabled));
+vm.runInContext("lineReceived('RT1 SAMPLE 90 12')",context);
+assert.equal(element('reading').textContent,'90° · 12 cm');
+vm.runInContext("lineReceived('RT1 SAMPLE 90 999')",context);
+assert.equal(element('reading').textContent,'90° · 12 cm');
+vm.runInContext("ready=false; controls()",context);
+assert(element('start').disabled && element('off').disabled);
+console.log('Combined controls and sample validation passed');

@@ -7,9 +7,10 @@ for(let i=1;i<=10;i++) {
   b.onclick=()=>send(`LED ${i}`).catch(fail); $('leds').append(b); buttons.push(b);
 }
 function controls() {
-  const led=ready && $('kind').value==='LED';
+  const kind=$('kind').value;
+  const led=ready && (kind==='LED' || kind==='COMBINED');
   buttons.forEach(b=>b.disabled=!led); $('off').disabled=!led;
-  for(const id of ['start','stop','beep']) $(id).disabled=!(ready && !led);
+  for(const id of ['start','stop','beep']) $(id).disabled=!(ready && (kind==='SCANNER' || kind==='COMBINED'));
   $('connect').disabled=!!port || closing; $('disconnect').disabled=!port || closing;
   $('kind').disabled=!!port || closing;
 }
@@ -48,7 +49,7 @@ function lineReceived(line) {
     ready=true; clearTimeout(handshakeTimer); $('status').textContent='Connected · firmware identified'; controls();
   }
   const match=/^RT1 SAMPLE (\d{1,3}) (-?\d{1,3})$/.exec(line);
-  if(ready && $('kind').value==='SCANNER' && match) {
+  if(ready && $('kind').value!=='LED' && match) {
     const angle=Number(match[1]), distance=Number(match[2]);
     if(angle<30 || angle>150 || (distance!==-1 && (distance<2 || distance>400))) return;
     lastSample=Date.now();
@@ -83,7 +84,7 @@ $('connect').onclick=async()=>{
     // Opening an Uno serial port can reset it. Query repeatedly during startup.
     heartbeat=setInterval(()=>{
       if(!ready) send('HELLO').catch(fail);
-      else if($('kind').value==='SCANNER') send('KEEP').catch(fail);
+      else if($('kind').value!=='LED') send('KEEP').catch(fail);
       if(lastSample && Date.now()-lastSample>2000) $('reading').textContent='No recent reading · scan stopped or unavailable';
     },1000);
     handshakeTimer=setTimeout(()=>{ if(!ready) void fail(Error('Firmware not identified. Upload the matching Red Tide sketch.')); },8000);
