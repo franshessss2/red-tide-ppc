@@ -8,9 +8,10 @@ import { ReelStage } from './intro/ReelStage'
 import '../styles/showroom.css'
 
 export const INTRO_EXIT_MS = 650
-export const INTRO_SCENE_MS = 3000
+export const INTRO_SCENE_MS = 3600
 export const INTRO_TRANSITION_MS = 600
 export const INTRO_SCENE_COUNT = 5
+const CHAPTERS = ['Introducing', 'Identity', 'Coastal zones', 'Review', 'Community']
 type Phase = 'playing' | 'leaving' | 'done'
 
 /** Looping showroom sequence. Every activation exits; timers never navigate. */
@@ -129,8 +130,8 @@ export function SplashScreen() {
         <ReelStage scene={scene} reduced={reduce} />
       </div>
       <div className="showroom-footer" aria-hidden="true">
-        <div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={scene >= index ? 'is-complete' : ''} />)}</div>
-        <span>Click anywhere to explore <span className="showroom-enter">↵</span></span>
+        <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? 4 : scene) + 1).padStart(2, '0')} / 05 · {CHAPTERS[reduce ? 4 : scene]}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={(reduce ? 4 : scene) >= index ? 'is-complete' : ''} />)}</div></div>
+        <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase === 'leaving'} />
     </motion.div>, document.body)}

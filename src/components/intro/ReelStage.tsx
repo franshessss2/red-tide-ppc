@@ -1,5 +1,7 @@
+import type { CSSProperties } from "react";
 import { INTRO_COAST_PATH } from "../../data/introCoast";
 
+const OBSERVATION = "Unusual water colour";
 const ZONES = [
   { x: 249, y: 47 },
   { x: 294, y: 128 },
@@ -80,13 +82,26 @@ function CoastPreview() {
   );
 }
 
-function ReportPreview() {
+export function ReportPreview() {
   return (
     <div className="reel-report" aria-hidden="true">
-      <span className="reel-report__label">COMMUNITY OBSERVATION</span>
+      <div className="reel-report__header">
+        <span className="reel-report__label">COMMUNITY OBSERVATION</span>
+        <span className="reel-report__example">ILLUSTRATION</span>
+      </div>
+      <p className="reel-report__prompt">What did you notice?</p>
       <div className="reel-report__field">
-        <span className="reel-report__typed">Unusual water colour</span>
-        <span className="reel-report__caret" />
+        <span
+          className="reel-report__typed"
+          style={
+            {
+              "--typing-width": `${OBSERVATION.length}ch`,
+              "--typing-steps": OBSERVATION.length,
+            } as CSSProperties
+          }
+        >
+          {OBSERVATION}
+        </span>
       </div>
       <div className="reel-report__receipt">
         <span className="reel-report__check">✓</span>
@@ -96,7 +111,7 @@ function ReportPreview() {
         <span className="reel-report__pending">PENDING</span>
       </div>
       <p className="reel-report__note">
-        An observation is a starting point. A warning requires review.
+        An observation informs a review. It does not confirm red tide.
       </p>
     </div>
   );
@@ -104,24 +119,24 @@ function ReportPreview() {
 
 const COPY = [
   {
-    tag: "A CLOSER LOOK AT OUR COAST",
+    tag: "RED TIDE · PRODUCT OVERVIEW",
     title: "Introducing",
-    description: "Community coastal monitoring, reimagined.",
+    description: "A shared view of the coast.",
   },
   {
     tag: "PUERTO PRINCESA · PALAWAN",
     title: "RED TIDE",
-    description: "One coast. A shared responsibility.",
+    description: "Explore. Observe. Stay informed.",
   },
   {
     tag: "01 / EXPLORE",
     title: "Explore coastal zones.",
-    description: "Seven coastal areas. Community records in one view.",
+    description: "Find your coastal area. Read the community record.",
   },
   {
     tag: "02 / OBSERVE → REVIEW",
     title: "Report observations.",
-    description: "Share what you see. Each report waits for admin review.",
+    description: "Share what you notice. An admin reviews every report.",
   },
   {
     tag: "COMMUNITY COASTAL MONITORING",
@@ -162,7 +177,9 @@ export function ReelStage({
       </div>
       <div className="reel-scene__copy">
         <p className="showroom-eyebrow">{copy.tag}</p>
-        <h1>{copy.title}</h1>
+        <h1>
+          <span>{copy.title}</span>
+        </h1>
         <p className="showroom-description">{copy.description}</p>
         {current === 4 && !reduced && (
           <p className="reel-scene__disclaimer">
