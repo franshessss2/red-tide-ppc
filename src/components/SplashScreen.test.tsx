@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { INTRO_EXIT_MS, INTRO_SCENE_MS, INTRO_TRANSITION_MS, SplashScreen } from './SplashScreen'
 import { INTRO_SEEN_KEY } from './intro/introGate'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
+vi.mock('./intro/OpeningFilm', () => ({ OpeningFilm: ({ onComplete }: { onComplete: () => void }) => { useEffect(onComplete, [onComplete]); return null } }))
 vi.mock('../pages/Landing', () => ({ Landing: ({ onReplay }: { onReplay: () => void }) => <main><h1>Red Tide</h1><button data-intro-replay aria-label="Watch introduction" onClick={onReplay}>↻</button><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 let reduced = false
 let preferenceListeners: Set<() => void> = new Set()

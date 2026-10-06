@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { Landing } from '../pages/Landing'
 import { useReducedMotion } from '../motion/preferences'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
+import { OpeningFilm } from './intro/OpeningFilm'
 import { ReelStage } from './intro/ReelStage'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 import '../styles/showroom.css'
@@ -12,12 +13,12 @@ export const INTRO_EXIT_MS = 650
 export const INTRO_SCENE_MS = REEL_SCENES[0].duration
 export const INTRO_TRANSITION_MS = 600
 export const INTRO_SCENE_COUNT = REEL_SCENES.length
-type Phase = 'playing' | 'leaving' | 'done'
+type Phase = 'opening' | 'playing' | 'leaving' | 'done'
 
 /** Looping showroom sequence. Every activation exits; timers never navigate. */
 export function SplashScreen() {
   const reduce = useReducedMotion()
-  const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'playing' : 'done')
+  const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'opening' : 'done')
   const [scene, setScene] = useState(0)
   const [transitioning, setTransitioning] = useState(false)
   const [run, setRun] = useState(0)
@@ -27,6 +28,14 @@ export function SplashScreen() {
   const pageRef = useRef<HTMLDivElement>(null)
   const replaying = useRef(false)
   const active = phase !== 'done'
+
+  const completeOpening = useCallback(() => {
+    if (phaseRef.current !== 'opening') return
+    phaseRef.current = 'playing'
+    setPhase('playing')
+  }, [])
+
+  useEffect(() => { if (reduce) completeOpening() }, [reduce, completeOpening])
 
   const dismiss = useCallback(() => {
     if (phaseRef.current !== 'playing') return
@@ -86,9 +95,13 @@ export function SplashScreen() {
     if (!active) return
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    buttonRef.current?.focus({ preventScroll: true })
+    if (phaseRef.current === 'playing') buttonRef.current?.focus({ preventScroll: true })
     return () => { document.body.style.overflow = previous }
   }, [active, run])
+
+  useEffect(() => {
+    if (phase === 'playing') buttonRef.current?.focus({ preventScroll: true })
+  }, [phase])
 
   const wasActive = useRef(active)
   useEffect(() => {
@@ -118,12 +131,15 @@ export function SplashScreen() {
       initial={false} animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
       transition={{ duration: reduce ? 0.12 : 0.65 }}
       onKeyDown={event => {
+        if (phaseRef.current === 'opening') return
         if (['Enter', ' ', 'Escape'].includes(event.key)) {
           event.preventDefault()
           if (!event.repeat) dismiss()
         }
         if (event.key === 'Tab') { event.preventDefault(); buttonRef.current?.focus() }
       }}>
+      {phase === 'opening' && !reduce && <OpeningFilm onComplete={completeOpening} />}
+      <div inert={phase === 'opening'} aria-hidden={phase === 'opening' ? true : undefined} key={phase === 'opening' ? 'pending' : 'showroom'}>
       <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
       {(transitioning && !reduce ? [scene, (scene + 1) % INTRO_SCENE_COUNT] : [scene]).map(index => <div key={index}
@@ -135,7 +151,8 @@ export function SplashScreen() {
         <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? REEL_CLOSING_SCENE : scene) + 1).padStart(2, '0')} / {String(INTRO_SCENE_COUNT).padStart(2, '0')} · {REEL_SCENES[reduce ? REEL_CLOSING_SCENE : scene].chapter}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={(reduce ? REEL_CLOSING_SCENE : scene) >= index ? 'is-complete' : ''} />)}</div></div>
         <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
-      <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase === 'leaving'} />
+      <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase !== 'playing'} />
+      </div>
     </motion.div>, document.body)}
   </div>
 }
