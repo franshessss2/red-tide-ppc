@@ -23,14 +23,12 @@ it('plays the local film, then fades once on end without navigating', () => {
   tick(OPENING_FADE_MS - 1); expect(done).not.toHaveBeenCalled()
   tick(1); expect(done).toHaveBeenCalledTimes(1)
 })
-it('falls back to muted autoplay when sound is blocked and lets a gesture enable it', async () => {
+it('falls back to muted autoplay when sound is blocked without showing controls', async () => {
   play.mockRejectedValueOnce(new DOMException('blocked', 'NotAllowedError'))
   render(<OpeningFilm onComplete={vi.fn()} />)
   await act(async () => {})
   expect(document.querySelector('video')!.muted).toBe(true)
-  fireEvent.click(screen.getByRole('button', { name: 'Sound off' }))
-  await act(async () => {})
-  expect(document.querySelector('video')!.muted).toBe(false)
+  expect(screen.queryByRole('button')).toBeNull()
 })
 it('bounds failed loading and decoder errors', () => {
   const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
@@ -49,9 +47,17 @@ it('pauses while hidden, resumes, and cancels watchdogs on unmount in StrictMode
 })
 it('contains keyboard focus and Escape proceeds into the intro', () => {
   const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
-  const next = screen.getByRole('button', { name: 'Continue to Red Tide' })
-  expect(document.activeElement).toBe(next)
-  fireEvent.keyDown(next, { key:'Tab' }); expect(document.activeElement).toBe(screen.getByRole('button', { name:'Sound on · 50%' }))
+  const film = document.querySelector('.opening-film')!
+  expect(document.activeElement).toBe(film)
+  fireEvent.keyDown(film, { key:'Tab' }); expect(document.activeElement).toBe(film)
   fireEvent.keyDown(document.activeElement!, { key:'Escape' }); tick(OPENING_FADE_MS)
   expect(done).toHaveBeenCalledTimes(1)
+})
+
+it('continues if audible and muted autoplay are both denied', async () => {
+  play.mockRejectedValue(new DOMException('blocked', 'NotAllowedError'))
+  const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
+  await act(async () => {})
+  tick(OPENING_FADE_MS); expect(done).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('button')).toBeNull()
 })
