@@ -193,6 +193,7 @@ export function MapPage() {
         onClick={() => { setMobilePanel('peek'); dismissShippingHint(); setStreetMapOpen(true) }}
         className="grid h-8 w-8 place-items-center rounded-md border border-line bg-ink-2/85 text-paper/75 hover:text-accent">
         <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z M9 3v16 M15 5v16" /></svg>
+        <span className="map-action-label hidden">Street map</span>
       </button>
       <span className="relative inline-flex">
         <button
@@ -222,6 +223,7 @@ export function MapPage() {
             <path d="M5 13.5 6 8h12l1 5.5" />
             <path d="M12 8V5m-3 3V6h6v2" />
           </svg>
+          <span className="map-action-label hidden">Shipping lanes</span>
         </button>
         <AnimatePresence>
           {shippingHintOpen && (
@@ -278,6 +280,7 @@ export function MapPage() {
           <circle cx="12" cy="12" r="7" />
           <path strokeLinecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
         </svg>
+        <span className="map-action-label hidden">Reset view</span>
       </button>
       <Link
         to="/admin"

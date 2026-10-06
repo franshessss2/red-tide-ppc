@@ -70,7 +70,7 @@ export function MobileMapActions({
           }}
         >
           <p className="w-full text-xs text-muted">
-            Street map · Shipping lanes · Reset view · Admin
+            Map options
           </p>
           {children}
         </div>
