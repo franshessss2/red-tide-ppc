@@ -15,7 +15,7 @@ const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms))
 it('plays the local film, then fades once on end without navigating', () => {
   const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
   const video = document.querySelector('video')!
-  expect(video.getAttribute('src')).toBe('/media/opening-reference.mp4')
+  expect(video.getAttribute('src')).toBe('/media/opening-peak.mp4')
   expect(video.hasAttribute('playsinline')).toBe(true)
   expect(play).toHaveBeenCalledTimes(1)
   fireEvent.ended(video); fireEvent.ended(video)

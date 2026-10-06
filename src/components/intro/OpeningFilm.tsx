@@ -5,7 +5,7 @@ export const OPENING_FADE_MS = 450
 const LOAD_TIMEOUT_MS = 8000
 const STALL_TIMEOUT_MS = 10000
 
-/** The supplied film precedes the showroom once; it never loops or navigates. */
+/** The supplied film precedes each full introduction; it never loops or navigates. */
 export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const continueRef = useRef<HTMLButtonElement>(null)
@@ -94,8 +94,8 @@ export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
         buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus()
       }
     }}>
-    <video ref={videoRef} playsInline preload="auto" poster="/media/opening-poster.jpg"
-      src="/media/opening-reference.mp4" aria-label="Google AI Studio reference film"
+    <video ref={videoRef} playsInline preload="auto" poster="/media/opening-peak-poster.jpg"
+      src="/media/opening-peak.mp4" aria-label="Opening film"
       onEnded={finish} onError={finish} />
     <div className="opening-film-actions">
       <button type="button" onClick={sound} disabled={leaving} aria-pressed={!muted}>

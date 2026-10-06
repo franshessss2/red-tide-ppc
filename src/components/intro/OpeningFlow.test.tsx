@@ -14,7 +14,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms))
-it('does not consume chapter timing under the film; proceeds, exits, and replay omits the film', () => {
+it('does not consume chapter timing under the film; proceeds, exits, and replay restarts the film on every activation', () => {
   render(<SplashScreen />)
   expect(screen.queryByRole('button', { name:'Explore Red Tide' })).toBeNull()
   tick(INTRO_SCENE_MS)
@@ -28,14 +28,23 @@ it('does not consume chapter timing under the film; proceeds, exits, and replay 
   fireEvent.click(enter); tick(INTRO_EXIT_MS)
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(document.activeElement).toBe(screen.getByRole('link', { name:'Open the map' }))
-  fireEvent.click(screen.getByRole('button', { name:'Watch introduction' }))
-  expect(document.querySelector('video')).toBeNull()
-  expect(screen.getByRole('button', { name:'Explore Red Tide' })).toBeTruthy()
+  for (let cycle = 0; cycle < 2; cycle++) {
+    fireEvent.click(screen.getByRole('button', { name:'Watch introduction' }))
+    expect(document.querySelector('video')!.getAttribute('src')).toBe('/media/opening-peak.mp4')
+    expect(document.querySelector('video')!.currentTime).toBe(0)
+    expect(screen.queryByRole('button', { name:'Explore Red Tide' })).toBeNull()
+    fireEvent.ended(document.querySelector('video')!); tick(OPENING_FADE_MS)
+    fireEvent.click(screen.getByRole('button', { name:'Explore Red Tide' })); tick(INTRO_EXIT_MS)
+    expect(document.activeElement).toBe(screen.getByRole('button', { name:'Watch introduction' }))
+  }
 })
 it('does not load media under reduced motion or when the intro is already seen', () => {
   localStorage.setItem(INTRO_SEEN_KEY, 'seen'); render(<SplashScreen />)
   expect(document.querySelector('video')).toBeNull(); cleanup(); localStorage.clear()
   vi.stubGlobal('matchMedia', () => ({ matches:true, addEventListener:vi.fn(), removeEventListener:vi.fn() }))
   render(<SplashScreen />); expect(document.querySelector('video')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name:'Explore Red Tide' })); tick(120)
+  fireEvent.click(screen.getByRole('button', { name:'Watch introduction' }))
+  expect(document.querySelector('video')).toBeNull()
   expect(screen.getByRole('button', { name:'Explore Red Tide' })).toBeTruthy()
 })

@@ -114,11 +114,12 @@ export function SplashScreen() {
 
   const replay = () => {
     replaying.current = true
-    phaseRef.current = 'playing'
+    const nextPhase = reduce ? 'playing' : 'opening'
+    phaseRef.current = nextPhase
     setScene(0)
     setTransitioning(false)
     setRun(value => value + 1)
-    setPhase('playing')
+    setPhase(nextPhase)
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
