@@ -19,21 +19,24 @@
   .map-page .map-controls {
     display: flex;
     top: calc(84px + env(safe-area-inset-top));
-    bottom: 132px;
+    bottom: calc(132px + env(safe-area-inset-bottom));
   }
   .map-page [data-testid="map-attribution"] {
-    bottom: calc(100px + env(safe-area-inset-bottom));
+    bottom: calc(108px + env(safe-area-inset-bottom));
     max-width: calc(100vw - 24px);
   }
   .mobile-map-actions__menu {
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
+    right: 56px;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    width: 250px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: min(224px, calc(100vw - 92px));
+    max-height: calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 12px;
     border: 1px solid var(--color-line);
     border-radius: 12px;
@@ -44,11 +47,34 @@
   .mobile-map-actions__menu a {
     min-height: 44px;
     min-width: 44px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+  .mobile-map-actions__menu > span {
+    display: flex;
+  }
+  .mobile-map-actions__menu .map-action-label {
+    display: inline;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  .map-page .map-zoom {
+    flex-direction: column;
+  }
+  .map-page .map-zoom > span {
+    width: 100%;
+    height: 1px;
   }
   .mobile-map-panel {
     position: absolute;
     inset-inline: 8px;
-    bottom: env(safe-area-inset-bottom);
+    bottom: calc(8px + env(safe-area-inset-bottom));
     z-index: var(--layer-controls);
     display: flex;
     height: 92px;
@@ -56,7 +82,7 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--color-line);
-    border-radius: 18px 18px 0 0;
+    border-radius: 18px;
     background: var(--color-ink-2);
     color: var(--color-paper);
     box-shadow: 0 -8px 32px #0003;
@@ -116,7 +142,7 @@
     height: min(55dvh, 480px);
   }
   .mobile-map-panel[data-state="full"] {
-    height: calc(100dvh - 100px - env(safe-area-inset-top));
+    height: calc(100% - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 }
 @media (prefers-reduced-motion: reduce) {
