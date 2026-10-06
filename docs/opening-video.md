@@ -8,11 +8,11 @@ Initial playback follows the existing first-visit gate. The landing-page replay 
 
 ## Flow
 
-- Attempt inline playback with sound. Browser sound policy may reject it; retry muted and expose a sound toggle.
-- Film end or Continue to Red Tide fades the film out for 450ms, then starts chapter zero with its full reading interval. Escape also continues. Enter/Space activate the focused native control.
-- Keep the landing page inert throughout film and showroom. Trap focus within film controls, transfer it to the showroom action after the film, restore the existing landing action on showroom exit.
+- Attempt inline playback with sound. Browser sound policy may reject it; retry muted. If both playback attempts fail, continue into the intro.
+- Film end fades the film out for 450ms, then starts chapter zero with its full reading interval. Escape also continues. The film has no visible sound or continue controls.
+- Keep the landing page inert throughout film and showroom. Keep focus on the film container, transfer it to the showroom action after the film, restore the existing landing action on showroom exit.
 - Pause the media and watchdog in hidden tabs. Resume on visibility. Eight seconds without loading or ten seconds without playback progress falls through to the showroom. Decode errors also continue.
 - Reduced motion does not mount or fetch the film; use the existing static intro. Cleanup pauses media and clears timers/listeners. Late autoplay rejection from a cleaned-up effect is ignored.
-- Fit the entire edited frame with `object-fit: contain`; no cropping of the film on desktop or landscape screens. Controls have 44px minimum hit areas.
+- Fit the entire edited frame with `object-fit: contain`; no cropping of the film on desktop or landscape screens.
 
 References: https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay and https://motion.dev/docs/react-animation. Existing Motion owns the showroom/landing transition; the video layer uses an opacity-only fade. Landing, map and Arduino functionality remain unchanged.

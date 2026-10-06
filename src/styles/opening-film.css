@@ -1,9 +1,4 @@
 .opening-film { position:absolute; inset:0; z-index:5; background:#050807; opacity:1; transition:opacity 450ms ease; }
 .opening-film--leaving { opacity:0; pointer-events:none; }
 .opening-film video { width:100%; height:100%; object-fit:contain; display:block; }
-.opening-film-actions { position:absolute; bottom:max(24px, env(safe-area-inset-bottom)); left:24px; right:24px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.opening-film-actions button { min-height:44px; padding:10px 14px; border:1px solid #47665a; border-radius:8px; background:rgba(7,16,12,.94); color:#eff5f1; font:500 13px/1.4 var(--font-sans, sans-serif); cursor:pointer; }
-.opening-film-actions button:focus-visible { outline:2px solid #e8c66b; outline-offset:4px; }
-.opening-film-actions button:disabled { cursor:default; }
-.opening-film-notice { position:absolute; bottom:90px; left:24px; right:24px; text-align:center; color:#eff5f1; background:#07100c; padding:12px; font-size:14px; }
-@media (max-width:400px) { .opening-film-actions { left:12px; right:12px; gap:8px; } .opening-film-actions button { padding:10px; font-size:12px; } }
+.opening-film:focus { outline:none; }
