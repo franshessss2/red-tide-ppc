@@ -75,6 +75,8 @@ export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
   }, [leaving, onComplete])
 
   return <div ref={filmRef} tabIndex={-1} className={`opening-film${leaving ? ' opening-film--leaving' : ''}`}
+    onContextMenu={event => event.preventDefault()}
+    onDragStart={event => event.preventDefault()}
     onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish() }
       if (event.key === 'Tab') {
@@ -84,6 +86,9 @@ export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
     }}>
     <video ref={videoRef} playsInline preload="auto" poster="/media/opening-peak-poster.jpg"
       src={source} aria-label="Opening film"
+      controls={false} controlsList="nodownload nofullscreen noremoteplayback"
+      disablePictureInPicture disableRemotePlayback draggable={false}
+      x-webkit-airplay="deny" tabIndex={-1}
       onEnded={finish} onError={finish} />
 
   </div>
