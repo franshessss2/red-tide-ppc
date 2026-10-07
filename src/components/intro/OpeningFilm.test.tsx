@@ -10,7 +10,7 @@ beforeEach(() => {
   play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers() })
 const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms))
 it('plays the local film, then fades once on end without navigating', () => {
   const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
@@ -29,6 +29,15 @@ it('falls back to muted autoplay when sound is blocked without showing controls'
   await act(async () => {})
   expect(document.querySelector('video')!.muted).toBe(true)
   expect(screen.queryByRole('button')).toBeNull()
+})
+it('selects the lighter film on phones without switching mid-playback', () => {
+  const media = vi.fn().mockReturnValue({ matches: true })
+  vi.stubGlobal('matchMedia', media)
+  const view = render(<OpeningFilm onComplete={vi.fn()} />)
+  expect(document.querySelector('video')!.getAttribute('src')).toBe('/media/opening-peak-mobile.mp4')
+  media.mockReturnValue({ matches: false } as MediaQueryList)
+  view.rerender(<OpeningFilm onComplete={vi.fn()} />)
+  expect(document.querySelector('video')!.getAttribute('src')).toBe('/media/opening-peak-mobile.mp4')
 })
 it('bounds failed loading and decoder errors', () => {
   const done = vi.fn(); render(<OpeningFilm onComplete={done} />)

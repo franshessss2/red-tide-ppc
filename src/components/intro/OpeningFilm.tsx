@@ -11,6 +11,9 @@ export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
   const filmRef = useRef<HTMLDivElement>(null)
   const finishing = useRef(false)
   const [leaving, setLeaving] = useState(false)
+  // Choose once per playback; rotation must not reload a running film.
+  const [source] = useState(() => window.matchMedia?.('(max-width: 900px), (pointer: coarse)').matches
+    ? '/media/opening-peak-mobile.mp4' : '/media/opening-peak.mp4')
   const finish = useCallback(() => {
     if (finishing.current) return
     finishing.current = true
@@ -80,7 +83,7 @@ export function OpeningFilm({ onComplete }: { onComplete: () => void }) {
       }
     }}>
     <video ref={videoRef} playsInline preload="auto" poster="/media/opening-peak-poster.jpg"
-      src="/media/opening-peak.mp4" aria-label="Opening film"
+      src={source} aria-label="Opening film"
       onEnded={finish} onError={finish} />
 
   </div>

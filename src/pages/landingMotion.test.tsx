@@ -50,6 +50,14 @@ afterEach(() => {
 })
 
 describe('landing motion pass — safety content is never gated on animation', () => {
+  it('unmounts background canvases while the introduction covers the landing', () => {
+    const view = render(<MemoryRouter><Landing covered /></MemoryRouter>)
+    expect(view.container.querySelector('canvas')).toBeNull()
+    expect(screen.queryByTestId('hero-backdrop')).toBeNull()
+    view.rerender(<MemoryRouter><Landing covered={false} /></MemoryRouter>)
+    expect(view.container.querySelector('canvas')).not.toBeNull()
+    expect(screen.getByTestId('hero-backdrop')).toBeTruthy()
+  })
   it('renders both CTAs immediately, with working hrefs', () => {
     renderLanding()
 

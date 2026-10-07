@@ -89,7 +89,7 @@ const HOW_IT_WORKS = [
   'An admin reviews community reports — a reviewed report can prompt a community warning. Check BFAR for official bulletins.',
 ] as const
 
-export function Landing({ onReplay }: { onReplay?: () => void }) {
+export function Landing({ onReplay, covered = false }: { onReplay?: () => void; covered?: boolean }) {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
@@ -183,10 +183,10 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
         the page so it does not repaint the same pixels the hero's Ferrofluid
         panel already owns. One animated layer per band of the page.
       */}
-      <Waves
+      {!covered && <Waves
         advisoryActive={zonesReady && counts.advisory > 0}
         className="absolute inset-0 h-full w-full [mask-image:linear-gradient(to_bottom,transparent_0,transparent_380px,black_620px)]"
-      />
+      />}
 
       <div className="relative flex min-h-dvh flex-col">
         <Header
@@ -237,7 +237,7 @@ export function Landing({ onReplay }: { onReplay?: () => void }) {
               Being the band's first child is what sizes it: the hero's full
               width and height, both columns included — not the content
               column, which is what clipped it before. */}
-          <HeroBackdrop />
+          {!covered && <HeroBackdrop />}
 
           {/* `relative` is the layering contract: a positioned element paints
               after the absolutely-positioned backdrop above it, so the whole
