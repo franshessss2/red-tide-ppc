@@ -5,7 +5,7 @@ import { Landing } from '../pages/Landing'
 import { useReducedMotion } from '../motion/preferences'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
 import { OpeningFilm } from './intro/OpeningFilm'
-import { ReelStage } from './intro/ReelStage'
+import { isWorkflowScene, ReelStage, WorkflowStage } from './intro/ReelStage'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 import '../styles/showroom.css'
 
@@ -25,6 +25,7 @@ export function SplashScreen() {
   const [hidden, setHidden] = useState(() => document.hidden)
   const phaseRef = useRef(phase)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const progressRef = useRef<HTMLElement>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const replaying = useRef(false)
   const active = phase !== 'done'
@@ -58,10 +59,18 @@ export function SplashScreen() {
     let remaining = transitioning ? INTRO_TRANSITION_MS : REEL_SCENES[scene].duration
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
+    // A compositor animation follows this same clock, without per-frame React updates.
+    const fill = !transitioning ? progressRef.current?.animate?.(
+      [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+      { duration: REEL_SCENES[scene].duration, fill: 'forwards', easing: 'linear' },
+    ) : undefined
+    fill?.pause()
     const start = () => {
       started = performance.now()
+      if (fill) { fill.currentTime = REEL_SCENES[scene].duration - remaining; fill.play() }
       timer = setTimeout(() => {
         if (phaseRef.current !== 'playing') return
+        if (fill) { fill.currentTime = REEL_SCENES[scene].duration; fill.pause() }
         if (transitioning) {
           setScene(value => (value + 1) % INTRO_SCENE_COUNT)
           setTransitioning(false)
@@ -70,12 +79,22 @@ export function SplashScreen() {
     }
     const visibility = () => {
       clearTimeout(timer)
-      if (document.hidden) remaining = Math.max(0, remaining - (performance.now() - started))
+      if (document.hidden) {
+        remaining = Math.max(0, remaining - (performance.now() - started))
+        if (fill) { fill.pause(); fill.currentTime = REEL_SCENES[scene].duration - remaining }
+      }
       else start()
     }
     if (!document.hidden) start()
     document.addEventListener('visibilitychange', visibility)
-    return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', visibility) }
+    return () => {
+      clearTimeout(timer)
+      if (fill && phaseRef.current === 'leaving' && progressRef.current) {
+        progressRef.current.style.transform = `scaleX(${Number(fill.currentTime ?? 0) / REEL_SCENES[scene].duration})`
+      }
+      fill?.cancel()
+      document.removeEventListener('visibilitychange', visibility)
+    }
   }, [phase, scene, reduce, run, transitioning])
 
   useEffect(() => {
@@ -123,6 +142,11 @@ export function SplashScreen() {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
+  const visibleScenes = transitioning && !reduce ? [scene, (scene + 1) % INTRO_SCENE_COUNT] : [scene]
+  const workflowScenes = reduce ? [] : visibleScenes.filter(isWorkflowScene)
+  const workflowEntering = workflowScenes.length > 0 && !isWorkflowScene(scene)
+  const workflowLeaving = isWorkflowScene(scene) && transitioning && workflowScenes.length === 1
+
   return <div className={`showroom-experience showroom-experience--${phase}`}>
     <div ref={pageRef} className="showroom-landing" inert={active} aria-hidden={active ? true : undefined}>
       <Landing onReplay={replay} covered={active} />
@@ -143,13 +167,17 @@ export function SplashScreen() {
       {phase !== 'opening' && <div key="showroom">
       <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
-      {(transitioning && !reduce ? [scene, (scene + 1) % INTRO_SCENE_COUNT] : [scene]).map(index => <div key={index}
+      {workflowScenes.length > 0 && <div key="workflow" className={`showroom-stage${workflowEntering ? ' showroom-stage--incoming' : workflowLeaving ? ' showroom-stage--out' : ''}`}
+        aria-hidden={workflowEntering ? true : undefined}>
+        <WorkflowStage scenes={workflowScenes} current={scene} />
+      </div>}
+      {visibleScenes.filter(index => reduce || !isWorkflowScene(index)).map(index => <div key={index}
         className={`showroom-stage${transitioning && !reduce ? index === scene ? ' showroom-stage--out' : ' showroom-stage--incoming' : ''}`}
         aria-hidden={index !== scene ? true : undefined}>
         <ReelStage scene={index} reduced={reduce} />
       </div>)}
       <div className="showroom-footer" aria-hidden="true">
-        <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? REEL_CLOSING_SCENE : scene) + 1).padStart(2, '0')} / {String(INTRO_SCENE_COUNT).padStart(2, '0')} · {REEL_SCENES[reduce ? REEL_CLOSING_SCENE : scene].chapter}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={(reduce ? REEL_CLOSING_SCENE : scene) >= index ? 'is-complete' : ''} />)}</div></div>
+        <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? REEL_CLOSING_SCENE : scene) + 1).padStart(2, '0')} / {String(INTRO_SCENE_COUNT).padStart(2, '0')} · {REEL_SCENES[reduce ? REEL_CLOSING_SCENE : scene].chapter}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={reduce || index < scene || (index === scene && transitioning) ? 'is-complete' : index === scene ? 'is-active' : ''}><i ref={index === scene ? progressRef : undefined} /></span>)}</div></div>
         <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase !== 'playing'} />
