@@ -21,6 +21,75 @@ const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
 describe('reel-inspired intro', () => {
+  it('keeps one observation and its typed field mounted through report, review and warning', () => {
+    render(<SplashScreen />)
+    for (let scene = 0; scene < 3; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
+    const card = document.querySelector('.reel-report')!
+    const field = card.querySelector('.reel-report__typed')!
+    expect(card.getAttribute('data-workflow-step')).toBe('report')
+    for (const [scene, step, title] of [[3, 'review', 'Review before warning.'], [4, 'warning', 'Read the status clearly.']] as const) {
+      tick(REEL_SCENES[scene].duration)
+      expect(document.querySelectorAll('.reel-report')).toHaveLength(1)
+      expect(document.querySelector('.reel-report')).toBe(card)
+      expect(card.querySelector('.reel-report__typed')).toBe(field)
+      expect(card.getAttribute('data-workflow-step')).toBe(step)
+      const incoming = document.querySelector('.reel-workflow-copy .showroom-stage--incoming')!
+      expect(incoming.getAttribute('aria-hidden')).toBe('true')
+      const words = incoming.querySelector('.reel-text-reveal')
+      expect(screen.queryByRole('heading', { name: title })).toBeNull()
+      tick(INTRO_TRANSITION_MS)
+      expect(screen.getByRole('heading', { name: title })).toBeTruthy()
+      expect(document.querySelector('.reel-workflow-copy .reel-text-reveal')).toBe(words)
+    }
+    expect(card.textContent).toContain('Example approved report')
+    expect(card.textContent).toContain('laboratory confirmation')
+    tick(REEL_SCENES[5].duration); tick(INTRO_TRANSITION_MS)
+    expect(document.querySelector('.reel-report')).toBeNull()
+    fireEvent.click(enter()); tick(INTRO_EXIT_MS)
+    fireEvent.click(screen.getByRole('button', { name: 'Watch introduction' }))
+    for (let scene = 0; scene < 3; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
+    expect(document.querySelector('.reel-report')).not.toBe(card)
+    expect(document.querySelector('.reel-report')?.getAttribute('data-workflow-step')).toBe('report')
+  })
+  it('drives progress from the chapter clock, pauses at hidden time, and cancels it on exit', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate')
+    const fills: { currentTime: number; play: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn>; cancel: ReturnType<typeof vi.fn> }[] = []
+    const animate = vi.fn(() => {
+      const fill = { currentTime: 0, play: vi.fn(), pause: vi.fn(), cancel: vi.fn() }
+      fills.push(fill); return fill
+    })
+    Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, value: animate })
+    try {
+      let hidden = false
+      vi.spyOn(document, 'hidden', 'get').mockImplementation(() => hidden)
+      const view = render(<SplashScreen />)
+      expect(animate.mock.calls).toHaveLength(1)
+      const fill = fills[0]
+      tick(1000)
+      act(() => { hidden = true; document.dispatchEvent(new Event('visibilitychange')) })
+      expect(fill.currentTime).toBe(1000)
+      const plays = fill.play.mock.calls.length
+      tick(30000)
+      expect(fill.currentTime).toBe(1000)
+      expect(fill.play).toHaveBeenCalledTimes(plays)
+      act(() => { hidden = false; document.dispatchEvent(new Event('visibilitychange')) })
+      expect(fill.currentTime).toBe(1000)
+      expect(fill.play).toHaveBeenCalledTimes(plays + 1)
+      tick(INTRO_SCENE_MS - 1000)
+      expect(document.querySelector('.showroom-progress > .is-complete')).toBeTruthy()
+      expect(fill.cancel).toHaveBeenCalledTimes(1)
+      tick(INTRO_TRANSITION_MS)
+      expect(fills).toHaveLength(2)
+      expect(fills[1].currentTime).toBe(0)
+      fireEvent.click(enter())
+      expect(fills[1].cancel).toHaveBeenCalledTimes(1)
+      view.unmount(); tick(60000)
+      expect(fills).toHaveLength(2)
+    } finally {
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, 'animate', descriptor)
+      else Reflect.deleteProperty(HTMLElement.prototype, 'animate')
+    }
+  })
   it('crossfades overlapping chapters without remounting the incoming illustration', () => {
     render(<SplashScreen />)
     tick(INTRO_SCENE_MS)

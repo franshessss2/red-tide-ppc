@@ -1,5 +1,17 @@
 # Red Tide product-film introduction
 
+## Connected workflow and progress (PR89)
+
+The report, review and warning chapters share one persistent observation card and typed field. The original observation stays visible as its receipt changes from pending review to a human decision and an explicitly illustrated approved-report warning. This is a demonstration, not an automatic approval or a live advisory. The card uses amber for review and red for warning, while the explanatory headings retain their original word reveal timing. Incoming copy mounts during the 450 ms crossfade and keeps its key when it becomes current; only the current chapter is exposed to assistive technology.
+
+The active progress segment fills using a transform animation controlled by the existing chapter clock. Its duration, hidden-tab pause/resume position, completion, loop reset and cleanup share the same reading timer. No per-frame React state or separate progress timer is added. Reduced motion remains the existing static closing summary; the opening video and its PR88 interaction restrictions are unchanged.
+
+Feature illustrations share a reserved frame, including compact portrait and landscape variants. Essential receipt/status labels are larger on phones. The Arduino packet animation completes at 3.4 seconds and its scan at 3.5 seconds, leaving time to settle inside the unchanged 4.4-second chapter. All PR87 chapter holds, crossfade duration, word-reveal recipes, copy entrance timings and landing exit timing remain unchanged.
+
+References used: [Motion shared layout](https://motion.dev/docs/react-layout-animations), [React Bits Fade Content](https://reactbits.dev/animations/fade-content), [Design Spells morphing transitions](https://designspells.com/spells/morphing-transitions-in-untitled), [Animista](https://animista.net/) and [web.dev animation performance](https://web.dev/articles/animations-guide). The implementation uses the existing React/Motion/CSS stack without additional dependencies, media, device operations or backend changes.
+
+Validation: 451 tests across 54 files and the TypeScript/Vite build pass. New regressions cover persistent observation/typing nodes, stable incoming heading nodes, accessible chapter handoff, fresh replay and clock-owned progress cancellation/pause/resume. Chromium geometry checks cover all nine chapters at 1440×900, 390×844, 320×568, 844×390 and 667×375, with keyboard exit, focus restoration, replay, hidden-tab progress and reduced motion. The isolated demo build was served through local request interception; text/illustration animations were settled for geometry captures while the chapter/progress clock ran in virtual time. No browser JavaScript errors were observed. These checks do not establish actual device FPS or Safari/Firefox behavior. `TextReveal.tsx`, `reelScenes.ts`, the opening-film files, landing, map and Firebase files are unchanged from the PR88 base.
+
 The previous intro is preserved on `backup/intro-before-rebuild-2026-10-05` at commit `7ddfc16982ca2d3501a22d26627b97bd5d767561`.
 
 ## Reference interpretation

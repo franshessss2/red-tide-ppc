@@ -436,10 +436,18 @@
   width: 24px;
   height: 2px;
   background: #2c3931;
-  transition: background 0.6s;
+  overflow: hidden;
 }
-.showroom-progress > span.is-complete {
+.showroom-progress > span > i {
+  display: block;
+  width: 100%;
+  height: 100%;
   background: #a8c69d;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.showroom-progress > span.is-complete > i {
+  transform: scaleX(1);
 }
 .showroom-enter {
   margin-left: 10px;
@@ -1038,13 +1046,13 @@
 .reel-hardware__device small { margin-bottom: 18px; font-size: 10px; color: #b6d3c8; }
 .reel-hardware__ports { height: 5px; display: block; background: repeating-linear-gradient(90deg, #bfd9c6 0 3px, transparent 3px 8px); opacity: 0.6; }
 .reel-hardware__link { height: 1px; background: #80ac954b; width: 16%; position: relative; }
-.reel-hardware__link i { position: absolute; height: 4px; width: 10px; border-radius: 4px; background: #e8c66b; top: -2px; animation: reel-packet 2s ease-in-out 0.4s 2 both; }
+.reel-hardware__link i { position: absolute; height: 4px; width: 10px; border-radius: 4px; background: #e8c66b; top: -2px; animation: reel-packet 1.5s ease-in-out 0.4s 2 both; }
 @keyframes reel-packet { 0% { left: 0; opacity: 0.3; } 70% { left: calc(100% - 10px); opacity: 1; } 100% { left: calc(100% - 10px); opacity: 0; } }
 .reel-hardware__outputs { width: 50%; display: grid; gap: 18px; padding-left: 16px; box-sizing: border-box; }
 .reel-hardware__outputs > div { display: flex; align-items: center; gap: 12px; }
 .reel-hardware__outputs strong { font-size: 13px; }
 .reel-hardware__scan { width: 32px; height: 17px; border: 1px solid #8cb69a7d; border-radius: 32px 32px 0 0; position: relative; flex-shrink: 0; }
-.reel-hardware__scan i { position: absolute; bottom: 0; left: 50%; height: 15px; width: 1px; background: #b9d4b3; transform-origin: bottom; animation: reel-sweep 2.4s ease-in-out 0.5s 2 alternate both; }
+.reel-hardware__scan i { position: absolute; bottom: 0; left: 50%; height: 15px; width: 1px; background: #b9d4b3; transform-origin: bottom; animation: reel-sweep 1.5s ease-in-out 0.5s 2 alternate both; }
 @keyframes reel-sweep { from { transform: rotate(-55deg); } to { transform: rotate(55deg); } }
 .reel-hardware__leds { width: 34px; display: flex; gap: 4px; flex-shrink: 0; }
 .reel-hardware__leds i { display: block; height: 7px; width: 7px; border-radius: 50%; background: #705446; }
@@ -1116,3 +1124,64 @@
   .reel-hardware__outputs { gap: 12px; }
 }
 .showroom--reduced .showroom-stage--incoming { animation: none; }
+
+/* Shared feature framing keeps the illustration and copy anchored across chapters. */
+.reel-scene--feature .reel-scene__visual { min-height: 310px; }
+.reel-scene--feature .reel-report,
+.reel-scene--feature .reel-study { min-height: 310px; }
+.reel-workflow-scene { animation: none; }
+.reel-workflow-copy { display: grid; min-height: 185px; align-content: start; }
+.reel-workflow-copy__chapter {
+  grid-area: 1 / 1;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reel-workflow-scene .reel-report__receipt { min-height: 44px; }
+.reel-report__receipt { transition: background-color 0.3s ease, border-color 0.3s ease; }
+.reel-report__status-copy { animation: reel-copy-in 0.25s ease both; }
+.reel-report--review .reel-report__receipt { background: #a88a321c; border-color: #e8c66b45; }
+.reel-report--warning .reel-report__receipt { background: #a646361c; border-color: #db786445; }
+.reel-report--warning .reel-report__check,
+.reel-report--warning .reel-report__pending { color: #f3a18e; }
+.reel-report--warning .reel-report__check { background: #d0644c20; }
+.reel-report__receipt[data-status='review'],
+.reel-report__receipt[data-status='warning'] { animation: none; }
+.reel-report__pending { font-size: 10px; letter-spacing: 0.06em; }
+.reel-study__badge { font-size: 10px; }
+
+@media (max-width: 600px) {
+  .reel-scene--feature .reel-scene__visual { min-height: 280px; }
+  .reel-scene--feature .reel-report,
+  .reel-scene--feature .reel-study { min-height: 280px; }
+  .reel-workflow-copy { min-height: 180px; }
+  .reel-report__receipt { font-size: 12px; }
+  .reel-report__receipt small,
+  .reel-report__note { font-size: 11px; }
+  .reel-study small,
+  .reel-study__foot { font-size: 11px; }
+  .reel-study__header,
+  .reel-report__label,
+  .reel-report__example { font-size: 10px; letter-spacing: 0.04em; }
+  .reel-hardware__outputs strong { font-size: 11px; }
+}
+@media (max-height: 600px) and (min-width: 601px) {
+  .reel-scene--feature .reel-scene__visual { min-height: 266px; }
+  .reel-scene--feature .reel-report,
+  .reel-scene--feature .reel-study { min-height: 266px; }
+  .reel-workflow-copy { min-height: 180px; }
+  .reel-workflow-scene .reel-report__typed { font-size: 14px; }
+  .reel-workflow-scene .reel-report__receipt { gap: 6px; padding: 10px 8px; font-size: 11px; }
+  .reel-workflow-scene .reel-report__check { flex-shrink: 0; }
+  .reel-workflow-scene .reel-report__note { font-size: 10px; }
+}
+@media (max-height: 600px) and (max-width: 600px) {
+  .reel-scene--feature .reel-scene__visual { min-height: 230px; }
+  .reel-scene--feature .reel-report,
+  .reel-scene--feature .reel-study { min-height: 230px; }
+  .reel-workflow-copy { min-height: 145px; }
+  .reel-report__prompt { margin: 10px 0; }
+  .reel-report__receipt { margin-top: 12px; }
+}
+@media (max-height: 420px) and (min-width: 601px) {
+  .showroom-stage { inset: 16% 8% 20%; }
+  .reel-scene--closing h1 { font-size: 80px; }
+}

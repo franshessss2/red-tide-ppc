@@ -85,9 +85,14 @@ function CoastPreview() {
   );
 }
 
-export function ReportPreview() {
+export function ReportPreview({ step = 'report' }: { step?: 'report' | 'review' | 'warning' }) {
+  const receipt = step === 'report'
+    ? { title: 'Observation recorded', detail: 'Awaiting admin review', badge: 'PENDING', symbol: '✓' }
+    : step === 'review'
+      ? { title: 'Admin review', detail: 'A person approves or rejects', badge: 'REVIEW', symbol: '01' }
+      : { title: 'Example approved report', detail: 'Can prompt a community warning', badge: 'WARNING', symbol: '!' };
   return (
-    <div className="reel-report" aria-hidden="true">
+    <div className={`reel-report reel-report--${step}`} aria-hidden="true" data-workflow-step={step}>
       <div className="reel-report__header">
         <span className="reel-report__label">COMMUNITY OBSERVATION</span>
         <span className="reel-report__example">ILLUSTRATION</span>
@@ -106,15 +111,16 @@ export function ReportPreview() {
           {OBSERVATION}
         </span>
       </div>
-      <div className="reel-report__receipt">
-        <span className="reel-report__check">✓</span>
-        <span>
-          Observation recorded<small>Awaiting admin review</small>
+      <div className="reel-report__receipt" data-status={step}>
+        <span className="reel-report__check">{receipt.symbol}</span>
+        <span key={step} className="reel-report__status-copy">
+          {receipt.title}<small>{receipt.detail}</small>
         </span>
-        <span className="reel-report__pending">PENDING</span>
+        <span className="reel-report__pending">{receipt.badge}</span>
       </div>
       <p className="reel-report__note">
-        An observation informs a review. It does not confirm red tide.
+        {step === 'warning' ? 'Community warning ≠ laboratory confirmation. Status unavailable ≠ safe water.'
+          : 'An observation informs a review. It does not confirm red tide.'}
       </p>
     </div>
   );
@@ -131,6 +137,36 @@ function SceneVisual({ visual, animated }: { visual: (typeof REEL_SCENES)[number
     case 'hardware': return <HardwarePreview />;
     default: return <TideMark animated={visual === 'identity' && animated} />;
   }
+}
+
+export function ReelCopy({ scene, reduced = false }: { scene: number; reduced?: boolean }) {
+  const current = reduced ? REEL_CLOSING_SCENE : scene;
+  const copy = REEL_SCENES[current];
+  return <>
+    <p className="showroom-eyebrow">{copy.tag}</p>
+    <h1><TextReveal text={copy.title} effect="words" trigger="mount" className="reel-text-reveal" /></h1>
+    <p className="showroom-description">{copy.description}</p>
+    {"detail" in copy && <p className="reel-scene__detail">{copy.detail}</p>}
+    {current === REEL_CLOSING_SCENE && !reduced && <p className="reel-scene__disclaimer">School prototype · Check official BFAR advisories.</p>}
+    {reduced && <p className="showroom-disclaimer">Reports are reviewed by an admin. Source labels identify sample or cached records. Arduino demonstrates distance sensing, LEDs and a buzzer. Check BFAR for official advisories.</p>}
+  </>;
+}
+
+export const isWorkflowScene = (scene: number) => scene >= 3 && scene <= 5;
+
+/** One card survives all three chapters; only the explanatory copy crossfades. */
+export function WorkflowStage({ scenes, current }: { scenes: number[]; current: number }) {
+  const target = scenes[scenes.length - 1];
+  const step = target === 3 ? 'report' : target === 4 ? 'review' : 'warning';
+  return <div className="reel-scene reel-scene--feature reel-workflow-scene">
+    <div className="reel-scene__visual"><ReportPreview step={step} /></div>
+    <div className="reel-scene__copy reel-workflow-copy">
+      {scenes.map(scene => <div key={scene} aria-hidden={scene !== current ? true : undefined}
+        className={`reel-workflow-copy__chapter${scenes.length > 1 ? scene === current ? ' showroom-stage--out' : ' showroom-stage--incoming' : ''}`}>
+        <ReelCopy scene={scene} />
+      </div>)}
+    </div>
+  </div>;
 }
 
 export function ReelStage({
@@ -152,22 +188,7 @@ export function ReelStage({
         <SceneVisual visual={copy.visual} animated={!reduced} />
       </div>
       <div className="reel-scene__copy">
-        <p className="showroom-eyebrow">{copy.tag}</p>
-        <h1>
-          <TextReveal text={copy.title} effect="words" trigger="mount" className="reel-text-reveal" />
-        </h1>
-        <p className="showroom-description">{copy.description}</p>
-        {"detail" in copy && <p className="reel-scene__detail">{copy.detail}</p>}
-        {current === REEL_CLOSING_SCENE && !reduced && (
-          <p className="reel-scene__disclaimer">
-            School prototype · Check official BFAR advisories.
-          </p>
-        )}
-        {reduced && (
-          <p className="showroom-disclaimer">
-            Reports are reviewed by an admin. Source labels identify sample or cached records. Arduino demonstrates distance sensing, LEDs and a buzzer. Check BFAR for official advisories.
-          </p>
-        )}
+        <ReelCopy scene={current} reduced={reduced} />
       </div>
     </div>
   );
