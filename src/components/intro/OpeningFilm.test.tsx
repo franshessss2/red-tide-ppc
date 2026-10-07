@@ -30,6 +30,26 @@ it('falls back to muted autoplay when sound is blocked without showing controls'
   expect(document.querySelector('video')!.muted).toBe(true)
   expect(screen.queryByRole('button')).toBeNull()
 })
+it('suppresses media menus and dragging only inside the film without interrupting playback', () => {
+  const done = vi.fn(); render(<OpeningFilm onComplete={done} />)
+  const film = document.querySelector('.opening-film')!
+  const video = document.querySelector('video')!
+  expect(video.controls).toBe(false)
+  expect(video.getAttribute('controlslist')).toBe('nodownload nofullscreen noremoteplayback')
+  expect(video.hasAttribute('disablepictureinpicture')).toBe(true)
+  expect(video.hasAttribute('disableremoteplayback')).toBe(true)
+  expect(video.getAttribute('x-webkit-airplay')).toBe('deny')
+  expect(video.draggable).toBe(false)
+  for (const target of [film, video]) {
+    expect(fireEvent.contextMenu(target)).toBe(false)
+    expect(fireEvent.dragStart(target)).toBe(false)
+  }
+  expect(fireEvent.contextMenu(document.body)).toBe(true)
+  expect(done).not.toHaveBeenCalled()
+  expect(play).toHaveBeenCalledTimes(1)
+  fireEvent.ended(video); tick(OPENING_FADE_MS)
+  expect(done).toHaveBeenCalledTimes(1)
+})
 it('selects the lighter film on phones without switching mid-playback', () => {
   const media = vi.fn().mockReturnValue({ matches: true })
   vi.stubGlobal('matchMedia', media)

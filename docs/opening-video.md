@@ -28,3 +28,9 @@ ffmpeg -i public/media/opening-peak.mp4 -map 0:v:0 -map 0:a:0 -vf scale=1280:720
 ```
 
 The covered landing keeps its DOM and focus targets but unmounts Waves and HeroBackdrop for the entire introduction, including replay. Its CSS animations pause while inert. Showroom stages mount only after the opening film finishes, avoiding hidden animated SVG/filter work during video decoding. Canvas effects return after dismissal. This removes competing rendering; actual FPS still depends on device hardware and browser power-saving settings and must be confirmed on the reporting phone.
+
+## Media interaction suppression (PR88)
+
+The film container receives pointer input instead of the video (including its poster). It cancels context menus and dragging locally; Safari/iOS touch callouts and text selection are disabled on this layer. The player has no native controls and requests no download, fullscreen, remote playback or Picture-in-Picture controls, with the legacy Safari AirPlay opt-out as a fallback. Escape, autoplay recovery, end/error handling and replay retain their existing behavior. No document-wide interaction blockers are installed.
+
+These are browser UI restrictions, not download protection. Public MP4 URLs, browser overrides, developer tools and screen recording remain accessible; support for media-control attributes varies by browser. References: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video and https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/disablePictureInPicture.
