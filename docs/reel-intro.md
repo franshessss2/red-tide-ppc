@@ -18,7 +18,7 @@ The supplied 18.69-second reel uses an opening word, two colored shapes joining 
 | 7 | Arduino UNO USB connection, distance scanning, LED testing and manual beep |
 | 8 | Centered RED TIDE closing title and official-advisory reminder |
 
-The nine chapters use individual visible reading times: 3.6, 3.6, 4.4, 4.6, 5.0, 4.8, 5.0, 5.2 and 4.0 seconds. Nine 0.6-second transitions bring the full loop to 45.6 seconds. Visitors can enter immediately from any chapter; the sequence never forces them to finish the film. Content, chapter labels, scene count and reading times share `reelScenes.ts`.
+The nine chapters use individual visible reading times: 3.0, 3.0, 3.8, 3.9, 4.3, 4.1, 4.3, 4.4 and 3.4 seconds. Nine 0.45-second transitions bring the full loop to 38.25 seconds. Slide holds are about 15% shorter; word reveals, copy entrances, typing and decorative illustration animation timings remain unchanged. Visitors can enter immediately from any chapter; the sequence never forces them to finish the film. Content, chapter labels, scene count and reading times share `reelScenes.ts`.
 
 The next chapter mounts during the outgoing dissolve. Stable scene keys retain that incoming illustration when it becomes current, so typing and other entrances do not restart after the fade. The incoming copy stays aria-hidden until the chapter commits; only the current chapter is exposed to assistive technology. Both chapters remain over the same static backdrop, avoiding a fully empty stage between scenes. The clock pauses during either reading or fading when the tab is hidden. Clicking or Enter/Space/Escape cancels playback and uses the existing 650 ms dissolve into the landing. Reduced motion shows a static equivalent, with 120 ms exit.
 

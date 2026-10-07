@@ -55,7 +55,7 @@
   max-width: 1200px;
   margin: auto;
   opacity: 1;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .showroom-stage--out {
   opacity: 0;
@@ -965,7 +965,7 @@
 
 /* Overlap the next chapter with the outgoing chapter; keep the background continuous. */
 .showroom-stage--incoming {
-  animation: showroom-crossfade-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: showroom-crossfade-in 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 @keyframes showroom-crossfade-in {
   from { opacity: 0; }

@@ -11,7 +11,7 @@ import '../styles/showroom.css'
 
 export const INTRO_EXIT_MS = 650
 export const INTRO_SCENE_MS = REEL_SCENES[0].duration
-export const INTRO_TRANSITION_MS = 600
+export const INTRO_TRANSITION_MS = 450
 export const INTRO_SCENE_COUNT = REEL_SCENES.length
 type Phase = 'opening' | 'playing' | 'leaving' | 'done'
 
