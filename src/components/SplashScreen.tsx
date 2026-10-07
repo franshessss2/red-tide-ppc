@@ -125,7 +125,7 @@ export function SplashScreen() {
 
   return <div className={`showroom-experience showroom-experience--${phase}`}>
     <div ref={pageRef} className="showroom-landing" inert={active} aria-hidden={active ? true : undefined}>
-      <Landing onReplay={replay} />
+      <Landing onReplay={replay} covered={active} />
     </div>
     {active && createPortal(<motion.div key={run} role="dialog" aria-modal="true" aria-label="Introduction"
       className={`showroom showroom--${phase}${reduce ? ' showroom--reduced' : ''}${hidden ? ' showroom--paused' : ''}`} data-scene={scene}
@@ -140,7 +140,7 @@ export function SplashScreen() {
         if (event.key === 'Tab') { event.preventDefault(); buttonRef.current?.focus() }
       }}>
       {phase === 'opening' && !reduce && <OpeningFilm onComplete={completeOpening} />}
-      <div inert={phase === 'opening'} aria-hidden={phase === 'opening' ? true : undefined} key={phase === 'opening' ? 'pending' : 'showroom'}>
+      {phase !== 'opening' && <div key="showroom">
       <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
       {(transitioning && !reduce ? [scene, (scene + 1) % INTRO_SCENE_COUNT] : [scene]).map(index => <div key={index}
@@ -153,7 +153,7 @@ export function SplashScreen() {
         <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase !== 'playing'} />
-      </div>
+      </div>}
     </motion.div>, document.body)}
   </div>
 }

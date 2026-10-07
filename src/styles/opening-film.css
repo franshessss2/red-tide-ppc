@@ -2,3 +2,4 @@
 .opening-film--leaving { opacity:0; pointer-events:none; }
 .opening-film video { width:100%; height:100%; object-fit:contain; display:block; }
 .opening-film:focus { outline:none; }
+.showroom-landing[inert] * { animation-play-state:paused !important; }

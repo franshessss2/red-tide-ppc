@@ -16,3 +16,15 @@ Initial playback follows the existing first-visit gate. The landing-page replay 
 - Fit the entire edited frame with `object-fit: contain`; no cropping of the film on desktop or landscape screens.
 
 References: https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay and https://motion.dev/docs/react-animation. Existing Motion owns the showroom/landing transition; the video layer uses an opacity-only fade. Landing, map and Arduino functionality remain unchanged.
+
+## Playback performance (PR86)
+
+Phones, coarse-pointer devices and viewports up to 900px use `opening-peak-mobile.mp4`: 1280x720, 60 FPS, H.264 Constrained Baseline level 3.2, yuv420p, progressive MP4. It retains all 1,116 frames and the complete 18.6-second edit while reducing decoded pixels per frame by 56%. AAC is copied unchanged, including the baked 50% gain. Desktop keeps the original 1080p version. Selection is fixed for each playback, so rotation does not restart the film.
+
+Generate the mobile delivery asset from the existing desktop asset:
+
+```sh
+ffmpeg -i public/media/opening-peak.mp4 -map 0:v:0 -map 0:a:0 -vf scale=1280:720 -c:v libx264 -profile:v baseline -level:v 3.2 -preset slow -crf 22 -maxrate 1800k -bufsize 3600k -pix_fmt yuv420p -c:a copy -movflags +faststart public/media/opening-peak-mobile.mp4
+```
+
+The covered landing keeps its DOM and focus targets but unmounts Waves and HeroBackdrop for the entire introduction, including replay. Its CSS animations pause while inert. Showroom stages mount only after the opening film finishes, avoiding hidden animated SVG/filter work during video decoding. Canvas effects return after dismissal. This removes competing rendering; actual FPS still depends on device hardware and browser power-saving settings and must be confirmed on the reporting phone.
