@@ -8,7 +8,7 @@ A public map of coastal zones colour-coded by advisory status, an anonymous way 
 For the school presentation, see [Presentation review](docs/presentation-review.md).
 For the optional virtual ESP32, see [Virtual device setup](docs/virtual-device-setup.md).
 The separate `/devices` page supports local rehearsal without accounts or hardware.
-On the first visit per browser session, `/` opens with a short wave intro over the landing page. Escape skips it, and `prefers-reduced-motion` skips it entirely; ↻ in the landing
+On the first visit per device and intro version (remembered in `localStorage`), `/` opens with a short wave intro over the landing page. Escape skips it, and `prefers-reduced-motion` skips it entirely; ↻ in the landing
 header reopens it. The public map retains its original animated zone and advisory drawers.
 
 ---
@@ -56,19 +56,21 @@ Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a
 
 **Routes**
 
-- `/` — the landing page: what this is, the live zone readout and figures, and the way in.
+- `/` — the landing page: community zone records and figures, their source labels, and the way in.
 - `/map` — the public map (lazy-loaded; the landing and admin never pay for Leaflet).
 - `/admin` — the passcode-gated review queue.
 - `/devices` — local rehearsal page for the optional virtual ESP32, with no accounts or hardware (see [Virtual device setup](docs/virtual-device-setup.md)).
+- `/arduino.html` — browser USB/serial demonstration; `/arduino-demo.html` remains an alias (see [Arduino setup](docs/arduino-combined.md)).
+- `/api/device-readings` — Vercel device-ingest/read endpoint. Server-only configuration is `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `DEVICE_INGEST_TOKEN` and `DEVICE_STORAGE_NAMESPACE`; see the virtual-device guide for constraints and setup. These values must not use the public `VITE_` prefix.
 
 **Core loop**
 
 1. **Public map at `/map`** — a Leaflet map of the Puerto Princesa coastline. Each zone is a coloured nearshore band hugging the actual shoreline (see §10):
-   - 🟢 **Safe** — no advisory recorded.
+   - 🟢 **No community warning** (`safe`) — no warning recorded; this does not establish official clearance.
    - 🟡 **Unconfirmed** — flagged by an admin as needing a check; treat with caution.
-   - 🔴 **Advisory** — confirmed; do not eat shellfish from this zone.
+   - 🔴 **Community warning** (`advisory`) — an admin-reviewed community warning; check official BFAR bulletins before a food-safety decision.
 2. **Tap a zone** → a popup shows the name, current status, plain-language guidance, how many community reports are waiting for review, and when the status last changed — plus a **"Report something here"** button.
-3. **Report form** — a description plus an optional photo. No account, no name, no login. The report is written to Firestore with status `pending`.
+3. **Report form** — a description plus an optional photo. No account, no name, no login. The report has status `pending`: stored in Firestore when configured, or in browser-local sample data in demo mode.
 4. **Admin view at `/admin`** — behind a passcode. Pending reports are listed with zone, description, photo and timestamp.
    - **Approve** → the report becomes `confirmed` **and** its zone becomes `advisory` with `lastUpdated = now`.
    - **Reject** → the report becomes `rejected` and the zone is left exactly as it was.
@@ -84,21 +86,9 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints. **If no Firebase keys are present the app runs in demo mode**: the same UI, backed by an in-memory store that mirrors to `localStorage`. Nothing leaves the browser, and a banner says so. That is enough to click through the entire loop in a demo.
+Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the admin passcode to `demo-review`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
 
-To use the admin view locally, create a `.env`:
-
-```bash
-cp .env.example .env
-```
-
-and set at least:
-
-```
-VITE_ADMIN_PASSCODE=whatever-you-like
-```
-
-Then open `/admin` and type that passcode.
+For an env-configured local run, fill `.env`, then use `npx vite` or `npm run build` followed by `npm run preview`. The default demo launcher does not use those values.
 
 > **Demo-mode tip:** demo data lives in `localStorage` under `red-tide-ppc:demo:v1`. Clear site data (or run `localStorage.clear()` in the console) to start over with all zones `safe`.
 
@@ -127,9 +117,9 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-upload-preset
 VITE_ADMIN_PASSCODE=change-me
 ```
 
-`.env` is gitignored. Everything prefixed `VITE_` is compiled into the public JavaScript bundle — these are identifiers, **not secrets**. Access control belongs in the security rules.
+`.env` is gitignored. Everything prefixed `VITE_` is compiled into the public JavaScript bundle. Firebase web identifiers are public, and the admin passcode is also readable by visitors; do not put private credentials in `VITE_*`. Access control belongs in the security rules.
 
-Restart `npm run dev` after editing `.env`; Vite only reads env files at startup.
+Restart an env-configured `npx vite` run after editing `.env`, or rebuild before preview/deployment. `npm run dev` deliberately forces demo mode and ignores env files.
 
 ### 4.3 Configure Cloudinary photo uploads
 
@@ -179,7 +169,7 @@ Polygons are stored as arrays of `{lat, lng}` objects: Firestore rejects nested 
 
 ### 4.6 Verify
 
-Reload the app. The amber **demo mode** banner should be gone, and a report submitted in one browser should appear in the admin queue of another.
+Reload an env-configured build. **Sample data** should be absent; source details distinguish cached/pending records from an acknowledged server snapshot. Verify that a report submitted in one browser appears in another. A server-delivery label does not establish official clearance or when the coast was tested.
 
 ---
 
@@ -255,11 +245,12 @@ src/
     MapControlColumn.tsx  # top-right control column: zoom +/− then both drawer tabs
     StatusPip.tsx         # the status dot (pops on status change)
     Ambient.tsx            # map scanline + registration marks (schematic)
-    Header.tsx  StatusPanel.tsx  StatusBadge.tsx  Notice.tsx  DemoBanner.tsx
+    Header.tsx  StatusBadge.tsx  Notice.tsx  DataProvenance.tsx
     SplashScreen.tsx      # first-visit wave intro over Landing (Escape or reduced-motion skips it)
-    DecryptedText.tsx     # landing hero: glyphs resolve left to right (reactbits pattern)
-    Waves.tsx             # landing background: three sine composites on a canvas
-    CountUp.tsx           # landing figures: counts up on first view, re-tweens on live updates
+    DecryptedText.tsx     # supporting landing text: glyphs resolve left to right
+    TextPressure.tsx      # main RED TIDE heading
+    Waves.tsx             # landing background: two sine composites on a canvas
+    CountUp.tsx           # landing figures: counts up on first view, re-tweens when community records change
     BlurText.tsx          # landing copy: words blur into focus on their own scroll trigger
     HeroBackdrop.tsx      # landing hero backdrop: full-bleed WebGL panel, owns the
                            # reduced-motion/off-screen/lazy-load policy (see docs §15, §20)
@@ -282,12 +273,12 @@ src/
     micro-interactions.css  # button press-scale
     tide-intro.css        # splash keyframes: wave layers, glow, ripple, 115dvh exit
   pages/
-    Landing.tsx            # / -- pre-map landing (DecryptedText hero, Waves, CountUp)
+    Landing.tsx            # / -- pre-map landing (TextPressure heading, DecryptedText, Waves, CountUp)
     MapPage.tsx             # /map public view (lazy-loaded)
     Admin.tsx               # /admin review dashboard
 ```
 
-**Split suggestion:** one developer owns `Map.tsx` / `MapPage.tsx` / `StatusPanel.tsx`; the other owns `ReportForm.tsx` / `Admin.tsx` / `AdminGate.tsx` / `ReportCard.tsx`. `store.ts`, `types.ts` and `status.ts` are the shared contract — change them together.
+**Split suggestion:** one developer owns `Map.tsx` / `MapPage.tsx` / `ZoneDrawer.tsx`; the other owns `ReportForm.tsx` / `Admin.tsx` / `AdminGate.tsx` / `ReportCard.tsx`. `store.ts`, `types.ts` and `status.ts` are the shared contract — change them together.
 
 ---
 
@@ -320,16 +311,18 @@ src/
 
 Any static host works — `npm run build` produces `dist/`.
 
-**Netlify (production)** — build command `npm run build`, publish directory `dist`. `public/_redirects` handles the SPA fallback. Production deploys from `main`. Set the `VITE_*` variables under *Site configuration → Environment variables*, then trigger a deploy, because values are read at build time.
+**Vercel (production)** — [red-tide-ppc.vercel.app](https://red-tide-ppc.vercel.app), deployed from `main` with `npm run build` and output `dist`. `vercel.json` supplies the SPA fallback while excluding `/api/` routes. Set public Firebase/Cloudinary build variables for the intended deployment environment; changing settings requires a rebuild.
 
-**Vercel (optional)** — `vercel.json` rewrites every path to `index.html` (needed so `/admin` survives a refresh). If you also connect a Vercel project, set the same `VITE_*` variables there for build and production, and enable Deployment Protection on preview URLs.
+**Current deployment observation (2026-10-10):** the served production bundle omits the five Firebase configuration variables and falls back to browser-local sample data. Visitors see **Sample data** beside community records and **Zones: Sample data · local records** on the map. Production hosting does not imply live or official data. This records the observed bundle, not access to the current Vercel settings dashboard; re-check after redeploying. Missing, incomplete or placeholder Firebase configuration selects sample data, and `VITE_USE_DEMO_BACKEND=true` can explicitly force it.
+
+**Netlify (alternative static host)** — the existing `public/_redirects` catch-all serves `index.html` for unmatched paths, including `/api/*` where no endpoint handles them. The repository's Vercel device function is not a Netlify function; provide an appropriate API backend/routing before using device ingestion there.
 
 Notes:
 
 - Env vars are baked in **at build time**. Changing them requires a redeploy.
 - Make sure the deployed Firestore rules are the ones in this repo, and restrict the unsigned Cloudinary preset for production.
 - Map tiles come from OpenStreetMap and need the visitor to be online.
-- Free tiers enforce limits by pausing. On Netlify's current Free plan, production deploys, bandwidth and requests all draw from one monthly credit pool, and a site that runs out is paused until the cycle resets. Every merge to `main` is a production deploy, so check *Usage and billing* before a burst of merges (see §18). Before pausing a site yourself, confirm the deploy log shows every stage (Initializing → Building → Deploying → Cleanup → Post-processing) as **Complete** — otherwise you can end up pausing mid-build on a stale or broken version without noticing. A **paused site serves nothing to visitors**, and new commits won't auto-deploy until you resume it.
+- Hosting quotas and pricing depend on provider and plan. Check the Vercel dashboard before relying on a production budget; Netlify credit estimates do not describe this deployment.
 
 ---
 
@@ -416,12 +409,12 @@ A toggleable **navigation-hazard layer** under the advisory zones: the boundary 
 npm test
 ```
 
-A growing suite across the following areas (see `docs/` for the browser-verification write-ups behind recent UI passes — the side-drawer map layout, header fade timing, hero full-bleed, coastal polygon accuracy):
+At the merge of #92 (2026-10-10), CI passed **489 tests in 58 files**. This is a recorded snapshot, not an automatically updated counter. The suite covers the following areas (see `docs/` for the browser-verification write-ups behind recent UI passes — the side-drawer map layout, header fade timing, hero full-bleed, coastal polygon accuracy):
 
-- **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's decrypted hero and live readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
+- **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's TextPressure heading and community-record readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
 - **`src/pages/mapPass.test.tsx`** (jsdom) — the six-item visual pass, DOM side: peek row content + hidden body, anchor cycling, the `zone-path` fill ramp, attribution, zoom-control placement, and the full report → approve loop.
 - **`src/components/Map.test.tsx`** (jsdom) — the production `zone-path` regression: the class lands on the path node in a single-pass render (no StrictMode double effect), `--selected` syncs from first mount onward, the fill ramp follows selection, and press feedback lights/releases the polygon.
-- **`src/components/SplashScreen.test.tsx`** (jsdom) — the first-visit intro: dismissal by Escape, the `prefers-reduced-motion` skip, the once-per-session `red-tide-ppc:splash:v1` key, scroll-lock and focus cleanup, and the fallback when browser storage is unavailable.
+- **`src/components/SplashScreen.test.tsx`** (jsdom) — the first-visit intro: dismissal by Escape, the `prefers-reduced-motion` skip, the persistent per-intro-version `red-tide-ppc:intro:v3` key, scroll-lock and focus cleanup, and the fallback when browser storage is unavailable.
 - **`src/store.test.ts`** — the real store against the real (in-memory) backend: seeded zones load `safe`; `submitReport` writes a pending report; short descriptions are refused; `approveReport` confirms the report **and** flips the zone to `advisory`; `rejectReport` leaves the zone untouched; manual revert to `safe` works; pending counts are right; the passcode gate only unlocks on an exact match.
 - **`src/lib/firestoreMapping.test.ts`** — the production-only mapping path: Timestamps, GeoPoints, unresolved `serverTimestamp()` values, malformed documents, and polygon values.
 - **`src/motion/sidePanelAnchors.test.ts`** — the drawers' snap arithmetic: offsets, clamping, velocity projection, flick gating against a mirrored (left-edge) drawer, and the tap-after-drag guard. (The bottom sheet's equivalent suite retired with the sheet.)
@@ -503,7 +496,7 @@ React 19 · TypeScript 5.9 · Vite 8 · React Router 7 · Zustand 5 · Motion 13
 
 ## 18. Running costs
 
-Everything this app depends on has a meaningful free tier. A small-city deployment — a few hundred unique visitors a month, a handful of reports a week — costs nothing, provided the hosting credits below are managed. The Netlify and Cloudinary figures were checked in October 2026; the Firebase and tile figures were not re-checked. Check each provider's pricing page before relying on any of them.
+Production hosting is Vercel. The provider allowances and cost examples below are estimates, not a verified bill or guarantee of a free deployment; check current plan limits before relying on them. Sample-data mode does not use Firestore or Cloudinary for its records.
 
 ---
 
@@ -542,17 +535,10 @@ Free, no API key, no account. OSM's tile servers are a public service — heavy 
 
 ---
 
-### Netlify (hosting)
+### Vercel (production hosting)
 
-Production runs on Netlify. On the current Free plan (accounts created after 4 September 2025), 300 credits per month are shared by production deploys, bandwidth and requests, with no overage option; a site that exhausts them is paused until the cycle resets. Mid-2026 rates: about 15 credits per production deploy and 20 credits per GB of bandwidth (sources disagree on the bandwidth rate; confirm it in your dashboard). Older accounts may still be on the legacy plan (100 GB bandwidth, 300 build minutes).
+Production uses Vercel. Current account quotas and billing were not verified for this README. Measure browser/network transfer in a deployed session; `npm run build` reports emitted asset sizes and gzip estimates, not actual full-page transfer. Netlify credits and deploy-cost estimates do not apply to this deployment.
 
-At about 1.5 MB per full page load (check the transfer size reported by `npm run build`), 1,000 first visits is roughly 1.5 GB, around 30 credits. Deploys are usually the larger cost: ten merges to `main` use about 150 credits. Batch small changes, and check *Usage and billing* before a busy week.
-
-### Vercel (optional)
-
-If you also host or preview on Vercel, check its current Hobby limits on vercel.com/pricing. They were not re-verified for this README.
-
----
 
 ### Summary
 
@@ -561,6 +547,6 @@ If you also host or preview on Vercel, check its current Hobby limits on vercel.
 | Firebase Firestore | ~850 daily active users | ~\$0.06–\$0.18 per 100k ops |
 | Cloudinary | 25 credits/month (about 25 GB of storage or bandwidth); no overage billing on Free | Plus plan, about \$89/month (verify) |
 | OpenStreetMap tiles | Community scale | \$0–\$25/month (CDN) |
-| Netlify hosting | 300 credits/month; each production deploy is about 15 credits | Personal or Pro plan (see pricing page) |
+| Vercel hosting | Check the project/account dashboard; allowance not verified here | Check the current Vercel plan |
 
-**Realistic total for a Puerto Princesa community deployment: \$0/month**, as long as deploy credits are managed. A paused site is a bigger risk than a bill.
+Actual costs depend on configuration, usage and current account limits. No production bill or zero-cost guarantee was verified for this README.
