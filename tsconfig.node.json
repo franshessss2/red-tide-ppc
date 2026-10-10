@@ -29,6 +29,8 @@
     "src/devices/model.ts",
     "src/types.ts",
     "src/data/zones.ts",
+    "src/data/team.ts",
+    "src/data/team.gate.test.ts",
     "src/lib/firestoreMapping.ts"
   ]
 }
