@@ -27,6 +27,9 @@ on:
 
 permissions:
   contents: read
+  # Only to post the measurement digest back to the PR, so the numbers outlive
+  # the artifact and can be read without downloading it.
+  pull-requests: write
 
 jobs:
   shots:
@@ -79,6 +82,21 @@ jobs:
       - name: Collect the height pass alongside the shots
         if: always()
         run: cp /tmp/landing-heights.json .cache/team-roster-shots/landing-heights-${GITHUB_SHA:0:7}-run${GITHUB_RUN_ID}.json || true
+
+      - name: Publish the measurements
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          summary=$(ls .cache/team-roster-shots/summary-*.md 2>/dev/null | head -1)
+          [ -z "$summary" ] && { echo "no summary produced"; exit 0; }
+          cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          pr=$(gh pr list --head "${GITHUB_REF_NAME}" --state open --json number -q '.[0].number')
+          if [ -n "$pr" ]; then
+            gh pr comment "$pr" --body-file "$summary"
+          else
+            echo "no open PR for ${GITHUB_REF_NAME}; summary left in the step summary only"
+          fi
 
       - name: Upload screenshots and measurements
         if: always()

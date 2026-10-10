@@ -169,6 +169,40 @@ const summary = { commit: sha, runId, baseURL, capturedAt: new Date().toISOStrin
 await writeFile(`${output}/measurements-${label}.json`, `${JSON.stringify(summary, null, 2)}\n`)
 console.log(JSON.stringify(summary, null, 2))
 
+// A markdown digest as well as the JSON: the workflow posts this to the PR, so
+// the numbers outlive the artifact (and are readable without downloading it).
+const md = [
+  `### Team strip capture — \`${sha.slice(0, 7)}\` · run [${runId}](https://github.com/${process.env.GITHUB_REPOSITORY ?? 'franshessss2/red-tide-ppc'}/actions/runs/${runId})`,
+  '',
+  'Captured against a build with `TEAM_SECTION_ENABLED` forced on for the measurement only; the committed flag stays `false`. The posters 404 by design until the real stills land, so the cards show the initials fallback.',
+  '',
+  '| viewport | document height | team strip | card heights | poster loaded |',
+  '| --- | --- | --- | --- | --- |',
+  ...results.map((r) => {
+    const g = r.geometry
+    return `| ${r.viewport} | ${g.documentHeight}px | ${g.teamHeight}px | ${g.cards.map((c) => `${c.height}px`).join(', ')} | ${g.cards.map((c) => (c.posterLoaded ? 'yes' : 'no')).join(', ')} |`
+  }),
+  '',
+  '**Role fit** (card pinned to each height; `clipped` = name/role ink outside the card box)',
+  '',
+  '| viewport | card height | entry | role | role lines | body scroll/client | clipped |',
+  '| --- | --- | --- | --- | --- | --- | --- |',
+  ...results.flatMap((r) =>
+    Object.entries(r.roleFit).flatMap(([height, cards]) =>
+      cards.map(
+        (c) =>
+          `| ${r.viewport} | ${height} | ${c.id} | ${c.role} | ${c.roleLines} | ${c.bodyScrollHeight}/${c.bodyClientHeight} | ${c.clipped ? '**YES**' : 'no'} |`,
+      ),
+    ),
+  ),
+  '',
+  `Page errors: ${results.flatMap((r) => r.errors).length === 0 ? 'none' : results.flatMap((r) => r.errors).join('; ')}`,
+  '',
+  `Screenshots (full page + strip, both viewports) are in artifact \`team-roster-shots-${sha}-run${runId}\`.`,
+  '',
+].join('\n')
+await writeFile(`${output}/summary-${label}.md`, `${md}\n`)
+
 const clipped = results.flatMap((result) =>
   Object.entries(result.roleFit).flatMap(([height, cards]) =>
     cards.filter((card) => card.clipped).map((card) => `${result.viewport} @${height} ${card.id}: "${card.role}"`),
