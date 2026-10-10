@@ -36,6 +36,8 @@ await mkdir(output, { recursive: true })
 
 const viewports = [
   { label: '390x844', width: 390, height: 844 },
+  { label: '360x740', width: 360, height: 740 },
+  { label: '844x390', width: 844, height: 390 },
   { label: '1440x900', width: 1440, height: 900 },
 ]
 /** The two card heights the phone CSS has used; both are checked for fit. */
@@ -54,10 +56,23 @@ try {
       deviceScaleFactor: 1,
     })
     await context.addInitScript(() => {
+      window.teamCLS = 0
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!entry.hadRecentInput) window.teamCLS += entry.value
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
       // Skip the first-visit intro reel (src/components/intro/introGate.ts).
       window.localStorage.setItem('red-tide-ppc:intro:v3', 'seen')
     })
     const page = await context.newPage()
+    if (viewport.width === 390) {
+      const session = await context.newCDPSession(page)
+      await session.send('Network.enable')
+      await session.send('Network.emulateNetworkConditions', {
+        offline: false, latency: 400, downloadThroughput: 1600000 / 8, uploadThroughput: 750000 / 8,
+      })
+    }
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
 
@@ -66,7 +81,36 @@ try {
     await page.evaluate(() => document.fonts.ready)
 
     const strip = page.locator('section.team')
+    const metrics = () => page.evaluate(() => {
+      const paint = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null
+      const resources = performance.getEntriesByType('resource')
+      const rect = (el) => {
+        const box = el.getBoundingClientRect()
+        return { x: box.x, y: box.y + scrollY, width: box.width, height: box.height }
+      }
+      return {
+        cls: window.teamCLS,
+        firstContentfulPaintMs: paint,
+        resourceTransferBytesStartedBeforeFCP: paint === null ? null : resources
+          .filter((entry) => entry.startTime <= paint).reduce((total, entry) => total + entry.transferSize, 0),
+        mediaRequests: resources.filter((entry) => entry.name.includes('/media/team/'))
+          .map((entry) => ({ url: entry.name, bytes: entry.transferSize, startTime: entry.startTime })),
+        otherSections: [...document.querySelectorAll('main section:not(.team),footer')]
+          .map((el) => ({ tag: el.tagName, id: el.id, className: el.className, ...rect(el) })),
+      }
+    })
+    const beforeScroll = await metrics()
     if ((await strip.count()) === 0) {
+      if (process.env.TEAM_SHOTS_DISABLED === '1') {
+        const documentHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+        const fullPath = `${output}/landing-${viewport.label}-${label}.png`
+        await page.screenshot({ path: fullPath, fullPage: true })
+        results.push({ viewport: viewport.label, commit: sha, runId, flag: false,
+          geometry: { documentHeight, teamHeight: null, cards: [] }, roleFit: {},
+          metrics: await metrics(), errors, shots: { fullPath } })
+        await context.close()
+        continue
+      }
       throw new Error(
         'No section.team in the DOM. The capture must run against a build with ' +
           'TEAM_SECTION_ENABLED forced on — see the workflow.',
@@ -134,22 +178,22 @@ try {
           const role = card.querySelector('.team-card__role')
           const name = card.querySelector('.team-card__name')
           const cardRect = card.getBoundingClientRect()
-          const roleRect = role.getBoundingClientRect()
-          const lineHeight = parseFloat(getComputedStyle(role).lineHeight) || 0
+          const roleRect = role?.getBoundingClientRect()
+          const lineHeight = role ? parseFloat(getComputedStyle(role).lineHeight) || 0 : 0
           return {
             id: card.getAttribute('data-team-card'),
             applicable,
             cardHeight: round(cardRect.height),
-            role: role.textContent,
-            roleHeight: round(roleRect.height),
+            role: role?.textContent ?? null,
+            roleHeight: roleRect ? round(roleRect.height) : 0,
             roleLines: lineHeight ? Math.round(roleRect.height / lineHeight) : null,
-            nameHeight: round(name.getBoundingClientRect().height),
+            nameHeight: name ? round(name.getBoundingClientRect().height) : 0,
             bodyScrollHeight: body.scrollHeight,
             bodyClientHeight: body.clientHeight,
             bodyOverflows: body.scrollHeight > body.clientHeight + 1,
-            roleBottomOverflowPx: round(Math.max(0, roleRect.bottom - cardRect.bottom)),
+            roleBottomOverflowPx: round(Math.max(0, (roleRect?.bottom ?? cardRect.bottom) - cardRect.bottom)),
             clipped:
-              body.scrollHeight > body.clientHeight + 1 || roleRect.bottom > cardRect.bottom + 1,
+              body.scrollHeight > body.clientHeight + 1 || (roleRect && roleRect.bottom > cardRect.bottom + 1),
           }
         })
         cards.forEach((card, index) => { card.style.cssText = previous[index] })
@@ -175,7 +219,8 @@ try {
     await page.waitForTimeout(400)
     await strip.screenshot({ path: stripPath })
 
-    results.push({ viewport: viewport.label, commit: sha, runId, geometry, roleFit, errors, shots: { fullPath, stripPath } })
+    results.push({ viewport: viewport.label, commit: sha, runId, flag: true, geometry, roleFit,
+      beforeScroll, metrics: await metrics(), errors, shots: { fullPath, stripPath } })
     await context.close()
   }
 } finally {
@@ -191,7 +236,7 @@ console.log(JSON.stringify(summary, null, 2))
 const md = [
   `### Team strip capture — \`${sha.slice(0, 7)}\` · run [${runId}](https://github.com/${process.env.GITHUB_REPOSITORY ?? 'franshessss2/red-tide-ppc'}/actions/runs/${runId})`,
   '',
-  'Captured against a build with `TEAM_SECTION_ENABLED` forced on for the measurement only; the committed flag stays `false`. The posters 404 by design until the real stills land, so the cards show the initials fallback.',
+  'Captured against a build with `TEAM_SECTION_ENABLED` forced on for the measurement only; the committed flag stays `false`. Empty slots render no name, role or media; no placeholder people or missing-media requests are generated.',
   '',
   '| viewport | document height | team strip | card heights | poster loaded |',
   '| --- | --- | --- | --- | --- |',

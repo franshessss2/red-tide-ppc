@@ -8,6 +8,23 @@ import {
   TeamSection,
 } from './TeamSection'
 
+// File-scoped media fixtures: no shipped module imports these synthetic values.
+vi.mock('../data/team', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../data/team')>()
+  return {
+    ...actual,
+    TEAM_MEMBERS: ['A', 'B', 'C'].map((letter, index) => ({
+      id: `test-member-${letter}`,
+      name: `Test Member ${letter}`,
+      role: `Test Role ${letter}`,
+      initials: `0${index + 1}`,
+      posterSrc: `/test-only/team/member-${letter}.jpg`,
+      videoSrc: `/test-only/team/member-${letter}.mp4`,
+      placeholder: true,
+    })),
+  }
+})
+
 /**
  * The three media rules for the landing team strip, asserted as behaviour:
  *
@@ -82,6 +99,7 @@ function firstFrame(video: HTMLVideoElement) {
 }
 
 beforeEach(() => {
+  vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
   vi.useFakeTimers()
   observers = []
   reducedMotion = false

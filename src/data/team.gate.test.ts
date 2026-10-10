@@ -84,25 +84,14 @@ function mp4Duration(path: string): number | null {
 }
 
 describe('team roster shape', () => {
-  it('is exactly the three agreed entries, in order, with the agreed roles', () => {
-    expect(TEAM_MEMBERS.map((member) => member.role)).toEqual([
-      'Creator',
-      'Front-end and back-end developer',
-      'Tester',
-    ])
+  it('keeps exactly three empty roster slots', () => {
+    expect(TEAM_MEMBERS).toHaveLength(3)
+    expect(TEAM_MEMBERS.map((member) => member.role)).toEqual(['', '', ''])
   })
 
-  it('points each entry at its own numbered clip and poster', () => {
-    expect(TEAM_MEMBERS.map((member) => member.posterSrc)).toEqual([
-      '/media/team/member-01.jpg',
-      '/media/team/member-02.jpg',
-      '/media/team/member-03.jpg',
-    ])
-    expect(TEAM_MEMBERS.map((member) => member.videoSrc)).toEqual([
-      '/media/team/member-01.mp4',
-      '/media/team/member-02.mp4',
-      '/media/team/member-03.mp4',
-    ])
+  it('leaves every poster and clip path empty until supplied', () => {
+    expect(TEAM_MEMBERS.map((member) => member.posterSrc)).toEqual(['', '', ''])
+    expect(TEAM_MEMBERS.map((member) => member.videoSrc)).toEqual(['', '', ''])
   })
 
   it('never leaves a stand-in name on an entry that claims to be real', () => {
@@ -142,7 +131,7 @@ describe('TEAM_SECTION_ENABLED gate', () => {
     if (TEAM_SECTION_ENABLED) {
       expect(stillSample, 'enabled while these assets are still placeholders').toEqual([])
     } else {
-      expect(stillSample.length).toBeGreaterThan(0)
+      expect(TEAM_PLACEHOLDER_ASSETS.length).toBeGreaterThan(0)
     }
   })
 
@@ -202,5 +191,22 @@ describe('team media budgets', () => {
       if (bytes > POSTER_MAX_BYTES) breaches.push({ src, detail: `${bytes} bytes > ${POSTER_MAX_BYTES}` })
     }
     report(breaches, 'posters')
+  })
+})
+
+describe('real shipped roster readiness (never mocked)', () => {
+  it('keeps names, roles and initials empty with placeholder markings preserved', () => {
+    expect(TEAM_MEMBERS.map(({ name, role, initials, placeholder }) => ({ name, role, initials, placeholder })))
+      .toEqual(Array.from({ length: 3 }, () => ({ name: '', role: '', initials: '', placeholder: true })))
+  })
+
+  it('cannot enable a roster with an empty required field or missing referenced file', () => {
+    const incomplete = TEAM_MEMBERS.flatMap((member) =>
+      (['name', 'role', 'posterSrc', 'videoSrc'] as const)
+        .filter((field) => !member[field]?.trim()).map((field) => `${member.id}.${field}`))
+    const absent = missing(teamAssetPaths())
+    if (TEAM_SECTION_ENABLED) {
+      expect({ incomplete, absent }, 'enabled with blank fields or missing files').toEqual({ incomplete: [], absent: [] })
+    }
   })
 })
