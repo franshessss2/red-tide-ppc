@@ -9,50 +9,15 @@ import { getFirestore, type Firestore } from 'firebase/firestore'
  * `firestore.rules`.
  */
 
-export interface FirebaseConfig {
-  apiKey: string
-  authDomain: string
-  projectId: string
-  messagingSenderId: string
-  appId: string
-}
+export { checkFirebaseConfig } from './firebaseConfig'
+import { checkFirebaseConfig, type FirebaseConfig } from './firebaseConfig'
+export type { FirebaseConfig } from './firebaseConfig'
 
 const rawEnv = import.meta.env as Record<string, string | undefined>
 
-function trimmed(value: string | undefined): string | null {
-  if (typeof value !== 'string') return null
-  const v = value.trim()
-  return v.length > 0 ? v : null
-}
-
-/** Placeholders shipped in `.env.example` — treat them as "not configured". */
-const PLACEHOLDERS = new Set([
-  'AIza...',
-  'your-project.firebaseapp.com',
-  'your-project',
-  '000000000000',
-  '1:000000000000:web:0000000000000000',
-])
-
-/**
- * Reads the Firebase web config out of `import.meta.env`.
- * Returns `null` when any required key is missing or still a placeholder, so
- * the app can fall back to demo mode instead of throwing at boot.
- */
+/** Returns null for missing, blank or placeholder values, as before. */
 export function readFirebaseConfig(): FirebaseConfig | null {
-  const candidate: Record<keyof FirebaseConfig, string | null> = {
-    apiKey: trimmed(rawEnv.VITE_FIREBASE_API_KEY),
-    authDomain: trimmed(rawEnv.VITE_FIREBASE_AUTH_DOMAIN),
-    projectId: trimmed(rawEnv.VITE_FIREBASE_PROJECT_ID),
-    messagingSenderId: trimmed(rawEnv.VITE_FIREBASE_MESSAGING_SENDER_ID),
-    appId: trimmed(rawEnv.VITE_FIREBASE_APP_ID),
-  }
-
-  for (const value of Object.values(candidate)) {
-    if (value === null || PLACEHOLDERS.has(value)) return null
-  }
-
-  return candidate as unknown as FirebaseConfig
+  return checkFirebaseConfig(rawEnv).config
 }
 
 /** Set `VITE_USE_DEMO_BACKEND=true` to force demo mode even with keys present. */

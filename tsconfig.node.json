@@ -31,6 +31,7 @@
     "src/data/zones.ts",
     "src/data/team.ts",
     "src/data/team.gate.test.ts",
-    "src/lib/firestoreMapping.ts"
+    "src/lib/firestoreMapping.ts",
+    "src/lib/firebaseConfig.ts"
   ]
 }
