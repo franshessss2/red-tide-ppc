@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TEAM_MEMBERS } from '../data/team'
+import { TEAM_MEMBERS, TEAM_SECTION_ENABLED } from '../data/team'
 import {
   TEAM_VIDEO_CROSSFADE_MS,
   TEAM_VIDEO_STALL_MS,
@@ -14,6 +14,10 @@ import {
  *  1. no `<video>` in the DOM until its card is ~50% in view,
  *  2. at most one `<video>` mounted — i.e. decoding — at any moment,
  *  3. the clip unmounts once its closing crossfade has finished.
+ *
+ * The policy tests render with `enabled` set so they exercise the strip; the
+ * shipped default (`TEAM_SECTION_ENABLED`) is off while the roster holds
+ * placeholders, which has its own test below.
  *
  * jsdom has no media pipeline, so `play` is stubbed and the first frame is
  * delivered by hand with a `loadeddata` event. The fake observer only reports
@@ -114,9 +118,26 @@ function endCurrentClip() {
   tick(TEAM_VIDEO_CROSSFADE_MS)
 }
 
+describe('TeamSection flag', () => {
+  it('is off while the roster still holds placeholders, and renders nothing', () => {
+    expect(TEAM_SECTION_ENABLED).toBe(false)
+    expect(TEAM_MEMBERS.some((member) => /Team member \d\d/.test(member.name))).toBe(true)
+
+    const { container } = render(<TeamSection />)
+    expect(container.querySelector('section.team')).toBeNull()
+    expect(container.querySelector('[data-team-card]')).toBeNull()
+    expect(videos()).toHaveLength(0)
+  })
+
+  it('renders the strip only when explicitly enabled', () => {
+    render(<TeamSection enabled />)
+    expect(document.querySelectorAll('[data-team-card]')).toHaveLength(TEAM_MEMBERS.length)
+  })
+})
+
 describe('TeamSection media policy', () => {
   it('renders three cards, watches each of them, and mounts no video yet', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     const rendered = cards()
     expect(rendered).toHaveLength(TEAM_MEMBERS.length)
     expect(observers.flatMap((observer) => [...observer.targets]).filter((element) => rendered.includes(element as HTMLElement)))
@@ -127,7 +148,7 @@ describe('TeamSection media policy', () => {
   })
 
   it('mounts no decoder until the card is at least half in view', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     const card = cards()[0]!
 
     setVisible(card, 0.49)
@@ -138,12 +159,13 @@ describe('TeamSection media policy', () => {
     expect(videos()[0]!.getAttribute('src')).toBe(TEAM_MEMBERS[0]!.videoSrc)
     expect(videos()[0]!.muted).toBe(true)
     expect(videos()[0]!.hasAttribute('playsinline')).toBe(true)
+    expect(videos()[0]!.getAttribute('preload')).toBe('auto')
     // Decorative: the name and role in the card body carry the content.
     expect(videos()[0]!.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('keeps at most one video mounted while every card is in view', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     setAllVisible(1)
     expect(videos()).toHaveLength(1)
     expect(videos()[0]!.getAttribute('src')).toBe(TEAM_MEMBERS[0]!.videoSrc)
@@ -164,7 +186,7 @@ describe('TeamSection media policy', () => {
   })
 
   it('crossfades the clip in, then unmounts it after the crossfade back', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     setVisible(cards()[0]!, 1)
     const video = videos()[0]!
     expect(video.className).not.toContain('is-revealed')
@@ -188,7 +210,7 @@ describe('TeamSection media policy', () => {
   })
 
   it('releases the decoder when the card scrolls away mid-clip', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     const first = cards()[0]!
     setVisible(first, 1)
     expect(videos()).toHaveLength(1)
@@ -204,7 +226,7 @@ describe('TeamSection media policy', () => {
   })
 
   it('drops the source on unmount so the decoder is actually freed', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     setVisible(cards()[0]!, 1)
     const video = videos()[0]!
     setVisible(cards()[0]!, 0)
@@ -214,14 +236,14 @@ describe('TeamSection media policy', () => {
 
   it('never mounts a clip under reduced motion', () => {
     reducedMotion = true
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     setAllVisible(1)
     expect(videos()).toHaveLength(0)
     expect(document.querySelectorAll('.team-card__poster')).toHaveLength(3)
   })
 
   it('keeps the poster and hands the permit on when a clip fails or stalls', () => {
-    render(<TeamSection />)
+    render(<TeamSection enabled />)
     // Only two cards are ever in view here, so the strip can go quiet.
     setVisible(cards()[0]!, 1)
     setVisible(cards()[1]!, 1)
@@ -238,7 +260,7 @@ describe('TeamSection media policy', () => {
   })
 
   it('mounts nothing for a member without a clip', () => {
-    render(<TeamSection members={[{ ...TEAM_MEMBERS[0]!, id: 'still', videoSrc: undefined }]} />)
+    render(<TeamSection enabled members={[{ ...TEAM_MEMBERS[0]!, id: 'still', videoSrc: undefined }]} />)
     setVisible(cards()[0]!, 1)
     tick(TEAM_VIDEO_STALL_MS)
     expect(videos()).toHaveLength(0)

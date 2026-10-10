@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { TEAM_MEMBERS, type TeamMember } from '../data/team'
+import { TEAM_MEMBERS, TEAM_SECTION_ENABLED, type TeamMember } from '../data/team'
 import { useReducedMotion } from '../motion/preferences'
 import { createVideoSlot, type VideoSlot, type VideoSlotToken } from '../motion/videoSlot'
 import { TextReveal } from './TextReveal'
@@ -35,10 +35,20 @@ export const TEAM_VIDEO_STALL_MS = 4000
 /** Hard ceiling on how long one card may hold the single decoder. */
 export const TEAM_VIDEO_MAX_MS = 12000
 
-export function TeamSection({ members = TEAM_MEMBERS }: { members?: readonly TeamMember[] } = {}) {
+export function TeamSection({
+  members = TEAM_MEMBERS,
+  enabled = TEAM_SECTION_ENABLED,
+}: {
+  members?: readonly TeamMember[]
+  /** Single on/off switch; defaults to `TEAM_SECTION_ENABLED` in the data module. */
+  enabled?: boolean
+} = {}) {
   const reduceMotion = useReducedMotion()
   // One permit for the whole strip. This is the "one decoder at a time" rule.
   const slot = useMemo(() => createVideoSlot(1), [])
+
+  // While the roster is still placeholders the strip renders nothing at all.
+  if (!enabled) return null
 
   return (
     <section className="team" aria-labelledby="team-title">

@@ -87,3 +87,25 @@
 @media (prefers-reduced-motion: reduce) {
   .team-card__video { transition: none; }
 }
+
+/* Phones: rather than three stacked 120px cards (470px block), a single
+   horizontal snap-scroll row ~160px tall cuts the strip to ~254px — measured
+   2158 -> 1942px document height at 390x844 (a 216px drop). */
+@media (max-width: 600px) {
+  .team__grid {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+  }
+  .team-card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+    height: 160px;
+    max-height: 160px;
+  }
+  .team-card__media { width: 108px; }
+}

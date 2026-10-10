@@ -5,6 +5,10 @@
  * them (and, if you like, the clip files they point at) with the real team;
  * nothing else in the section needs to change.
  *
+ * While the roster is still placeholders, `TEAM_SECTION_ENABLED` stays `false`
+ * and `<TeamSection />` renders nothing. Flip it to `true` once real names (and
+ * clips, if desired) are in — that single constant is the on/off switch.
+ *
  * `videoSrc` is optional on purpose: a member with no clip keeps the still
  * poster, and the section never mounts a decoder for them. Clips live in
  * `public/media/team/` and are played under the single-decoder policy in
@@ -20,6 +24,13 @@ export interface TeamMember {
   initials: string
   videoSrc?: string
 }
+
+/**
+ * Single on/off switch for the whole strip. `false` while `TEAM_MEMBERS` below
+ * still contains placeholder entries; the landing then renders nothing where
+ * the section would be. Set `true` once the real roster replaces them.
+ */
+export const TEAM_SECTION_ENABLED = false
 
 export const TEAM_MEMBERS: readonly TeamMember[] = [
   {
