@@ -115,10 +115,17 @@ try {
       page.evaluate((height) => {
         const round = (n) => Math.round(n * 100) / 100
         const cards = [...document.querySelectorAll('[data-team-card]')]
+        // 120px and 160px are the PHONE card heights. The ≥768px layout is a
+        // column with a 140px media block on top, so pinning it to either
+        // value would overflow by construction and say nothing about the text.
+        // There the card is measured at its natural height instead.
+        const applicable = cards.every((card) => getComputedStyle(card).flexDirection === 'row')
         const previous = cards.map((card) => card.style.cssText)
-        for (const card of cards) {
-          card.style.height = `${height}px`
-          card.style.maxHeight = `${height}px`
+        if (applicable) {
+          for (const card of cards) {
+            card.style.height = `${height}px`
+            card.style.maxHeight = `${height}px`
+          }
         }
         // Force layout before measuring.
         void document.body.offsetHeight
@@ -131,6 +138,8 @@ try {
           const lineHeight = parseFloat(getComputedStyle(role).lineHeight) || 0
           return {
             id: card.getAttribute('data-team-card'),
+            applicable,
+            cardHeight: round(cardRect.height),
             role: role.textContent,
             roleHeight: round(roleRect.height),
             roleLines: lineHeight ? Math.round(roleRect.height / lineHeight) : null,
@@ -149,7 +158,15 @@ try {
       }, cardHeight)
 
     const roleFit = {}
-    for (const height of CARD_HEIGHTS) roleFit[`${height}px`] = await fitAt(height)
+    for (const height of CARD_HEIGHTS) {
+      const measured = await fitAt(height)
+      // Desktop ignores the forced height, so record it once, not per height.
+      if (measured.every((card) => !card.applicable)) {
+        roleFit.natural = measured
+        break
+      }
+      roleFit[`${height}px`] = measured
+    }
 
     const fullPath = `${output}/landing-${viewport.label}-${label}.png`
     const stripPath = `${output}/team-strip-${viewport.label}-${label}.png`
@@ -185,13 +202,16 @@ const md = [
   '',
   '**Role fit** (card pinned to each height; `clipped` = name/role ink outside the card box)',
   '',
+  '`120px` and `160px` are the phone card heights. At >=768px the card is a column with a 140px media block on top, so those heights do not apply there and the card is measured at its natural height instead.',
+  '',
   '| viewport | card height | entry | role | role lines | body scroll/client | clipped |',
   '| --- | --- | --- | --- | --- | --- | --- |',
   ...results.flatMap((r) =>
     Object.entries(r.roleFit).flatMap(([height, cards]) =>
-      cards.map(
-        (c) =>
-          `| ${r.viewport} | ${height} | ${c.id} | ${c.role} | ${c.roleLines} | ${c.bodyScrollHeight}/${c.bodyClientHeight} | ${c.clipped ? '**YES**' : 'no'} |`,
+      cards.map((c) =>
+        c.applicable
+          ? `| ${r.viewport} | ${height} | ${c.id} | ${c.role} | ${c.roleLines} | ${c.bodyScrollHeight}/${c.bodyClientHeight} | ${c.clipped ? '**YES**' : 'no'} |`
+          : `| ${r.viewport} | n/a (${c.cardHeight}px natural) | ${c.id} | ${c.role} | ${c.roleLines} | ${c.bodyScrollHeight}/${c.bodyClientHeight} | ${c.clipped ? '**YES**' : 'no'} |`,
       ),
     ),
   ),
@@ -205,10 +225,12 @@ await writeFile(`${output}/summary-${label}.md`, `${md}\n`)
 
 const clipped = results.flatMap((result) =>
   Object.entries(result.roleFit).flatMap(([height, cards]) =>
-    cards.filter((card) => card.clipped).map((card) => `${result.viewport} @${height} ${card.id}: "${card.role}"`),
+    cards
+      .filter((card) => card.applicable && card.clipped)
+      .map((card) => `${result.viewport} @${height} ${card.id}: "${card.role}"`),
   ),
 )
-console.log(clipped.length === 0 ? '\nrole fit: OK at 120px and 160px, both viewports' : `\nrole fit: CLIPPED\n${clipped.join('\n')}`)
+console.log(clipped.length === 0 ? '\nrole fit: OK at 120px and 160px (phone layout), no clipping' : `\nrole fit: CLIPPED\n${clipped.join('\n')}`)
 const pageErrors = results.flatMap((result) => result.errors)
 if (pageErrors.length > 0) {
   console.error(`\npage errors:\n${pageErrors.join('\n')}`)
