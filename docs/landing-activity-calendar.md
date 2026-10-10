@@ -1,5 +1,27 @@
 # Landing activity calendar
 
+> **Status — 2026-10-10:** this section is **not rendered by the Landing page any
+> more**. It was swapped for the compact "Team" strip (see
+> `docs/landing-team-section.md`), but every piece of the calendar was kept in
+> the repo so it can be brought back unchanged.
+>
+> **Files left orphaned** (present, tested, but no longer imported by the page):
+>
+> - `src/components/ui/git-hub-calendar.tsx` — the `GitHubCalendar` component
+> - `src/components/ui/git-hub-calendar.test.tsx` — its 3 unit tests (still run and pass)
+> - `src/lib/reportActivity.ts` — `reportActivity`, `activityWeeks`, `manilaDate`
+> - `src/lib/reportActivity.test.ts` — its 3 unit tests (still run and pass)
+> - `src/styles/activity-calendar.css` — scoped styles (imported by the component)
+>
+> **Re-mount point:** in `src/pages/Landing.tsx`, inside `<main>`, at the spot
+> now occupied by `<TeamSection />` — directly above `<footer>`. Re-adding
+> `import { GitHubCalendar } from '../components/ui/git-hub-calendar'`,
+> `import { manilaDate, reportActivity } from '../lib/reportActivity'`, the
+> `activityNow` state/timer and the `activity` memo, and replacing `<TeamSection />`
+> with the `<section className="report-activity">…</section>` block from git
+> history, restores it exactly as documented below. The removed block is in
+> commit history; no component, data or test code was deleted.
+
 The standalone **Report activity** section sits below the explanatory content and above the footer. Desktop places its short introduction beside the chart; phones stack them with separate gutters. It does not compete with the hero or the coastal status summary.
 
 Installed skill: `bs-data-visualization-activity-calendar` version **1.0.1**, supplied by the user as a ZIP archive. Source and instructions are retained in `.agents/skills/bs-data-visualization-activity-calendar`. Skillry's service CLI could not store an authenticated session on this Linux workspace; the provided archive was installed locally without importing credentials.
