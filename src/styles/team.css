@@ -1,0 +1,111 @@
+/* ===========================================================================
+   Landing "Team" strip.
+
+   It sits where the report-activity calendar used to be, directly above the
+   footer, and it has to fit in that footprint: the landing page must not get
+   any taller than it was with the calendar.
+
+     phones   — one card per row, capped at 120px tall each (3 cards ≈ 380px)
+     ≥768px   — a single row of three cards, still shorter than the calendar
+
+   Media policy lives in `TeamSection.tsx`: nothing is mounted until the card
+   is half in view, one decoder at a time, unmounted after the crossfade.
+   =========================================================================== */
+.team { margin-top: 64px; }
+.team__header { max-width: 46rem; }
+.team__header h2 { margin: 0; font-size: 18px; font-weight: 600; color: var(--color-paper); }
+.team__header p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--color-muted); }
+.team__grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+
+.team-card {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-ink-2);
+}
+.team-card__media {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #16302a 0%, #0a0d0c 58%, #1b1408 100%);
+}
+/* The poster is always in the DOM: it is what the video crossfades over, and
+   what is left behind once the video unmounts. */
+.team-card__poster {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--color-accent-dim);
+}
+.team-card__video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 380ms ease;
+  pointer-events: none;
+}
+.team-card__video.is-revealed { opacity: 1; }
+.team-card__video.is-leaving { opacity: 0; }
+.team-card__body { min-width: 0; padding: 12px 14px 12px 0; }
+.team-card__name { margin: 0; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--color-paper); }
+.team-card__role { margin: 3px 0 0; font-size: 11px; line-height: 1.35; color: var(--color-accent-dim); }
+.team-card__detail { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--color-muted); }
+
+/* Phones: three stacked cards, 120px each including the hairline border. */
+@media (max-width: 600px) {
+  .team { margin-top: 48px; }
+  .team-card { height: 120px; max-height: 120px; }
+  .team-card__media { width: 88px; }
+  .team-card__body { padding: 11px 12px 11px 0; }
+  .team-card__detail { margin-top: 4px; }
+}
+
+/* Desktop: a single row of three, media on top. Fixed media height keeps the
+   strip's total height independent of the container width. */
+@media (min-width: 768px) {
+  .team__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .team-card { flex-direction: column; gap: 0; }
+  .team-card__media { width: 100%; height: 140px; }
+  .team-card__body { padding: 12px 14px 14px; }
+  .team-card__name { font-size: 15px; }
+  .team-card__role { font-size: 12px; }
+  .team-card__detail { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-card__video { transition: none; }
+}
+
+/* Phones: rather than three stacked 120px cards (470px block), a single
+   horizontal snap-scroll row ~160px tall cuts the strip to ~254px — measured
+   2158 -> 1942px document height at 390x844 (a 216px drop). */
+@media (max-width: 600px) {
+  .team__grid {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+  }
+  .team-card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+    height: 160px;
+    max-height: 160px;
+  }
+  .team-card__media { width: 108px; }
+}
