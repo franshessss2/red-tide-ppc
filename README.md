@@ -121,6 +121,12 @@ VITE_ADMIN_PASSCODE=change-me
 
 Restart an env-configured `npx vite` run after editing `.env`, or rebuild before preview/deployment. `npm run dev` deliberately forces demo mode and ignores env files.
 
+### Optional Firebase build guard
+
+Set `VITE_REQUIRE_FIREBASE=true` in the build environment to make `npm run build` fail when any of `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID` or `VITE_FIREBASE_APP_ID` is missing, blank or a shipped placeholder. The error names every invalid variable without printing values. Vite loads the selected mode's env files and build-process variables; changing deployed settings requires a rebuild.
+
+Leave the flag unset for the existing preview/demo behavior. Development serving is unaffected. This checks configuration completeness, not credential validity or server connectivity; it does not override `VITE_USE_DEMO_BACKEND=true`.
+
 ### 4.3 Configure Cloudinary photo uploads
 
 1. Create a free account at [Cloudinary](https://cloudinary.com/users/register_free).
