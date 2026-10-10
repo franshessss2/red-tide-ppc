@@ -24,5 +24,8 @@
     "noUncheckedSideEffectImports": true,
     "composite": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Gate tests read the repository off disk (node:fs), so they belong to the
+  // node project — this one is DOM-free and typechecked by tsconfig.node.json.
+  "exclude": ["src/**/*.gate.test.ts"]
 }

@@ -121,7 +121,9 @@ function endCurrentClip() {
 describe('TeamSection flag', () => {
   it('is off while the roster still holds placeholders, and renders nothing', () => {
     expect(TEAM_SECTION_ENABLED).toBe(false)
-    expect(TEAM_MEMBERS.some((member) => /Team member \d\d/.test(member.name))).toBe(true)
+    // The marking, not the name text, is what the gate reads — see
+    // src/data/team.gate.test.ts.
+    expect(TEAM_MEMBERS.some((member) => member.placeholder)).toBe(true)
 
     const { container } = render(<TeamSection />)
     expect(container.querySelector('section.team')).toBeNull()
@@ -264,6 +266,40 @@ describe('TeamSection media policy', () => {
     setVisible(cards()[0]!, 1)
     tick(TEAM_VIDEO_STALL_MS)
     expect(videos()).toHaveLength(0)
+    expect(document.querySelector('.team-card__poster')!.textContent).toBe('01')
+  })
+})
+
+describe('TeamSection poster still', () => {
+  const images = () => [...document.querySelectorAll<HTMLImageElement>('.team-card__poster-image')]
+
+  it('shows each card its own still, before anything decodes', () => {
+    render(<TeamSection enabled />)
+    expect(videos()).toHaveLength(0)
+    expect(images().map((image) => image.getAttribute('src')))
+      .toEqual(TEAM_MEMBERS.map((member) => member.posterSrc))
+    // Decorative: the name and role carry the content.
+    expect(images()[0]!.getAttribute('alt')).toBe('')
+    expect(images()[0]!.getAttribute('loading')).toBe('lazy')
+  })
+
+  it('hands the same still to the clip, so the crossfade has no gap', () => {
+    render(<TeamSection enabled />)
+    setVisible(cards()[0]!, 1)
+    expect(videos()[0]!.getAttribute('poster')).toBe(TEAM_MEMBERS[0]!.posterSrc)
+  })
+
+  it('falls back to the initials when the still is missing', () => {
+    render(<TeamSection enabled />)
+    const image = images()[0]!
+    act(() => { fireEvent.error(image) })
+    expect(images()).toHaveLength(TEAM_MEMBERS.length - 1)
+    expect(document.querySelectorAll('.team-card__poster')[0]!.textContent).toBe('01')
+  })
+
+  it('renders no still for a member without one', () => {
+    render(<TeamSection enabled members={[{ ...TEAM_MEMBERS[0]!, id: 'bare', posterSrc: undefined }]} />)
+    expect(images()).toHaveLength(0)
     expect(document.querySelector('.team-card__poster')!.textContent).toBe('01')
   })
 })

@@ -84,6 +84,9 @@ function TeamCard({
   const [inView, setInView] = useState(false)
   const [permitted, setPermitted] = useState(false)
   const [settled, setSettled] = useState(false)
+  // A missing or broken still falls back to the initials rather than the
+  // browser's broken-image glyph.
+  const [posterFailed, setPosterFailed] = useState(false)
 
   // Rule 1 — the card has to be about half on screen before a decoder may be
   // requested. `inView` tracks the current crossing, so scrolling away mid-clip
@@ -127,13 +130,27 @@ function TeamCard({
   return (
     <li ref={cardRef} className="team-card" data-team-card={member.id}>
       <div className="team-card__media" aria-hidden="true">
+        {/* The initials sit underneath as the always-present fallback: they
+            carry the card before the still loads, and stay if it 404s. */}
         <span className="team-card__poster">{member.initials}</span>
-        {showVideo && <TeamVideo src={member.videoSrc!} onSettled={handleSettled} />}
+        {member.posterSrc && !posterFailed && (
+          <img
+            className="team-card__poster-image"
+            src={member.posterSrc}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={() => setPosterFailed(true)}
+          />
+        )}
+        {showVideo && (
+          <TeamVideo src={member.videoSrc!} poster={member.posterSrc} onSettled={handleSettled} />
+        )}
       </div>
       <div className="team-card__body">
         <h3 className="team-card__name">{member.name}</h3>
         <p className="team-card__role">{member.role}</p>
-        <p className="team-card__detail">{member.detail}</p>
       </div>
     </li>
   )
@@ -143,7 +160,7 @@ function TeamCard({
  * One clip, one decoder, one play. Mounted only while its card holds the
  * shared permit, and unmounted by its parent once the closing crossfade ends.
  */
-function TeamVideo({ src, onSettled }: { src: string; onSettled: () => void }) {
+function TeamVideo({ src, poster, onSettled }: { src: string; poster?: string; onSettled: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [revealed, setRevealed] = useState(false)
   const [leaving, setLeaving] = useState(false)
@@ -200,6 +217,7 @@ function TeamVideo({ src, onSettled }: { src: string; onSettled: () => void }) {
       ref={videoRef}
       className={`team-card__video${leaving ? ' is-leaving' : revealed ? ' is-revealed' : ''}`}
       src={src}
+      poster={poster}
       muted
       playsInline
       preload="auto"

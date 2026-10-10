@@ -1,0 +1,90 @@
+# Landing screenshots + height/fit measurements for the team strip.
+#
+# The dev sandbox has no browser and cannot reach any browser CDN (egress is
+# blocked), so — like inlet-shots.yml — the capture runs here, on a runner.
+#
+# The shipped flag is OFF: the roster still holds placeholder names and the
+# three posters are not in the repository yet. A capture of a disabled section
+# would be a blank page, so this job forces TEAM_SECTION_ENABLED on in the
+# working copy for the build it measures, and never commits that edit. The
+# posters are expected to 404 in these shots — the initials fallback showing
+# through is the correct, documented behaviour until the real stills land.
+#
+# Artifacts are named with the commit SHA and the run ID so a screenshot can
+# always be traced back to the exact build it came from.
+#
+# Only runs when the capture script or this workflow changes, so it stays
+# dormant otherwise. It never touches src/ on the branch.
+
+name: team roster shots
+
+on:
+  push:
+    paths:
+      - 'scripts/team-roster-shots.mjs'
+      - '.github/workflows/team-roster-shots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    name: Capture landing at 390x844 and 1440x900
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: PUPPETEER_SKIP_DOWNLOAD=1 npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Enable the strip for this capture only (not committed)
+        run: |
+          sed -i 's/^export const TEAM_SECTION_ENABLED = false$/export const TEAM_SECTION_ENABLED = true/' src/data/team.ts
+          grep -n '^export const TEAM_SECTION_ENABLED' src/data/team.ts
+          echo "--- measurement-only diff, discarded with the runner ---"
+          git --no-pager diff --stat
+
+      - name: Build
+        run: npm run build
+
+      - name: Serve the build
+        run: |
+          npx vite preview --port 4173 --strictPort --host 127.0.0.1 &>/tmp/preview.log &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4173/ >/dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:4173/ >/dev/null
+
+      - name: Landing document height
+        run: node scripts/landing-height-pass.mjs http://127.0.0.1:4173 | tee /tmp/landing-heights.json
+
+      - name: Team strip shots and role fit
+        env:
+          TEAM_SHOTS_OUTPUT_DIR: .cache/team-roster-shots
+        run: node scripts/team-roster-shots.mjs http://127.0.0.1:4173
+
+      - name: Collect the height pass alongside the shots
+        if: always()
+        run: cp /tmp/landing-heights.json .cache/team-roster-shots/landing-heights-${GITHUB_SHA:0:7}-run${GITHUB_RUN_ID}.json || true
+
+      - name: Upload screenshots and measurements
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: team-roster-shots-${{ github.sha }}-run${{ github.run_id }}
+          path: .cache/team-roster-shots
+          retention-days: 14
+          if-no-files-found: error
