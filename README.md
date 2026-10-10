@@ -8,7 +8,7 @@ A public map of coastal zones colour-coded by advisory status, an anonymous way 
 For the school presentation, see [Presentation review](docs/presentation-review.md).
 For the optional virtual ESP32, see [Virtual device setup](docs/virtual-device-setup.md).
 The separate `/devices` page supports local rehearsal without accounts or hardware.
-The first-visit intro plays automatically and exits with one click; ↻ in the landing
+On the first visit per browser session, `/` opens with a short wave intro over the landing page. Escape skips it, and `prefers-reduced-motion` skips it entirely; ↻ in the landing
 header reopens it. The public map retains its original animated zone and advisory drawers.
 
 ---
@@ -59,6 +59,7 @@ Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a
 - `/` — the landing page: what this is, the live zone readout and figures, and the way in.
 - `/map` — the public map (lazy-loaded; the landing and admin never pay for Leaflet).
 - `/admin` — the passcode-gated review queue.
+- `/devices` — local rehearsal page for the optional virtual ESP32, with no accounts or hardware (see [Virtual device setup](docs/virtual-device-setup.md)).
 
 **Core loop**
 
@@ -255,6 +256,7 @@ src/
     StatusPip.tsx         # the status dot (pops on status change)
     Ambient.tsx            # map scanline + registration marks (schematic)
     Header.tsx  StatusPanel.tsx  StatusBadge.tsx  Notice.tsx  DemoBanner.tsx
+    SplashScreen.tsx      # first-visit wave intro over Landing (Escape or reduced-motion skips it)
     DecryptedText.tsx     # landing hero: glyphs resolve left to right (reactbits pattern)
     Waves.tsx             # landing background: three sine composites on a canvas
     CountUp.tsx           # landing figures: counts up on first view, re-tweens on live updates
@@ -266,6 +268,7 @@ src/
   motion/
     RouteTransition.tsx   # landing <-> map <-> admin route dissolve (fade + rise, gated on lazy
                            # chunk load; see docs §21, supersedes §19)
+    tokens.ts             # shared motion durations and easings (incl. intro exit timing)
     mapMotion.ts          # zone load-in stagger, focus-flight padding, pure helpers (tested)
     pins.ts               # report-pin centroid + intro-glide helpers (pure, tested)
     statusKey.ts          # active-status resolution for the pill indicator (pure, tested)
@@ -277,6 +280,7 @@ src/
     statusTheme.ts        # status -> dark-theme colours, classes, map paint
     map-motion.css        # zone pulse/dash/dim, pin drop/ring, location halo, ambient orbs
     micro-interactions.css  # button press-scale
+    tide-intro.css        # splash keyframes: wave layers, glow, ripple, 115dvh exit
   pages/
     Landing.tsx            # / -- pre-map landing (DecryptedText hero, Waves, CountUp)
     MapPage.tsx             # /map public view (lazy-loaded)
@@ -316,16 +320,16 @@ src/
 
 Any static host works — `npm run build` produces `dist/`.
 
-**Vercel** — `vercel.json` already rewrites every path to `index.html` (needed so `/admin` survives a refresh). Set the `VITE_*` variables under *Project → Settings → Environment Variables*, and add them for **both** build and production.
+**Netlify (production)** — build command `npm run build`, publish directory `dist`. `public/_redirects` handles the SPA fallback. Production deploys from `main`. Set the `VITE_*` variables under *Site configuration → Environment variables*, then trigger a deploy, because values are read at build time.
 
-**Netlify** — build command `npm run build`, publish directory `dist`. `public/_redirects` handles the SPA fallback. Set the same `VITE_*` variables under *Site configuration → Environment variables*.
+**Vercel (optional)** — `vercel.json` rewrites every path to `index.html` (needed so `/admin` survives a refresh). If you also connect a Vercel project, set the same `VITE_*` variables there for build and production, and enable Deployment Protection on preview URLs.
 
 Notes:
 
 - Env vars are baked in **at build time**. Changing them requires a redeploy.
 - Make sure the deployed Firestore rules are the ones in this repo, and restrict the unsigned Cloudinary preset for production.
 - Map tiles come from OpenStreetMap and need the visitor to be online.
-- If you pause/unpause auto-publishing to conserve build minutes or bandwidth on a free tier: a **paused site serves nothing to visitors**, and new commits won't auto-deploy until you resume it. Before pausing again after a redeploy, confirm the deploy log shows every stage (Initializing → Building → Deploying → Cleanup → Post-processing) as **Complete** — otherwise you can end up pausing mid-build on a stale or broken version without noticing.
+- Free tiers enforce limits by pausing. On Netlify's current Free plan, production deploys, bandwidth and requests all draw from one monthly credit pool, and a site that runs out is paused until the cycle resets. Every merge to `main` is a production deploy, so check *Usage and billing* before a burst of merges (see §18). Before pausing a site yourself, confirm the deploy log shows every stage (Initializing → Building → Deploying → Cleanup → Post-processing) as **Complete** — otherwise you can end up pausing mid-build on a stale or broken version without noticing. A **paused site serves nothing to visitors**, and new commits won't auto-deploy until you resume it.
 
 ---
 
@@ -417,6 +421,7 @@ A growing suite across the following areas (see `docs/` for the browser-verifica
 - **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's decrypted hero and live readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
 - **`src/pages/mapPass.test.tsx`** (jsdom) — the six-item visual pass, DOM side: peek row content + hidden body, anchor cycling, the `zone-path` fill ramp, attribution, zoom-control placement, and the full report → approve loop.
 - **`src/components/Map.test.tsx`** (jsdom) — the production `zone-path` regression: the class lands on the path node in a single-pass render (no StrictMode double effect), `--selected` syncs from first mount onward, the fill ramp follows selection, and press feedback lights/releases the polygon.
+- **`src/components/SplashScreen.test.tsx`** (jsdom) — the first-visit intro: dismissal by Escape, the `prefers-reduced-motion` skip, the once-per-session `red-tide-ppc:splash:v1` key, scroll-lock and focus cleanup, and the fallback when browser storage is unavailable.
 - **`src/store.test.ts`** — the real store against the real (in-memory) backend: seeded zones load `safe`; `submitReport` writes a pending report; short descriptions are refused; `approveReport` confirms the report **and** flips the zone to `advisory`; `rejectReport` leaves the zone untouched; manual revert to `safe` works; pending counts are right; the passcode gate only unlocks on an exact match.
 - **`src/lib/firestoreMapping.test.ts`** — the production-only mapping path: Timestamps, GeoPoints, unresolved `serverTimestamp()` values, malformed documents, and polygon values.
 - **`src/motion/sidePanelAnchors.test.ts`** — the drawers' snap arithmetic: offsets, clamping, velocity projection, flick gating against a mirrored (left-edge) drawer, and the tap-after-drag guard. (The bottom sheet's equivalent suite retired with the sheet.)
@@ -472,17 +477,19 @@ Two more real-browser passes cover this session's motion work. `scripts/map-moti
 | **Adjust a drawer's snap feel** | `src/motion/sidePanelAnchors.ts` (projection time, flick velocity, spring constants) — pure and unit-tested, change here before touching `ZoneDrawer.tsx` / `AdvisoryDrawer.tsx`. |
 | **Adjust map zone/camera animation timing** | `src/motion/mapMotion.ts` (stagger, flight duration, focus padding), then `src/styles/map-motion.css`. |
 | **Adjust the route transition feel** | `src/motion/RouteTransition.tsx` (variants, durations) — re-run `scripts/route-transition-pass.mjs` after any change. |
+| **Adjust the intro timing or look** | `src/motion/tokens.ts` (`introExit` and the entrance values) and `src/styles/tide-intro.css`; the behaviour is in `src/components/SplashScreen.tsx`. Keep the surface and curtain exits on the same `dvh` unit. |
 
 ---
 
 ## 16. Recent UI work
 
-Four motion passes — presentation only, no data, network or geometry changes (the full check list for the first three lives in the header of `scripts/map-motion-pass.mjs`, or in the linked write-up):
+Five motion passes — presentation only, no data, network or geometry changes (the full check list for the first three lives in the header of `scripts/map-motion-pass.mjs`, or in the linked write-up):
 
 - **Zone & camera** — polygons fade in on a 70 ms stagger, advisory zones pulse their stroke and march their dash (frozen while the camera moves), a selection dims the other zones, and focusing a zone glides the camera with drawer-aware padding. `scripts/map-motion-pass.mjs`, Phase 1.
 - **Drawer, pill & chevron** — the drawer's first open staggers, the status pill's indicator slides, and the chevron folds through a `d` morph rather than spinning. `scripts/map-motion-pass.mjs`, Phase 2.
 - **Pins, location, glide & orbs** — report pins drop onto their zone's centroid with one expanding ring, the location dot's halo pauses with the camera, the wide-to-bay intro glide runs once per session, and the ambient orbs never sit over the pills. `scripts/map-motion-pass.mjs`, Phase 3; shots in `tmp/map-motion-shots/`.
 - **Route dissolve** — `/` <-> `/map` fades out then rises in, gated on the lazy chunk so the enter never fades in a spinner; `/admin` stays instant. `docs/design-references.md` §21; frames in `docs/route-transition-shots/`.
+- **Intro** — the first-visit splash was retimed (about 2.1 s hold, 0.8 s exit) so the water surface and curtain leave together on the same `115dvh` reference and do not drift with mobile browser chrome. The skip button and centre dot were removed, and the background gained layered depth and an acquisition ripple. Escape and reduced motion still skip it.
 
 ---
 
@@ -496,7 +503,7 @@ React 19 · TypeScript 5.9 · Vite 8 · React Router 7 · Zustand 5 · Motion 13
 
 ## 18. Running costs
 
-Everything this app depends on has a meaningful free tier. A small-city deployment — a few hundred unique visitors a month, a handful of reports a week — costs nothing.
+Everything this app depends on has a meaningful free tier. A small-city deployment — a few hundred unique visitors a month, a handful of reports a week — costs nothing, provided the hosting credits below are managed. The Netlify and Cloudinary figures were checked in October 2026; the Firebase and tile figures were not re-checked. Check each provider's pricing page before relying on any of them.
 
 ---
 
@@ -523,17 +530,9 @@ At realistic community scale (5,000 visits/month, 50 reports/month), Blaze cost 
 
 ### Cloudinary (photo uploads)
 
-The free tier gives **25 credits/month** (1 credit ≈ 1 image transformation or ~10 MB of storage/bandwidth).
+The free plan includes 25 credits per month, measured over a rolling 30 days. One credit equals 1,000 transformations, or 1 GB of storage, or 1 GB of delivered bandwidth, all drawn from the same pool. Free-plan accounts are not billed for overage.
 
-| Action | Cost |
-| --- | --- |
-| Upload a report photo | ~1 credit per upload |
-| Storage | 25 credits covers ~10 GB |
-| Bandwidth | Included in the credit pool |
-
-At 50 photo reports/month, this uses 50 credits — exceeding the free tier. Paid plans start at **\$89/month** (200 credits), which is overkill for this use case. The practical option at scale: resize photos client-side before upload (see §13, item 6 — already flagged as a pre-production task), which keeps file sizes under 500 KB and makes the free tier go much further.
-
-If photo uploads are removed entirely (reports text-only), Cloudinary cost is \$0.
+At 50 photo reports a month this is far below the allowance: 50 photos of 500 KB is about 25 MB of storage (about 0.025 credit) before derived copies. Resizing photos client-side before upload (§13, item 6) is still worth doing for load time on weak mobile signal. If photo uploads are removed, Cloudinary cost is \$0. The first paid plan was listed at \$89/month in mid-2026; check Cloudinary's pricing page before relying on that figure.
 
 ---
 
@@ -543,14 +542,15 @@ Free, no API key, no account. OSM's tile servers are a public service — heavy 
 
 ---
 
-### Vercel (hosting)
+### Netlify (hosting)
 
-The **Hobby plan** (free) covers:
-- 100 GB bandwidth / month
-- Unlimited deploys
-- Automatic HTTPS + CDN
+Production runs on Netlify. On the current Free plan (accounts created after 4 September 2025), 300 credits per month are shared by production deploys, bandwidth and requests, with no overage option; a site that exhausts them is paused until the cycle resets. Mid-2026 rates: about 15 credits per production deploy and 20 credits per GB of bandwidth (sources disagree on the bandwidth rate; confirm it in your dashboard). Older accounts may still be on the legacy plan (100 GB bandwidth, 300 build minutes).
 
-This app's production build is ~1.5 MB gzip total. 100 GB bandwidth = ~65,000 full-page loads on the free tier before any cost. For a community advisory tool, the free tier is sufficient indefinitely.
+At about 1.5 MB per full page load (check the transfer size reported by `npm run build`), 1,000 first visits is roughly 1.5 GB, around 30 credits. Deploys are usually the larger cost: ten merges to `main` use about 150 credits. Batch small changes, and check *Usage and billing* before a busy week.
+
+### Vercel (optional)
+
+If you also host or preview on Vercel, check its current Hobby limits on vercel.com/pricing. They were not re-verified for this README.
 
 ---
 
@@ -559,8 +559,8 @@ This app's production build is ~1.5 MB gzip total. 100 GB bandwidth = ~65,000 fu
 | Service | Free tier covers | Paid if exceeded |
 | --- | --- | --- |
 | Firebase Firestore | ~850 daily active users | ~\$0.06–\$0.18 per 100k ops |
-| Cloudinary | ~25 photo uploads/month | \$89/month (200 credits) |
+| Cloudinary | 25 credits/month (about 25 GB of storage or bandwidth); no overage billing on Free | Plus plan, about \$89/month (verify) |
 | OpenStreetMap tiles | Community scale | \$0–\$25/month (CDN) |
-| Vercel hosting | ~65,000 page loads/month | \$20/month (Pro) |
+| Netlify hosting | 300 credits/month; each production deploy is about 15 credits | Personal or Pro plan (see pricing page) |
 
-**Realistic total for a Puerto Princesa community deployment: \$0/month.** The only scenario that exceeds free tiers is a viral moment driving thousands of simultaneous users — at which point the app has already done its job.
+**Realistic total for a Puerto Princesa community deployment: \$0/month**, as long as deploy credits are managed. A paused site is a bigger risk than a bill.
