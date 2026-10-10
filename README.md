@@ -250,7 +250,7 @@ src/
     DecryptedText.tsx     # supporting landing text: glyphs resolve left to right
     TextPressure.tsx      # main RED TIDE heading
     Waves.tsx             # landing background: two sine composites on a canvas
-    CountUp.tsx           # landing figures: counts up on first view, re-tweens on live updates
+    CountUp.tsx           # landing figures: counts up on first view, re-tweens when community records change
     BlurText.tsx          # landing copy: words blur into focus on their own scroll trigger
     HeroBackdrop.tsx      # landing hero backdrop: full-bleed WebGL panel, owns the
                            # reduced-motion/off-screen/lazy-load policy (see docs §15, §20)
@@ -411,7 +411,7 @@ npm test
 
 At the merge of #92 (2026-10-10), CI passed **489 tests in 58 files**. This is a recorded snapshot, not an automatically updated counter. The suite covers the following areas (see `docs/` for the browser-verification write-ups behind recent UI passes — the side-drawer map layout, header fade timing, hero full-bleed, coastal polygon accuracy):
 
-- **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's decrypted hero and live readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
+- **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's TextPressure heading and community-record readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
 - **`src/pages/mapPass.test.tsx`** (jsdom) — the six-item visual pass, DOM side: peek row content + hidden body, anchor cycling, the `zone-path` fill ramp, attribution, zoom-control placement, and the full report → approve loop.
 - **`src/components/Map.test.tsx`** (jsdom) — the production `zone-path` regression: the class lands on the path node in a single-pass render (no StrictMode double effect), `--selected` syncs from first mount onward, the fill ramp follows selection, and press feedback lights/releases the polygon.
 - **`src/components/SplashScreen.test.tsx`** (jsdom) — the first-visit intro: dismissal by Escape, the `prefers-reduced-motion` skip, the persistent per-intro-version `red-tide-ppc:intro:v3` key, scroll-lock and focus cleanup, and the fallback when browser storage is unavailable.
