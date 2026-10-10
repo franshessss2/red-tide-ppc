@@ -53,9 +53,6 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Secret scan (redacted output)
-        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo --log-opts="--all" --redact
-
       - name: Build and capture the shipped flag-off baseline
         run: |
           npm run build
@@ -94,6 +91,21 @@ jobs:
         env:
           TEAM_SHOTS_OUTPUT_DIR: .cache/team-roster-shots
         run: node scripts/team-roster-shots.mjs http://127.0.0.1:4173
+
+      - name: Secret scan (redacted output; failure remains blocking)
+        run: |
+          set +e
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo --log-opts="--all" --redact --report-format=json --report-path=/repo/.cache/team-roster-shots/gitleaks-redacted.json
+          scan_status=$?
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = Path('.cache/team-roster-shots/gitleaks-redacted.json')
+          if report.exists():
+              for finding in json.loads(report.read_text()):
+                  print({key: finding.get(key) for key in ['RuleID', 'File', 'StartLine', 'Commit']})
+          PY
+          exit "$scan_status"
 
       - name: Collect the height pass alongside the shots
         if: always()
