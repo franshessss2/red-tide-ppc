@@ -1,0 +1,4 @@
+# Test fixture: the synthetic test-marked API-key literal in firebase.test.ts's
+# FULL fixture is injected by vi.stubEnv for configuration tests; it is not a
+# credential read from an environment file. Scope this exception to one finding.
+868f015f6355d2c18d10c402912b96ffa0dcb3c7:src/lib/firebase.test.ts:generic-api-key:11
