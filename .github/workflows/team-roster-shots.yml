@@ -7,8 +7,7 @@
 # three posters are not in the repository yet. A capture of a disabled section
 # would be a blank page, so this job forces TEAM_SECTION_ENABLED on in the
 # working copy for the build it measures, and never commits that edit. The
-# posters are expected to 404 in these shots — the initials fallback showing
-# through is the correct, documented behaviour until the real stills land.
+# roster fields are empty; capture shows empty slots without media requests.
 #
 # Artifacts are named with the commit SHA and the run ID so a screenshot can
 # always be traced back to the exact build it came from.
@@ -33,12 +32,14 @@ permissions:
 
 jobs:
   shots:
-    name: Capture landing at 390x844 and 1440x900
+    name: Capture landing at four viewport sizes
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check out
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -51,6 +52,21 @@ jobs:
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      - name: Secret scan (redacted output)
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo --log-opts="--all" --redact
+
+      - name: Build and capture the shipped flag-off baseline
+        run: |
+          npm run build
+          npx vite preview --port 4173 --strictPort --host 127.0.0.1 &>/tmp/baseline-preview.log &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4173/ >/dev/null && break
+            sleep 2
+          done
+          TEAM_SHOTS_DISABLED=1 TEAM_SHOTS_OUTPUT_DIR=.cache/team-roster-shots/off node scripts/team-roster-shots.mjs http://127.0.0.1:4173
 
       - name: Enable the strip for this capture only (not committed)
         run: |

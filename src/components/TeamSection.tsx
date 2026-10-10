@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { TEAM_MEMBERS, TEAM_SECTION_ENABLED, type TeamMember } from '../data/team'
-import { useReducedMotion } from '../motion/preferences'
+import { usePageVisible, useReducedMotion } from '../motion/preferences'
 import { createVideoSlot, type VideoSlot, type VideoSlotToken } from '../motion/videoSlot'
 import { TextReveal } from './TextReveal'
 import '../styles/team.css'
@@ -35,6 +35,18 @@ export const TEAM_VIDEO_STALL_MS = 4000
 /** Hard ceiling on how long one card may hold the single decoder. */
 export const TEAM_VIDEO_MAX_MS = 12000
 
+type Connection = EventTarget & { saveData?: boolean; effectiveType?: string }
+const connection = () => (navigator as Navigator & { connection?: Connection }).connection
+function subscribeConnection(notify: () => void) {
+  const network = connection()
+  network?.addEventListener('change', notify)
+  return () => network?.removeEventListener('change', notify)
+}
+function prefersPosterOnly() {
+  const network = connection()
+  return Boolean(network?.saveData || ['slow-2g', '2g'].includes(network?.effectiveType ?? ''))
+}
+
 export function TeamSection({
   members = TEAM_MEMBERS,
   enabled = TEAM_SECTION_ENABLED,
@@ -44,6 +56,8 @@ export function TeamSection({
   enabled?: boolean
 } = {}) {
   const reduceMotion = useReducedMotion()
+  const dataSaving = useSyncExternalStore(subscribeConnection, prefersPosterOnly, () => true)
+  const pageVisible = usePageVisible()
   // One permit for the whole strip. This is the "one decoder at a time" rule.
   const slot = useMemo(() => createVideoSlot(1), [])
 
@@ -62,7 +76,7 @@ export function TeamSection({
             key={member.id}
             member={member}
             slot={slot}
-            reduceMotion={reduceMotion}
+            reduceMotion={reduceMotion || dataSaving || !pageVisible}
           />
         ))}
       </ul>
@@ -149,8 +163,8 @@ function TeamCard({
         )}
       </div>
       <div className="team-card__body">
-        <h3 className="team-card__name">{member.name}</h3>
-        <p className="team-card__role">{member.role}</p>
+        {member.name.trim() && <h3 className="team-card__name">{member.name}</h3>}
+        {member.role.trim() && <p className="team-card__role">{member.role}</p>}
       </div>
     </li>
   )
