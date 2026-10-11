@@ -165,7 +165,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
       {/* Outside the overflow-x-clip root: that clip can make `fixed`
           relative to the page instead of the viewport. */}
       <LandingScrollProgress />
-    <div className="relative min-h-dvh overflow-x-clip bg-ink text-paper">
+    <div className="landing-surface relative min-h-dvh overflow-x-clip bg-ink text-paper">
       <LiveDataStatus />
       {/*
         The ambient sine canvas stays, but it is masked out across the top of
@@ -260,7 +260,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
                       aria-hidden, so a screen reader never reads the glyphs. */}
                   <h1
                     aria-label="Red Tide"
-                    className="font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
+                    className="landing-heading font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
                   >
                     {headlineDecrypted ? (
                       <TextPressure text="RED TIDE" />
@@ -298,7 +298,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
                     <Link
                       to="/map"
                       {...MAP_CTA_PREFETCH}
-                      className="text-sm font-medium text-paper/80 underline-offset-4 transition-colors hover:text-accent hover:underline"
+                      className="landing-report-cta text-sm font-medium text-paper/80 underline-offset-4 transition-colors hover:text-accent hover:underline"
                     >
                       Report a sighting
                     </Link>
@@ -311,7 +311,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block"><TextReveal text="Coastal overview" /></h2>
                 <CommunitySource />
-                <section aria-label="Community status" className="mt-4 text-sm leading-relaxed text-muted">
+                <section aria-label="Community status" className="landing-status mt-4 text-sm leading-relaxed text-muted">
                   {zonesReady ? <div className="flex items-center gap-2.5">
                     <StatusPip hex={dominantTheme.hex} pulses={false} trigger={dominant} />
                     <span>{counts.unknown > 0 ? `${counts.unknown} zone statuses unavailable` : counts.advisory > 0 ? `${counts.advisory} community warnings recorded` : 'No community warnings recorded'}. Check official bulletins.</span>
@@ -485,11 +485,11 @@ function Figure({
   return (
     <div className="min-w-0 rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
       <p
-        className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
+        className={`landing-figure-value font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
         {ready ? value : '—'}
       </p>
-      <p className="mt-1.5 text-[11px] leading-snug text-muted lg:mt-2 lg:text-xs">{label}</p>
+      <p className="landing-figure-label mt-1.5 text-[11px] leading-snug text-muted lg:mt-2 lg:text-xs">{label}</p>
     </div>
   )
 }
