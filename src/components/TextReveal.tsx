@@ -1,6 +1,6 @@
 import { Fragment, useRef, type ElementType } from 'react'
 import { motion } from 'motion/react'
-import { useReducedMotion } from '../motion/preferences'
+import { useDecorativeMotionDisabled } from '../motion/LandingMotionPolicy'
 import { useReveal } from '../motion/useReveal'
 
 // Portable enter contracts from pixel-point/animate-text. Existing scene
@@ -15,7 +15,7 @@ export function TextReveal({ text, as: Tag = 'span', className = '', effect = 'm
   effect?: keyof typeof effects; trigger?: 'view' | 'mount'
 }) {
   const ref = useRef<HTMLElement>(null)
-  const reduce = useReducedMotion()
+  const reduce = useDecorativeMotionDisabled()
   const seen = useReveal(ref, { enabled: trigger === 'view', rootMargin: '0px' })
   const visible = trigger === 'mount' || seen
   const recipe = effects[effect]

@@ -51,6 +51,12 @@
 }
 .landing-map-cta:hover { translate: 0 -2px; background-color: #ffc04c; }
 .landing-map-cta:active { translate: none; scale: .97; }
+.landing-surface[data-save-data="true"] .landing-map-cta,
+.landing-surface[data-save-data="true"] .landing-map-cta__arrow {
+  transition: none;
+  translate: none;
+  scale: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .landing-map-cta:hover, .landing-map-cta:active { translate: none; scale: none; }
 }

@@ -1,5 +1,6 @@
 import { motion } from 'motion/react'
-import { usePageVisible, useReducedMotion } from '../motion/preferences'
+import { usePageVisible } from '../motion/preferences'
+import { useDecorativeMotionDisabled } from '../motion/LandingMotionPolicy'
 import { Component, Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
@@ -111,7 +112,7 @@ const featherStyle: CSSProperties = {
 }
 
 export function HeroBackdrop({ className = '' }: { className?: string }) {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useDecorativeMotionDisabled()
   const ref = useRef<HTMLDivElement | null>(null)
   const fadePlayed = useRef(false)
 
