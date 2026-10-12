@@ -88,7 +88,9 @@ There is no shipped test hook or additional plugin for this behavior.
 - Keyboard resize is requested in the native manifest; actual keyboard and
   system inset behavior still require a device run.
 - This build has no Firebase environment configuration and uses the existing
-  sample-data fallback. The existing **Sample data** label remains. Reports in
+  sample-data fallback. The public prototype admin passcode is `137950FrT`
+  when `VITE_ADMIN_PASSCODE` is unset. This is readable in the web bundle.
+  The existing **Sample data** label remains. Reports in
   this mode are demonstrations; they are not sent to a live moderation service.
 - Bundling the UI does not provide offline map tiles or cached live advisories.
 - `/api/*` endpoints have no server inside a local Capacitor bundle. The

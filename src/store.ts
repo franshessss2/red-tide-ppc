@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { getBackend } from './lib/backend'
+import { DEMO_ADMIN_PASSCODE } from './lib/demoAdminPasscode'
 import { emptyFeed, receivedFeed, type FeedName, type FeedState } from './lib/feed'
 import { zoneStatusMeta } from './lib/status'
 import { isImageFile, MAX_PHOTO_BYTES } from './lib/image'
@@ -363,7 +364,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   tryUnlockAdmin(passcode) {
-    const expected = rawEnv.VITE_ADMIN_PASSCODE?.trim()
+    // Unset uses the public sample-data passcode; an explicit blank still locks
+    // the gate. Firebase always requires an explicitly configured passcode.
+    const expected = rawEnv.VITE_ADMIN_PASSCODE?.trim() ??
+      (getBackend().kind === 'demo' ? DEMO_ADMIN_PASSCODE : undefined)
     if (!expected) {
       set({
         formError:
