@@ -1,15 +1,15 @@
 import { TextReveal } from '../components/TextReveal'
 import { MOTION } from '../motion/tokens'
 import { useReducedMotion } from '../motion/preferences'
+import { LandingMotionPolicy, useSaveData } from '../motion/LandingMotionPolicy'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { TeamSection } from '../components/TeamSection'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
 import { BlurText } from '../components/BlurText'
 import { CommunitySource, DataProvenance } from '../components/DataProvenance'
-import { DecryptedText } from '../components/DecryptedText'
 import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
 import { HeroBackdrop } from '../components/HeroBackdrop'
@@ -47,17 +47,15 @@ import type { ZoneStatus } from '../types'
  *  - `Waves` — the existing 2D canvas, now masked out behind the hero so only
  *    one animated layer ever repaints a given band of the page.
  *
- * Text reveals use `BlurText`, each block triggered by its own scroll
- * intersection so the page resolves as you read down it rather than firing
- * everything at load.
+ * The hero has one Motion entrance clock; lower blocks keep their existing
+ * scroll reveals. Landing's Save-Data policy makes those decorations static.
  *
  * WHAT IS DELIBERATELY NOT ANIMATED
  * ---------------------------------
- * The secondary CTA, the "what is red tide" primer and the
+ * The "what is red tide" primer and the
  * "not an official BFAR advisory" disclaimer are plain DOM. The primary
- * "Open the map" link has a CSS hover only (`landing-motion.css`) — present
- * and clickable on the first frame; reduced motion keeps brightness without
- * the lift or glow. Safety copy and the route to the map must never depend
+ * map links remain visible and clickable on the first frame; reduced motion
+ * and Save-Data disable the entrance and hover movement. Safety copy must never depend
  * on an animation, an observer or a WebGL context succeeding.
  */
 /**
@@ -92,8 +90,9 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
-  const reduceMotion = useReducedMotion()
-  const [headlineDecrypted, setHeadlineDecrypted] = useState(false)
+  const reducedPreference = useReducedMotion()
+  const saveData = useSaveData()
+  const reduceMotion = reducedPreference || saveData
   const counts = useMemo(() => {
     const result: Record<ZoneStatus, number> = { safe: 0, unconfirmed: 0, advisory: 0, unknown: 0 }
     for (const zone of zones) result[zone.status] += 1
@@ -122,8 +121,18 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
     mass: 0.7,
   })
   const heroContentY = useTransform(heroScroll, [0, 1], [0, reduceMotion ? 0 : -28])
-  const heroContentOpacity = useTransform(heroScroll, [0, 0.85], [1, reduceMotion ? 1 : 0.9])
   const heroContentScale = useTransform(heroScroll, [0, 1], [1, reduceMotion ? 1 : 0.985])
+
+  // One parent owns the entrance clock. Copy stays readable from the first
+  // frame; only its position changes, so contrast never depends on a fade.
+  const heroTimeline: Variants = {
+    enter: {},
+    show: { transition: { staggerChildren: reduceMotion ? 0 : MOTION.time.stagger } },
+  }
+  const heroStep: Variants = {
+    enter: { y: 8 },
+    show: { y: 0, transition: { duration: reduceMotion ? 0 : MOTION.time.reveal, ease: EASE_OUT_QUINT } },
+  }
 
 
   const primerContainerVariants: Variants = useMemo(
@@ -161,18 +170,18 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
     typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function'
 
   return (
-    <>
+    <LandingMotionPolicy.Provider value={saveData}>
       {/* Outside the overflow-x-clip root: that clip can make `fixed`
           relative to the page instead of the viewport. */}
-      <LandingScrollProgress />
-    <div className="relative min-h-dvh overflow-x-clip bg-ink text-paper">
+      {!saveData && <LandingScrollProgress />}
+    <div data-save-data={saveData} className="landing-surface relative min-h-dvh overflow-x-clip bg-ink text-paper">
       <LiveDataStatus />
       {/*
         The ambient sine canvas stays, but it is masked out across the top of
         the page so it does not repaint the same pixels the hero's Ferrofluid
         panel already owns. One animated layer per band of the page.
       */}
-      {!covered && <Waves
+      {!covered && !saveData && <Waves
         advisoryActive={zonesReady && counts.advisory > 0}
         className="absolute inset-0 h-full w-full [mask-image:linear-gradient(to_bottom,transparent_0,transparent_380px,black_620px)]"
       />}
@@ -234,59 +243,34 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
               the texture rather than under it. */}
           <motion.div
             className={`relative mx-auto ${LANDING_CONTAINER}`}
-            style={{ y: heroContentY, opacity: heroContentOpacity, scale: heroContentScale }}
+            style={{ y: heroContentY, scale: heroContentScale }}
           >
             {/* Stack on phones/tablets; use the right half for live information
                 on laptops instead of stretching the hero paragraph across it. */}
             <div className="lg:grid lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12 lg:pt-16 xl:gap-20 2xl:gap-24">
-              <section aria-label="Introduction" className="min-w-0 pt-14 sm:pt-16 lg:pt-0">
+              <motion.section aria-label="Introduction" className="min-w-0 pt-14 sm:pt-16 lg:pt-0"
+                variants={heroTimeline} initial={reduceMotion ? false : 'enter'} animate="show">
                 <div>
-                  {/* Short label — letters read better than words at this size,
-                      and it is the first thing to resolve. */}
-                  <BlurText
-                    as="p"
-                    text="Community early warning"
-                    trigger="mount"
-                    animateBy="letters"
-                    direction="top"
-                    delay={14}
-                    stepDuration={0.22}
+                  <motion.p variants={heroStep}
                     className="text-xs font-medium tracking-[0.08em] text-accent"
-                  />
+                  >Community early warning</motion.p>
 
-                  {/* The headline still decrypts once on load (skipped on small
-                      viewports and under reduced motion — see DecryptedText). The
-                      label lives on the heading itself: the scrambling text is
-                      aria-hidden, so a screen reader never reads the glyphs. */}
-                  <h1
+                  {/* The landing title joins the shared timeline. The separate
+                      opening film and intro reel retain their word animations. */}
+                  <motion.h1 variants={heroStep}
                     aria-label="Red Tide"
-                    className="font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
+                    className="landing-heading font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"
                   >
-                    {headlineDecrypted ? (
-                      <TextPressure text="RED TIDE" />
-                    ) : (
-                      <DecryptedText
-                        text="RED TIDE"
-                        delay={0}
-                        onComplete={() => setHeadlineDecrypted(true)}
-                      />
-                    )}
-                  </h1>
+                    <TextPressure text="RED TIDE" />
+                  </motion.h1>
 
-                  {/* The subheading blurs in by words, after the scramble has had
-                      time to resolve above it. */}
-                  <BlurText
-                    as="p"
-                    text="Explore Puerto Princesa’s coastal records, share observations, and follow community warnings."
-                    animateBy="words"
-                    direction="top"
-                    delay={55}
+                  <motion.p variants={heroStep}
                     className="mt-5 block max-w-md text-base leading-relaxed text-muted sm:mt-4 sm:text-lg xl:max-w-lg xl:text-xl"
-                  />
+                  >Explore Puerto Princesa’s coastal records, share observations, and follow community warnings.</motion.p>
 
                   {/* Clickable on the first frame. Hover lift/glow is CSS only
                       (landing-motion.css); it never gates the route. */}
-                  <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 sm:mt-8 sm:gap-y-3">
+                  <motion.div variants={heroStep} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 sm:mt-8 sm:gap-y-3">
                     <Link
                       to="/map"
                       {...MAP_CTA_PREFETCH}
@@ -298,20 +282,20 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
                     <Link
                       to="/map"
                       {...MAP_CTA_PREFETCH}
-                      className="text-sm font-medium text-paper/80 underline-offset-4 transition-colors hover:text-accent hover:underline"
+                      className="landing-report-cta text-sm font-medium text-paper/80 underline-offset-4 transition-colors hover:text-accent hover:underline"
                     >
                       Report a sighting
                     </Link>
-                  </div>
+                  </motion.div>
                 </div>
-              </section>
+              </motion.section>
 
               <motion.div
-                className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
+                className="landing-overview mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/95 lg:p-6 xl:p-8"
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block"><TextReveal text="Coastal overview" /></h2>
                 <CommunitySource />
-                <section aria-label="Community status" className="mt-4 text-sm leading-relaxed text-muted">
+                <section aria-label="Community status" className="landing-status mt-4 text-sm leading-relaxed text-muted">
                   {zonesReady ? <div className="flex items-center gap-2.5">
                     <StatusPip hex={dominantTheme.hex} pulses={false} trigger={dominant} />
                     <span>{counts.unknown > 0 ? `${counts.unknown} zone statuses unavailable` : counts.advisory > 0 ? `${counts.advisory} community warnings recorded` : 'No community warnings recorded'}. Check official bulletins.</span>
@@ -370,7 +354,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
             </section>
 
             {/* ----------------------------------------------------- primer */}
-            {hasIntersectionObserver ? (
+            {hasIntersectionObserver && !reduceMotion ? (
               <motion.section
                 className="min-w-0"
                 aria-label="What is red tide"
@@ -442,7 +426,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
         </main>
       </div>
     </div>
-    </>
+    </LandingMotionPolicy.Provider>
   )
 }
 
@@ -485,11 +469,11 @@ function Figure({
   return (
     <div className="min-w-0 rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
       <p
-        className={`font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
+        className={`landing-figure-value font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >
         {ready ? value : '—'}
       </p>
-      <p className="mt-1.5 text-[11px] leading-snug text-muted lg:mt-2 lg:text-xs">{label}</p>
+      <p className="landing-figure-label mt-1.5 text-[11px] leading-snug text-muted lg:mt-2 lg:text-xs">{label}</p>
     </div>
   )
 }

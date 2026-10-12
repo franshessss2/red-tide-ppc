@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { motion, useMotionValue, useTransform, type MotionValue } from 'motion/react'
-import { useReducedMotion } from '../motion/preferences'
+import { useDecorativeMotionDisabled } from '../motion/LandingMotionPolicy'
 
 const RADIUS = 120
 const MAX_SCALE = 1.08
@@ -10,7 +10,7 @@ function isCoarsePointer() {
 }
 
 export function TextPressure({ text, className = '' }: { text: string; className?: string }) {
-  const reduce = useReducedMotion()
+  const reduce = useDecorativeMotionDisabled()
   const [coarse, setCoarse] = useState(isCoarsePointer)
   const pointerX = useMotionValue(-10000)
   const pointerY = useMotionValue(-10000)

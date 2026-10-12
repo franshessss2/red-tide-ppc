@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useRef, type ElementType } from 'react'
 import { motion } from 'motion/react'
-import { useReducedMotion } from '../motion/preferences'
+import { useDecorativeMotionDisabled } from '../motion/LandingMotionPolicy'
 import { useReveal } from '../motion/useReveal'
 import { MOTION, staggerDelay, tween } from '../motion/tokens'
 
@@ -16,7 +16,7 @@ export function BlurText({ text, delay = MOTION.time.stagger * 1000, className =
   animateBy = 'words', direction = 'top', threshold = 0.2, rootMargin = '0px 0px -10% 0px',
   stepDuration = MOTION.time.reveal / 2, as: Tag = 'span', root = null, trigger = 'view',
 }: BlurTextProps) {
-  const reduce = useReducedMotion()
+  const reduce = useDecorativeMotionDisabled()
   const ref = useRef<HTMLElement>(null)
   const revealed = useReveal(ref, { root, threshold, rootMargin, enabled: trigger === 'view' })
   const visible = trigger === 'mount' || revealed

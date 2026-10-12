@@ -1,11 +1,62 @@
+/* Match the measured primary font metrics while self-hosted fonts load.
+   Scope these stacks to Landing: the opening film and intro inherit no changes.
+   Width adjustment is based on the landing description / RED TIDE in Chromium;
+   it approximates glyph widths, not a promise of identical font outlines. */
+@font-face {
+  font-family: "Landing Sans Fallback";
+  src: local("Arial"), local("Liberation Sans");
+  size-adjust: 108.5685%;
+  ascent-override: 90.2655%;
+  descent-override: 26.710%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Landing Display Fallback";
+  src: local("Arial"), local("Liberation Sans");
+  size-adjust: 56.9317%;
+  ascent-override: 166.8665%;
+  descent-override: 61.4772%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Landing Mono Fallback";
+  src: local("Courier New"), local("Liberation Mono");
+  ascent-override: 102%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+.landing-surface {
+  --font-sans: "Space Grotesk", "Landing Sans Fallback", Arial, sans-serif;
+  --font-display: "Bebas Neue", "Landing Display Fallback", "Arial Narrow", sans-serif;
+  --font-mono: "JetBrains Mono", "Landing Mono Fallback", monospace;
+  font-family: var(--font-sans);
+}
+.landing-heading { min-height: .9em; }
+/* Reserve two status lines before the asynchronous record feed arrives. */
+.landing-status { min-height: 3.25em; }
+.landing-figure-value { min-height: 1em; }
+.landing-figure-label { min-height: 2.75em; }
+/* Reserve the loaded-font button widths, including the narrow-screen wrap. */
+.landing-report-cta { min-width: 7.5rem; }
+/* Opaque phone figures and an almost opaque desktop panel keep their reading
+   surface steady. No backdrop-filter on the scroll-transformed hero. */
+.landing-overview [aria-label="Figures"] > div { background-color: #141414; }
+
 /* The primary CTA shares timing with the map controls. Paint stays static;
    only a small lift and press signal interaction. */
 .landing-map-cta {
+  min-width: 11.5rem;
   transition: translate var(--dur-fast) var(--ease-out-quint),
     scale var(--dur-fast) var(--ease-out-quint), background-color var(--dur-fast) var(--ease-out-quint);
 }
 .landing-map-cta:hover { translate: 0 -2px; background-color: #ffc04c; }
 .landing-map-cta:active { translate: none; scale: .97; }
+.landing-surface[data-save-data="true"] .landing-map-cta,
+.landing-surface[data-save-data="true"] .landing-map-cta__arrow {
+  transition: none;
+  translate: none;
+  scale: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .landing-map-cta:hover, .landing-map-cta:active { translate: none; scale: none; }
 }

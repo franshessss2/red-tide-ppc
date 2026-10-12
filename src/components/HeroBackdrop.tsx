@@ -1,5 +1,6 @@
 import { motion } from 'motion/react'
-import { usePageVisible, useReducedMotion } from '../motion/preferences'
+import { usePageVisible } from '../motion/preferences'
+import { useDecorativeMotionDisabled } from '../motion/LandingMotionPolicy'
 import { Component, Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 /**
@@ -52,8 +53,8 @@ class BackdropBoundary extends Component<{ children: ReactNode }, { failed: bool
 
 const Ferrofluid = lazy(() => import('./ferrofluid/Ferrofluid'))
 
-/** Amber / off-white / near-black, matching the app's tokens. */
-export const FERROFLUID_COLORS = ['#f0a500', '#eaeaea', '#080808']
+/** Warm amber highlights and a bronze midtone, without a white rim. */
+export const FERROFLUID_COLORS = ['#cf8d32', '#915216', '#181006']
 
 /** Wait for idle before pulling the WebGL chunk (ms fallback for Safari). */
 const IDLE_TIMEOUT_MS = MOTION.time.idle * 1000
@@ -80,7 +81,7 @@ function StaticBackdrop() {
     <div
       aria-hidden="true"
       data-testid="hero-static-backdrop"
-      className="absolute inset-0 bg-[radial-gradient(120%_90%_at_15%_0%,rgba(240,165,0,0.16),rgba(240,165,0,0.05)_42%,rgba(8,8,8,0)_72%),linear-gradient(to_right,rgba(240,165,0,0.12),rgba(240,165,0,0.02)_50%,rgba(240,165,0,0.12))]"
+      className="absolute inset-0 bg-[radial-gradient(120%_90%_at_15%_0%,rgba(240,165,0,0.06),rgba(240,165,0,0.02)_42%,rgba(8,8,8,0)_72%),linear-gradient(to_right,rgba(240,165,0,0.035),rgba(240,165,0,0.01)_50%,rgba(240,165,0,0.035))]"
     />
   )
 }
@@ -111,15 +112,14 @@ const featherStyle: CSSProperties = {
 }
 
 export function HeroBackdrop({ className = '' }: { className?: string }) {
-  const reduceMotion = useReducedMotion()
+  const reduceMotion = useDecorativeMotionDisabled()
   const ref = useRef<HTMLDivElement | null>(null)
   const fadePlayed = useRef(false)
 
-  // Has the hero ever been on screen, and is the tab in front? Both must hold
-  // for a frame to be drawn.
+  // Current visibility gates both the first load and subsequent frames.
   const [visible, setVisible] = useState(false)
   const tabActive = usePageVisible()
-  const [hasSeen, setHasSeen] = useState(false)
+  const [canvasStarted, setCanvasStarted] = useState(false)
   // Gate on idle so the shader chunk never competes with first paint.
   const [idle, setIdle] = useState(false)
 
@@ -152,14 +152,13 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
       // No observer: treat the hero as visible. It is at the top of the page,
       // and `document.hidden` still gates the loop.
       setVisible(true)
-      setHasSeen(true)
       return
     }
 
     const scope = createMotionScope()
     const observer = new IntersectionObserver(
       scope.guard((entries) => {
-        for (const entry of entries) { setVisible(entry.isIntersecting); if (entry.isIntersecting) setHasSeen(true) }
+        for (const entry of entries) setVisible(entry.isIntersecting)
       }),
       // NO positive rootMargin. It was '100px', which measured as a real bug:
       // the landing page at 1280x800 is only ~537px of scroll, so a fully
@@ -174,6 +173,13 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
     scope.own(() => observer.disconnect())
     return () => scope.dispose()
   }, [reduceMotion])
+
+  // First load requires current visibility, not a remembered intersection.
+  // Keep the renderer after it starts: scroll/tab changes pause its loop
+  // without rebuilding the GL context or resetting the shader's phase.
+  useEffect(() => {
+    if (!reduceMotion && idle && visible && tabActive) setCanvasStarted(true)
+  }, [reduceMotion, idle, visible, tabActive])
 
   // Reduced motion: the gradient IS the backdrop. No lazy import is triggered,
   // so `ogl` is never fetched and no GL context is ever created.
@@ -190,11 +196,6 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
     )
   }
 
-  // Only mount the canvas once the hero has actually been seen *and* the
-  // browser has gone idle — a visitor who lands and immediately scrolls past
-  // never pays for the chunk.
-  const mountCanvas = idle && hasSeen
-
   return (
     <div
       ref={ref}
@@ -205,11 +206,11 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
     >
       <StaticBackdrop />
 
-      {mountCanvas ? (
+      {canvasStarted ? (
         <BackdropBoundary><Suspense fallback={null}>
           <motion.div className="absolute inset-0"
             initial={fadePlayed.current ? false : { opacity: 0 }}
-            animate={{ opacity: 0.7 }}
+            animate={{ opacity: 0.38 }}
             transition={tween(reduceMotion, MOTION.time.canvasFade)}
             onAnimationStart={() => { fadePlayed.current = true }}
           >
@@ -224,14 +225,14 @@ export function HeroBackdrop({ className = '' }: { className?: string }) {
               // feature size means less high-frequency noise to shade.
               speed={0.28}
               scale={2.1}
-              turbulence={0.7}
+              turbulence={0.5}
               fluidity={0.14}
-              rimWidth={0.22}
-              sharpness={2.6}
-              shimmer={1.1}
-              glow={1.5}
+              rimWidth={0.18}
+              sharpness={1.8}
+              shimmer={0.7}
+              glow={0.65}
               flowDirection="down"
-              opacity={0.85}
+              opacity={0.7}
               // A landing-page glance, not an interactive demo.
               mouseInteraction={false}
             />

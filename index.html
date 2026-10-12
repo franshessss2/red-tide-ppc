@@ -20,6 +20,11 @@
     <!-- Fonts are self-hosted via the Latin-only @fontsource imports in
          src/main.tsx. Vite fingerprints the assets; font-display: swap keeps
          text readable while they load, with no Google Fonts connection. -->
+    <!-- Discover the body and display fonts before JavaScript to avoid cold-load
+         reflow. Let the other existing weights load through CSS so font
+         preloads do not crowd the initial script requests. -->
+    <link rel="preload" href="/node_modules/@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <title>Red Tide PPC — Puerto Princesa PSP Advisory Map</title>
   </head>
   <body>
