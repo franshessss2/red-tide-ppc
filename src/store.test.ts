@@ -240,6 +240,35 @@ describe('selectors', () => {
 })
 
 describe('admin passcode gate', () => {
+  it('uses the public sample-data passcode only when configuration is unset', () => {
+    startApp()
+    vi.stubEnv('VITE_ADMIN_PASSCODE', undefined)
+
+    expect(useAppStore.getState().tryUnlockAdmin('demo-review')).toBe(false)
+    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(true)
+    useAppStore.getState().lockAdmin()
+    expect(useAppStore.getState().adminUnlocked).toBe(false)
+  })
+
+  it('does not use the sample-data passcode for a Firebase backend', () => {
+    startApp()
+    setBackendForTesting({ ...createDemoBackend(), kind: 'firebase' })
+    vi.stubEnv('VITE_ADMIN_PASSCODE', undefined)
+
+    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(false)
+    expect(useAppStore.getState().adminUnlocked).toBe(false)
+    expect(useAppStore.getState().formError).toContain('VITE_ADMIN_PASSCODE')
+  })
+
+  it('honors an explicitly configured passcode over the sample-data default', () => {
+    startApp()
+    vi.stubEnv('VITE_ADMIN_PASSCODE', 'test-override')
+
+    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(false)
+    expect(useAppStore.getState().tryUnlockAdmin('test-override')).toBe(true)
+    useAppStore.getState().lockAdmin()
+  })
+
   it('refuses to unlock when no passcode is configured', () => {
     startApp()
     vi.stubEnv('VITE_ADMIN_PASSCODE', '')

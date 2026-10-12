@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Red Tide PPC</string>
+    <string name="title_activity_main">Red Tide PPC</string>
+    <string name="package_name">com.redtideppc.app</string>
+    <string name="custom_url_scheme">com.redtideppc.app</string>
+</resources>

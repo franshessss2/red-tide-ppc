@@ -1,0 +1,11 @@
+{
+  "appId": "com.redtideppc.app",
+  "appName": "Red Tide PPC",
+  "webDir": "../dist",
+  "backgroundColor": "#0c0a09",
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
+  }
+}

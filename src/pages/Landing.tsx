@@ -12,6 +12,7 @@ import { BlurText } from '../components/BlurText'
 import { CommunitySource, DataProvenance } from '../components/DataProvenance'
 import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
+import { AndroidDownloadButton } from '../components/AndroidDownloadButton'
 import { HeroBackdrop } from '../components/HeroBackdrop'
 import { StatusPip } from '../components/StatusPip'
 import { Waves } from '../components/Waves'
@@ -188,25 +189,26 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
 
       <div className="relative flex min-h-dvh flex-col">
         <Header
-          containerClassName={LANDING_CONTAINER}
+          containerClassName={`${LANDING_CONTAINER} [&>a]:gap-1 [&>div]:gap-1 min-[400px]:[&>a]:gap-2.5 min-[400px]:[&>div]:gap-2.5`}
           eyebrow="Puerto Princesa, Palawan"
           title="Red Tide"
           right={
             <>
+              <AndroidDownloadButton />
               {onReplay && <button type="button" data-intro-replay aria-label="Watch introduction" title="Watch introduction" onClick={onReplay} className="grid h-11 w-11 place-items-center text-2xl text-muted transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-accent"><span aria-hidden="true">↻</span></button>}
               <a href="/arduino.html" aria-label="Open Arduino" title="Arduino" className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4" /><rect x="10" y="10" width="4" height="4" rx=".5" /></svg>
               </a>
               <Link
                 to="/admin"
-                className="rounded-md border border-line bg-ink-2/85 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
+                className="rounded-md border border-line bg-ink-2/85 px-1.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
               >
                 Admin
               </Link>
               <Link
                 to="/map"
                 {...MAP_CTA_PREFETCH}
-                className="rounded-md border border-line bg-ink-2/85 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
+                className="rounded-md border border-line bg-ink-2/85 px-1.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
               >
                 Map
               </Link>

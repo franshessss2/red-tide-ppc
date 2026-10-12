@@ -13,6 +13,8 @@ name: pp-bay extension shots
 
 on:
   push:
+    # Maintenance commits belong on main; release tags must not run write-back jobs.
+    branches: [main]
     paths:
       - 'scripts/pp-bay-extension-shots.mjs'
   workflow_dispatch:

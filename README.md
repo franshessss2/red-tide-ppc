@@ -86,7 +86,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the admin passcode to `demo-review`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
+Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the public prototype admin passcode to `137950FrT`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
 
 For an env-configured local run, fill `.env`, then use `npx vite` or `npm run build` followed by `npm run preview`. The default demo launcher does not use those values.
 
@@ -117,7 +117,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-upload-preset
 VITE_ADMIN_PASSCODE=change-me
 ```
 
-`.env` is gitignored. Everything prefixed `VITE_` is compiled into the public JavaScript bundle. Firebase web identifiers are public, and the admin passcode is also readable by visitors; do not put private credentials in `VITE_*`. Access control belongs in the security rules.
+`.env` is gitignored. When sample-data mode is active and `VITE_ADMIN_PASSCODE` is unset, the public prototype passcode is `137950FrT` (also used in the Android sample-data bundle). An explicit value overrides this default; an explicit blank disables the gate. Firebase-backed builds require an explicit passcode. Everything prefixed `VITE_` is compiled into the public JavaScript bundle. Firebase web identifiers are public, and the admin passcode is also readable by visitors; do not put private credentials in `VITE_*`. Access control belongs in the security rules.
 
 Restart an env-configured `npx vite` run after editing `.env`, or rebuild before preview/deployment. `npm run dev` deliberately forces demo mode and ignores env files.
 
