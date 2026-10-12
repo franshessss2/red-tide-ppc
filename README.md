@@ -1,54 +1,33 @@
 # Red Tide PPC
 
-**Community-driven red tide (PSP) advisory map and report tracker for the coastal waters of Puerto Princesa, Palawan.**
+**A school prototype for coastal community records and observation reports in Puerto Princesa, Palawan.**
 
-A public map of coastal zones colour-coded by advisory status, an anonymous way for anyone on the water to report what they are seeing, and a passcode-gated admin view that turns a credible report into a zone-wide advisory.
+Explore seven approximate coastal zones, submit an observation, and demonstrate a human review that can raise a community warning. A reviewed report is not laboratory confirmation, and no recorded warning is not a food-safety clearance.
 
+[Production website](https://red-tide-ppc.vercel.app/) · [Public map](https://red-tide-ppc.vercel.app/map) · [Android download folder](https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing) · [GitHub releases](https://github.com/franshessss2/red-tide-ppc/releases)
 
-For the school presentation, see [Presentation review](docs/presentation-review.md).
-For the optional virtual ESP32, see [Virtual device setup](docs/virtual-device-setup.md).
-The separate `/devices` page supports local rehearsal without accounts or hardware.
-On the first visit per device and intro version (remembered in `localStorage`), `/` opens with a short wave intro over the landing page. Escape skips it, and `prefers-reduced-motion` skips it entirely; ↻ in the landing
-header reopens it. The public map retains its original animated zone and advisory drawers.
+## Current state — 13 October 2026
+
+- **Hosting:** Vercel, deployed from `main`. Record labels distinguish sample/local data, cached records and server delivery. Hosting does not imply live or official data.
+- **Sample mode:** missing, incomplete or placeholder Firebase configuration falls back to browser-local records; `VITE_USE_DEMO_BACKEND=true` forces that mode. Visitors see **Sample data** beside community records and **Sample data · local records** in source details. The current production check is dated in §9.
+- **Introduction:** an opening film followed by a nine-chapter reel. The reel loops until the visitor enters; reduced motion skips the film and shows a static equivalent. Replay restarts the sequence. See [Opening film](docs/opening-video.md) and [Reel intro](docs/reel-intro.md).
+- **Map:** below 768px, a compact bottom panel; at desktop widths, the original zone/advisory drawers. A separate street-map dialog uses MapLibre. See [Mobile map layout](docs/mobile-map-layout.md) and [Street map](docs/mapcn-text-motion.md).
+- **Android:** a Capacitor debug alpha bundles the web build. The shared Drive folder currently contains the PR #99 status-bar/cutout fix as `RTP.apk`; it is outside Google Play. Real-phone verification remains pending. Build details are in §9 and [Android setup](android-app/README.md).
+- **Team:** three empty roster slots remain disabled. Supplying real names, roles, initials and media is a separate follow-up; see §15.
+
+For the school rehearsal, see [Presentation review](docs/presentation-review.md); some older walkthroughs and screenshot scripts describe earlier layouts, so use the current behavior above when following them. The isolated device demonstrations are documented in [Virtual device setup](docs/virtual-device-setup.md) and [Combined Arduino UNO](docs/arduino-combined.md).
 
 ---
 
 ## 1. The problem, in plain English
 
-### What is a red tide?
+Some algal blooms produce toxins that can accumulate in seafood. Water appearance and a community photograph cannot establish whether seafood is safe. The app collects observations, not toxin measurements or official advisories.
 
-"Red tide" — *pula ang dagat* in Filipino — is a **bloom of microscopic algae**. Under the right conditions (warm water, calm seas, nutrient runoff) certain single-celled organisms multiply explosively. In the Philippines the usual culprits are *Pyrodinium bahamense* and *Alexandrium* species.
+Paralytic shellfish poisoning can cause numbness, weakness and breathing problems; severe cases can cause respiratory failure. Seek urgent medical care for suspected poisoning after eating seafood. Timing and severity vary; do not wait for a particular symptom sequence. [CDC clinical signs and symptoms](https://www.cdc.gov/harmful-algal-blooms/hcp/clinical-signs/symptoms-saltwater-harmful-algal-blooms.html).
 
-The water can turn reddish-brown, but **not always**. A bloom can be dangerous while the sea still looks perfectly normal, which is exactly why a name based on colour is not enough on its own.
+Cooking or freezing does not make marine shellfish toxins safe. Treatment is supportive medical care, not a remedy supplied by this app. [CDC marine-toxin guidance](https://www.cdc.gov/yellow-book/hcp/environmental-hazards-risks/food-poisoning-from-marine-toxins.html), [CDC clinical overview](https://www.cdc.gov/harmful-algal-blooms/hcp/clinical-overview/index.html).
 
-### Why it makes people sick
-
-Some of those organisms produce **saxitoxin**, a nerve poison. Shellfish — *tahong* (mussels), *talaba* (oysters), *halaan* (clams), *tuway*, and *alamang* (small shrimp) — feed by filtering seawater, so the toxin concentrates inside their flesh.
-
-Eating contaminated shellfish causes **Paralytic Shellfish Poisoning (PSP)**:
-
-- Symptoms usually begin **30 minutes to 2 hours** after eating.
-- It starts as tingling or numbness around the mouth, tongue and face, then spreads to the arms and legs.
-- Severe cases progress to **respiratory paralysis** and can be fatal within 12 hours.
-- **There is no antidote.** Treatment is supportive care — keeping the person breathing until the toxin wears off.
-
-Three things people often get wrong, and this app repeats deliberately:
-
-| Myth | Reality |
-| --- | --- |
-| "Cooking kills it." | **No.** Boiling, frying, grilling, vinegar and chili do **not** destroy saxitoxin. |
-| "If it smells and tastes fine, it is safe." | **No.** Contaminated shellfish look, smell and taste normal. |
-| "All seafood from that water is dangerous." | **No.** Fish, squid, shrimp and crab are generally safe if they are fresh, have their gills and intestines removed, and are washed under running water before cooking. The toxin sits in the organs, not the meat. |
-
-### Who decides officially?
-
-The **Bureau of Fisheries and Aquatic Resources (BFAR)** tests shellfish and seawater and publishes shellfish bulletins and advisories. The Philippine regulatory limit is **60 µg of saxitoxin per 100 g of shellfish meat**; above that, gathering and selling shellfish from the area is banned.
-
-### The gap this project targets
-
-Official testing is authoritative but **slow to reach a specific cove**, and it cannot cover every shoreline every day. Meanwhile the people who notice first are the ones already on the water: fishers, *gleaners*, boat operators, resort staff, residents walking the shore at low tide.
-
-Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a fast way to raise a visible warning for one specific zone — while being explicit that **it is not a substitute for a BFAR advisory**.
+For Philippine official advice, check [BFAR shellfish bulletins](https://www.bfar-frmdhabmonitoring.com.ph/shellfishBulletinFile) and the applicable local authority. The site links to BFAR; it does not import current bulletins or certify a coastal area. These health references were checked on **13 October 2026**; no current local clearance is asserted.
 
 ---
 
@@ -56,7 +35,7 @@ Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a
 
 **Routes**
 
-- `/` — the landing page: community zone records and figures, their source labels, and the way in.
+- `/` — opening film/reel on eligible first visits, then the landing page with community figures, source labels, replay and the Android QR download dialog.
 - `/map` — the public map (lazy-loaded; the landing and admin never pay for Leaflet).
 - `/admin` — the passcode-gated review queue.
 - `/devices` — local rehearsal page for the optional virtual ESP32, with no accounts or hardware (see [Virtual device setup](docs/virtual-device-setup.md)).
@@ -66,15 +45,15 @@ Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a
 **Core loop**
 
 1. **Public map at `/map`** — a Leaflet map of the Puerto Princesa coastline. Each zone is a coloured nearshore band hugging the actual shoreline (see §10):
-   - 🟢 **No community warning** (`safe`) — no warning recorded; this does not establish official clearance.
-   - 🟡 **Unconfirmed** — flagged by an admin as needing a check; treat with caution.
+   - 🟢 **No alert recorded** (`safe`) — no community warning recorded; this does not establish official clearance.
+   - 🟡 **Under review** (`unconfirmed`) — flagged by an admin as needing a check; treat with caution.
    - 🔴 **Community warning** (`advisory`) — an admin-reviewed community warning; check official BFAR bulletins before a food-safety decision.
-2. **Tap a zone** → a popup shows the name, current status, plain-language guidance, how many community reports are waiting for review, and when the status last changed — plus a **"Report something here"** button.
+2. **Tap a zone** → read its community status, guidance, pending-report count and record-update time in the popup/panel; the report action opens the form. Record-update time is not water sampling time.
 3. **Report form** — a description plus an optional photo. No account, no name, no login. The report has status `pending`: stored in Firestore when configured, or in browser-local sample data in demo mode.
 4. **Admin view at `/admin`** — behind a passcode. Pending reports are listed with zone, description, photo and timestamp.
    - **Approve** → the report becomes `confirmed` **and** its zone becomes `advisory` with `lastUpdated = now`.
    - **Reject** → the report becomes `rejected` and the zone is left exactly as it was.
-5. **Manual control only** — zone status never changes by itself. When the water is cleared, an admin reverts the zone to `safe` from the admin view's **Zones** tab.
+5. **Manual control only** — zone status does not expire automatically. An admin can change it from the **Zones** tab. Setting `safe` means no community warning is recorded; it does not clear water or seafood officially.
 6. **Optional shipping-channel overlay** — a ship icon in the header toggles dashed blue PCG traffic-lane lines for the port approach (see §11), so someone drifting while gleaning can see where ship traffic is channelled. Off by default; a safety reference, not an advisory.
 
 ---
@@ -82,15 +61,22 @@ Red Tide PPC gives those sightings somewhere to go, and gives a local reviewer a
 ## 3. Quick start (no Firebase project required)
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the public prototype admin passcode to `137950FrT`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
+Use Node.js 22.12 or newer in the Node 22 line, matching CI's Node 22 setup. Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the public prototype admin passcode to `137950FrT`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
 
 For an env-configured local run, fill `.env`, then use `npx vite` or `npm run build` followed by `npm run preview`. The default demo launcher does not use those values.
 
-> **Demo-mode tip:** demo data lives in `localStorage` under `red-tide-ppc:demo:v1`. Clear site data (or run `localStorage.clear()` in the console) to start over with all zones `safe`.
+> **Scoped sample reset:** this removes local sample reports, photos and zone changes on the current origin. Use only when you intend to discard that rehearsal data:
+>
+> ```js
+> localStorage.removeItem('red-tide-ppc:demo:v1')
+> location.reload()
+> ```
+>
+> This preserves unrelated storage and the intro-seen key. It does not delete Firebase records. Replaying the intro needs no reset: use ↻ or `/?intro=1`.
 
 ---
 
@@ -152,10 +138,10 @@ Or paste the contents into the Firebase console under **Firestore → Rules**.
 >
 > There is no authentication in this MVP, so the rules cannot distinguish a fisherman from an attacker:
 >
-> - `reports` must be **world-writable**, or nobody can submit anonymously.
-> - `zones` must be **world-updatable**, or the admin's Approve button cannot flip a zone to `advisory`.
+> - The shipped rules allow unauthenticated reads and restricted-field creates/updates for reports and zones.
+> - The public browser passcode cannot establish who is an admin.
 >
-> What they still enforce: fixed document shapes, **every new report must start as `pending`** (nobody can self-confirm), zone updates restricted to `status`/`lastUpdated`, and no deletes.
+> Report creates must start `pending`; report updates can change `status`/`reviewedAt`; zone updates can change `status`/`lastUpdated`; deletes are denied. These checks do not provide reviewer authorization, private reports, rate limiting or complete schema validation. A direct client can change allowed fields without the UI gate.
 >
 > Before any real deployment, add Firebase Auth with an admin custom claim and lock writes behind it. The rule files show the intended shape in a comment.
 
@@ -166,10 +152,11 @@ Zones are **pre-seeded, never user-created**:
 ```bash
 npm run seed:dry-run   # show what would be written, write nothing
 npm run seed           # create any missing zones
-npm run seed -- --force  # overwrite existing zones (resets status to "safe")
 ```
 
-The seed script reads the same `.env` as the app and writes the seven zones defined in `src/data/zones.ts` into the `zones` collection with `lastUpdated = serverTimestamp()`.
+The seed script loads `.env`/`.env.local` and process variables; it does not use the demo launcher's forced environment. `npm run seed` creates missing zones and skips existing ones. Its definitions come from `src/data/zones.ts`, with `lastUpdated = serverTimestamp()`. Inspect the selected Firebase project before a real seed run. Dry run validates/prints payloads without fetching existing documents or writing; it does not verify deployed authorization rules.
+
+`--force` is a deliberate destructive maintenance option: it overwrites existing zone definitions, resets their status and replaces `lastUpdated`. It is not routine deployment or geometry advice. Back up records and review a migration before changing existing zones; the current Firestore rules may reject geometry changes.
 
 Polygons are stored as arrays of `{lat, lng}` objects: Firestore rejects nested arrays, so the `[lat, lng]` tuples the app uses are converted on the way in (`toFirestorePolygon`) and back to tuples on the way out (`normalizePolygon`). `seed:dry-run` also validates every payload shape before touching the network.
 
@@ -185,7 +172,7 @@ Reload an env-configured build. **Sample data** should be absent; source details
 | --- | --- | --- |
 | **Approve** | `pending` → `confirmed` | → `advisory`, `lastUpdated = now` |
 | **Reject** | `pending` → `rejected` | **unchanged** |
-| **Zones tab → Safe / Unconfirmed / Advisory** | unchanged | set directly, `lastUpdated = now` |
+| **Zones tab → No alert recorded / Under review / Community warning** | unchanged | set directly, `lastUpdated = now` |
 
 Submitting a report never changes a zone by itself — otherwise a rejected report would leave a zone stuck in a changed state. The number of pending reports per zone is shown on the map popup and in the zone list instead.
 
@@ -195,18 +182,21 @@ Submitting a report never changes a zone by itself — otherwise a rejected repo
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server (binds `0.0.0.0`, so phones on the same network can open it) |
+| `npm run dev` / `npm run dev:demo` | Demo launcher: browser-local records and public prototype passcode, ignores env files; binds `0.0.0.0` |
 | `npm run build` | Type-check (`tsc -b`) then production build into `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm run typecheck` | Type-check only |
 | `npm test` | Run the Vitest suite once |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm --prefix android-app run cap:sync` | Copy the root `dist/` build into the Android project |
+| `npm --prefix android-app run verify:sync` | Verify synced web assets match root `dist/` byte for byte |
+| `npm --prefix android-app run cap:open` | Open the Android project in Android Studio |
 | `npm run seed` | Seed zones into Firestore |
 | `npm run seed:dry-run` | Seed preview, no writes |
 | `npx tsx scripts/generate-zones.ts` | Regenerate the zone polygons + coastline reference from `scripts/coastline-cache/` (verifies geometry, then writes `src/data/zones.ts` + `src/data/coastline.ts`) — `--check` verifies without writing (§10) |
 | `node scripts/fetch-coastline.mjs` | Raw OSM coastline fetch (runs in CI — `.github/workflows/fetch-coastline.yml` commits the result to `scripts/coastline-cache/`) |
 | `node scripts/fetch-seamarks.mjs` | Raw OSM seamark sweep for the shipping-overlay provenance (runs in CI — `.github/workflows/fetch-seamarks.yml`, §11) |
-| `node scripts/map-motion-pass.mjs` | Real-browser verification of the map's zone / camera / drawer / pin / location / glide / orb animations (headless Chromium; it needs a manual NSS/chromium-libs bootstrap because this sandbox has no system NSS — `CHROMIUM_LIB_DIR`, with the full recipe in `scripts/route-transition-pass.mjs`'s header) |
+| `node scripts/map-motion-pass.mjs` | Historical Chromium map-motion pass; check its header and current desktop/mobile targets before use (§14) |
 | `node scripts/route-transition-pass.mjs` | Real-browser verification of the route dissolve (`/` <-> `/map`; `/admin` stays instant) |
 | `node scripts/route-transition-filmstrip.mjs` | Before/after filmstrip capture for that route dissolve |
 
@@ -214,77 +204,34 @@ Submitting a report never changes a zone by itself — otherwise a rejected repo
 
 ## 7. Project structure
 
-Deliberately small files in separate modules, so two developers can work in parallel without colliding:
+Key entrypoints; this is not an exhaustive file list:
 
-```
-scripts/
-  seed.ts                 # writes the zones into Firestore
-src/
-  types.ts                # Zone / Report domain types (no DOM, no Firebase)
-  store.ts                # ALL datastore calls + app state (Zustand)
-  data/
-    zones.ts              # the seven pre-seeded zones + polygon helper
-    coastline.ts          # generated dense OSM coastline runs (test reference)
-    shipping.ts           # PPTSS shipping-channel lines (PCG circular transcription)
-  lib/
-    backend.ts            # Backend contract + which implementation to use
-    backend.firebase.ts   # Firestore + Cloudinary upload plumbing
-    backend.demo.ts       # in-memory / localStorage implementation
-    firestoreMapping.ts   # Firestore doc -> domain type (pure, unit-tested)
-    firebase.ts           # Firebase bootstrap + env parsing
-    status.ts             # status -> colour / label / guidance (single source)
-    format.ts             # date + relative time + byte formatting (PHT)
-    image.ts              # photo size/type checks, downscale for demo mode
-  components/
-    Map.tsx               # react-leaflet map, polygons, popups
-    MapMarkers.tsx        # report pins, user location dot, intro camera glide (all rendered
-                           # inside Map.tsx)
-    ShippingLayer.tsx     # toggleable PPTSS navigation-hazard line overlay
-    ZonePopup.tsx         # popup content + "Report something here"
-    ReportForm.tsx        # report modal / bottom sheet
-    ReportCard.tsx        # one report in the admin queue
-    AdminGate.tsx         # passcode screen
-    ZoneDrawer.tsx        # right-edge zone drawer (collapsed/open): summary strip + full zone
-                           # list, left status-accent cards, spring-driven with velocity-aware snap
-    AdvisoryDrawer.tsx    # right-edge advisory-signal drawer (gauge card + grab tab)
-    MorphChevron.tsx      # the drawer chevron icon morph
-    MapControlColumn.tsx  # top-right control column: zoom +/− then both drawer tabs
-    StatusPip.tsx         # the status dot (pops on status change)
-    Ambient.tsx            # map scanline + registration marks (schematic)
-    Header.tsx  StatusBadge.tsx  Notice.tsx  DataProvenance.tsx
-    SplashScreen.tsx      # first-visit wave intro over Landing (Escape or reduced-motion skips it)
-    DecryptedText.tsx     # supporting landing text: glyphs resolve left to right
-    TextPressure.tsx      # main RED TIDE heading
-    Waves.tsx             # landing background: two sine composites on a canvas
-    CountUp.tsx           # landing figures: counts up on first view, re-tweens when community records change
-    BlurText.tsx          # landing copy: words blur into focus on their own scroll trigger
-    HeroBackdrop.tsx      # landing hero backdrop: full-bleed WebGL panel, owns the
-                           # reduced-motion/off-screen/lazy-load policy (see docs §15, §20)
-    ferrofluid/            # the `ogl` shader itself -- reach it only via HeroBackdrop
-    Map.test.tsx           # regression: the zone-path classes in a production render
-  motion/
-    RouteTransition.tsx   # landing <-> map <-> admin route dissolve (fade + rise, gated on lazy
-                           # chunk load; see docs §21, supersedes §19)
-    tokens.ts             # shared motion durations and easings (incl. intro exit timing)
-    mapMotion.ts          # zone load-in stagger, focus-flight padding, pure helpers (tested)
-    pins.ts               # report-pin centroid + intro-glide helpers (pure, tested)
-    statusKey.ts          # active-status resolution for the pill indicator (pure, tested)
-    sidePanelAnchors.ts   # drawer snap maths: offsets, velocity projection, flick gating,
-                           # plus isDragTail (pure, tested)
-    readouts.ts           # data-derived drawer copy + gauge wave (pure, tested)
-    useSidePanel.ts       # drawer position/states + clip-window motion values
-  styles/
-    statusTheme.ts        # status -> dark-theme colours, classes, map paint
-    map-motion.css        # zone pulse/dash/dim, pin drop/ring, location halo, ambient orbs
-    micro-interactions.css  # button press-scale
-    tide-intro.css        # splash keyframes: wave layers, glow, ripple, 115dvh exit
-  pages/
-    Landing.tsx            # / -- pre-map landing (TextPressure heading, DecryptedText, Waves, CountUp)
-    MapPage.tsx             # /map public view (lazy-loaded)
-    Admin.tsx               # /admin review dashboard
-```
-
-**Split suggestion:** one developer owns `Map.tsx` / `MapPage.tsx` / `ZoneDrawer.tsx`; the other owns `ReportForm.tsx` / `Admin.tsx` / `AdminGate.tsx` / `ReportCard.tsx`. `store.ts`, `types.ts` and `status.ts` are the shared contract — change them together.
+| Path | Responsibility |
+| --- | --- |
+| `src/App.tsx` | Routes and app composition |
+| `src/store.ts`, `src/types.ts` | Application state, actions and domain types |
+| `src/data/zones.ts`, `src/data/coastline.ts`, `src/data/shipping.ts` | Approximate zones, geometry reference and shipping transcription |
+| `src/data/team.ts` | Disabled, empty Team roster and readiness marking |
+| `src/lib/backend.ts`, `src/lib/backend.demo.ts`, `src/lib/backend.firebase.ts` | Backend selection; local sample records or Firestore/Cloudinary |
+| `src/lib/firebase.ts`, `src/lib/firebaseConfig.ts` | Runtime selection and shared opt-in build configuration check |
+| `src/lib/status.ts`, `src/components/DataProvenance.tsx` | Status guidance and source labels |
+| `src/components/SplashScreen.tsx`, `src/components/intro/` | Opening film, first-visit gate and nine-chapter reel |
+| `src/pages/Landing.tsx`, `src/styles/landing-motion.css` | Landing layout, reserved geometry and coordinated entrances |
+| `src/components/HeroBackdrop.tsx`, `src/components/ferrofluid/` | Lazy hero canvas and shader |
+| `src/components/Waves.tsx` | Two sine composites in the landing canvas |
+| `src/components/AndroidDownloadButton.tsx` | Landing-only QR dialog and shared download-folder link |
+| `src/pages/MapPage.tsx`, `src/components/Map.tsx`, `src/components/MapMarkers.tsx` | Coastal map, polygons, reports and optional location dot |
+| `src/components/MobileMapPanel.tsx`, `src/components/MobileMapActions.tsx` | Phone information panel and options |
+| `src/components/ZoneDrawer.tsx`, `src/components/AdvisoryDrawer.tsx` | Desktop drawers |
+| `src/components/StreetMapDialog.tsx`, `src/components/StreetMapExample.tsx` | Lazy MapLibre street-map dialog |
+| `src/pages/Admin.tsx`, `src/components/AdminGate.tsx`, `src/components/ReportForm.tsx` | Review gate, queue and observation form |
+| `src/motion/LandingMotionPolicy.tsx`, `src/motion/preferences.ts` | Scoped Save-Data and reduced-motion policy |
+| `src/motion/`, `src/styles/` | Shared motion helpers and styles; some files describe legacy effects |
+| `api/device-readings.ts`, `server/`, `wokwi/` | Isolated synthetic-device ingestion and simulator |
+| `public/arduino.html`, `public/arduino-demo.html`, `arduino/` | USB demonstration and downloadable sketches |
+| `android-app/` | Separate Capacitor package, Android source and device regressions |
+| `.github/workflows/ci.yml` | Typecheck, plain tests, build and full-history Gitleaks |
+| `scripts/`, `docs/` | Seed/geometry tools and dated verification records |
 
 ---
 
@@ -315,11 +262,13 @@ src/
 
 ## 9. Deploying
 
-Any static host works — `npm run build` produces `dist/`.
+`npm run build` produces `dist/`. Static hosting can serve the SPA; the optional device API additionally needs a server-function host.
 
 **Vercel (production)** — [red-tide-ppc.vercel.app](https://red-tide-ppc.vercel.app), deployed from `main` with `npm run build` and output `dist`. `vercel.json` supplies the SPA fallback while excluding `/api/` routes. Set public Firebase/Cloudinary build variables for the intended deployment environment; changing settings requires a rebuild.
 
-**Current deployment observation (2026-10-10):** the served production bundle omits the five Firebase configuration variables and falls back to browser-local sample data. Visitors see **Sample data** beside community records and **Zones: Sample data · local records** on the map. Production hosting does not imply live or official data. This records the observed bundle, not access to the current Vercel settings dashboard; re-check after redeploying. Missing, incomplete or placeholder Firebase configuration selects sample data, and `VITE_USE_DEMO_BACKEND=true` can explicitly force it.
+**Current deployment check (2026-10-13):** an isolated Chromium visit showed **Sample data** and local-record labels on `/` and `/map`. The served bundle was previously observed without the five Firebase configuration variables on 2026-10-10; current build-time settings were not inspected. Missing, incomplete or placeholder configuration selects sample data, and `VITE_USE_DEMO_BACKEND=true` can explicitly force it. These labels do not identify which setting caused the fallback.
+
+The same read-only check loaded `/`, `/map`, `/admin`, `/devices`, `/arduino.html` and `/arduino-demo.html` plus their checked entry JS/CSS assets with HTTP 200 and no page exceptions. Map tiles were blocked; no reports, admin unlock or hardware actions were tested. **`GET /api/device-readings` returned HTTP 500, plain-text `FUNCTION_INVOCATION_FAILED`**, rather than the handler's JSON response. [Issue #37](https://github.com/franshessss2/red-tide-ppc/issues/37) tracks this unresolved deployment failure and the remaining route checks. Its cause and the current server configuration are unverified; a green deployment/build does not establish endpoint health.
 
 **Netlify (alternative static host)** — the existing `public/_redirects` catch-all serves `index.html` for unmatched paths, including `/api/*` where no endpoint handles them. The repository's Vercel device function is not a Netlify function; provide an appropriate API backend/routing before using device ingestion there.
 
@@ -329,6 +278,29 @@ Notes:
 - Make sure the deployed Firestore rules are the ones in this repo, and restrict the unsigned Cloudinary preset for production.
 - Map tiles come from OpenStreetMap and need the visitor to be online.
 - Hosting quotas and pricing depend on provider and plan. Check the Vercel dashboard before relying on a production budget; Netlify credit estimates do not describe this deployment.
+
+---
+
+### Android debug alpha
+
+The current native version is `0.2.0-alpha.1` / version code `1`, with placeholder app ID `com.redtideppc.app`. `android-app/` pins Capacitor core, Android runtime and CLI to 8.5.2. It bundles `../dist`; it does not load the Vercel site remotely. There is no iOS project or production signing setup.
+
+The landing header's small **QR** button opens a download dialog. Both its QR image and its link target the shared folder above, so replacing the APK inside that folder does not require changing the QR. As checked on **13 October 2026**, its sole `RTP.apk` matches the rebuilt PR #99 debug APK (SHA-256 `8fa8d19c4beb877288f66011b9613a8bef89c2017da2c674f4ac9dbc3ee71d3c`). The older tagged GitHub Android alpha asset predates the #99 fix; it was not replaced by the merge. The download-folder policy is to upload and verify the newest APK before removing older APKs, leaving one current APK.
+
+```bash
+npm ci
+npm run build
+npm --prefix android-app ci
+npm --prefix android-app run cap:sync
+npm --prefix android-app run verify:sync
+npm --prefix android-app run cap:open
+```
+
+In Android Studio, use the configured Android SDK/JDK to build/install a debug APK. Alternatively, from `android-app/android`, run `gradlew.bat :app:assembleDebug` on Windows (`./gradlew :app:assembleDebug` on Unix). See [Android setup](android-app/README.md) for the toolchain, dependencies, Back behavior and connected-device tests.
+
+PR #99 reserves status-bar, navigation-bar, display-cutout and keyboard space around the WebView. The rebuilt APK was compiled, linted and signature-checked; connected-device regression execution, keyboard/rotation/navigation behavior and real-phone GPU performance remain **unverified**. Installing the rebuilt APK is necessary to test native geometry; a web preview cannot verify it.
+
+The bundled sample-data build uses the public prototype passcode in §3 and does not provide offline map tiles, a local `/api/*` server, push notifications or authenticated moderation. The isolated device page needs a hosted API strategy for native use. Install only the intended testing APK; this is not a Google Play release.
 
 ---
 
@@ -350,7 +322,7 @@ Each zone is a **single simple polygon of 63–270 vertices**: a nearshore band 
 
 **How they are generated** (and re-generated — do not hand-edit the coordinates):
 
-1. CI (`.github/workflows/fetch-coastline.yml`) runs `scripts/fetch-coastline.mjs`, which pulls every `natural=coastline` way in the seven zone bboxes from Overpass plus the documented ways from the OSM API, and commits the raw geometry to `scripts/coastline-cache/osm-coastline.json` (the dev sandbox has no egress to those APIs).
+1. CI (`.github/workflows/fetch-coastline.yml`) runs `scripts/fetch-coastline.mjs`, which pulls every `natural=coastline` way in the seven zone bboxes from Overpass plus the documented ways from the OSM API, and commits the raw geometry to `scripts/coastline-cache/osm-coastline.json`.
 2. `npx tsx scripts/generate-zones.ts` walks the coastline graph (Dijkstra between per-zone anchors), bridges thin out-and-back spurs (piers, fish pens — only where the bridge chord stays within 15 m of the real coast), builds the buffer, verifies **landward deviation ≤ 15 m, ring simplicity, pairwise non-overlap and band width**, then writes `src/data/zones.ts` and `src/data/coastline.ts`.
 3. `src/data/zones.test.ts` asserts the property that actually matters: **every point of the landward edge within 20 m of the real coastline**, plus simplicity and non-overlap — so the "jagged blade" or "floating offshore strip" regressions fail CI instead of waiting for a human to eyeball screenshots.
 
@@ -371,7 +343,7 @@ Caveats worth knowing:
 
 Before this is used for real public-health decisions, replace them with the actual boundaries from BFAR or the Puerto Princesa City LGU.
 
-**If you edit the polygons:** zones are seeded into Firestore, so an existing project keeps the old coordinates until you re-seed — `npm run seed -- --force`. In demo mode, clear `localStorage` (`red-tide-ppc:demo:v1`) to re-seed from the file.
+**If you edit the polygons:** an existing Firestore project keeps stored definitions until a reviewed migration updates them. Preview changes and preserve existing warning statuses; the current public rules restrict updates to status/timestamp fields. Do not use force-seeding as an automatic deployment step. In sample mode, the scoped reset in §3 re-seeds from the file and discards local rehearsal records.
 
 ---
 
@@ -393,7 +365,7 @@ A toggleable **navigation-hazard layer** under the advisory zones: the boundary 
 - **No push notifications** and no SMS/route-based alerts.
 - **No BFAR API integration or scraping** — status is entered by a human admin.
 - **No automatic expiry or decay** of zone status; reverting to `safe` is a deliberate admin action.
-- **No geolocation or per-report coordinates** — a report belongs to a zone, not to a point.
+- **No measured per-report coordinates** — reports belong to a zone and pins use its centroid. A browser location dot is available when permission is granted; native Android location-plugin/permission behavior is not verified.
 - **No moderation history or audit trail** beyond the report's final status.
 
 ---
@@ -403,60 +375,42 @@ A toggleable **navigation-hazard layer** under the advisory zones: the boundary 
 1. **Replace the passcode with Firebase Auth** and an `admin` custom claim; lock `zones` and `reports` updates behind it. The current gate is a string compare against a value that is readable in the page source.
 2. **Tighten `firestore.rules`** once zones are seeded (`allow create: if false` on `zones`).
 3. **Add rate limiting / basic spam control** on report creation — right now anyone can flood the queue.
-4. **Store the reviewer and timestamp** on approve/reject for accountability (`reviewedAt` is already written; `reviewedBy` needs auth).
+4. **Add an accountable moderation history:** the Firebase update writes `reviewedAt`, but the public report model and sample backend do not supply a reviewer identity or complete audit trail.
 5. **Replace the polygons** with real boundaries (see §10).
-6. **Compress or resize photos client-side** before upload to keep bandwidth use and load times down.
+6. **Compress or resize Firebase/Cloudinary uploads** with a tested fallback. Only the sample backend currently downscales images; the real uploader receives the original file.
+
+Open presentation work is tracked in [#33](https://github.com/franshessss2/red-tide-ppc/issues/33), [#37](https://github.com/franshessss2/red-tide-ppc/issues/37), [#38](https://github.com/franshessss2/red-tide-ppc/issues/38), [#49](https://github.com/franshessss2/red-tide-ppc/issues/49), [#65](https://github.com/franshessss2/red-tide-ppc/issues/65), [#66](https://github.com/franshessss2/red-tide-ppc/issues/66), [#68](https://github.com/franshessss2/red-tide-ppc/issues/68), [#79](https://github.com/franshessss2/red-tide-ppc/issues/79) and [#80](https://github.com/franshessss2/red-tide-ppc/issues/80). Production security and privacy work remains deferred; closing or refreshing documentation does not complete those controls.
 
 ---
 
 ## 14. Tests
 
 ```bash
+npm run typecheck
 npm test
+npm run build
 ```
 
-At the merge of #92 (2026-10-10), CI passed **489 tests in 58 files**. This is a recorded snapshot, not an automatically updated counter. The suite covers the following areas (see `docs/` for the browser-verification write-ups behind recent UI passes — the side-drawer map layout, header fade timing, hero full-bleed, coastal polygon accuracy):
+On **12 October 2026**, main `401d358` (merge of #99) passed **518 tests in 62 files**, with a **44.13s** test phase: [CI run 38224998593](https://github.com/franshessss2/red-tide-ppc/actions/runs/38224998593). This is a dated result, not an automatically updated counter. No root `lint` script is defined.
 
-- **`src/App.test.tsx`** (jsdom) — the whole loop rendered for real: landing → map → tap a zone → report → `/admin` → wrong passcode rejected → correct passcode → Approve → zone turns advisory → public map shows the advisory. Plus the landing page's TextPressure heading and community-record readout, a photo attachment run end to end, and a check that a too-short report submits nothing.
-- **`src/pages/mapPass.test.tsx`** (jsdom) — the six-item visual pass, DOM side: peek row content + hidden body, anchor cycling, the `zone-path` fill ramp, attribution, zoom-control placement, and the full report → approve loop.
-- **`src/components/Map.test.tsx`** (jsdom) — the production `zone-path` regression: the class lands on the path node in a single-pass render (no StrictMode double effect), `--selected` syncs from first mount onward, the fill ramp follows selection, and press feedback lights/releases the polygon.
-- **`src/components/SplashScreen.test.tsx`** (jsdom) — the first-visit intro: dismissal by Escape, the `prefers-reduced-motion` skip, the persistent per-intro-version `red-tide-ppc:intro:v3` key, scroll-lock and focus cleanup, and the fallback when browser storage is unavailable.
-- **`src/store.test.ts`** — the real store against the real (in-memory) backend: seeded zones load `safe`; `submitReport` writes a pending report; short descriptions are refused; `approveReport` confirms the report **and** flips the zone to `advisory`; `rejectReport` leaves the zone untouched; manual revert to `safe` works; pending counts are right; the passcode gate only unlocks on an exact match.
-- **`src/lib/firestoreMapping.test.ts`** — the production-only mapping path: Timestamps, GeoPoints, unresolved `serverTimestamp()` values, malformed documents, and polygon values.
-- **`src/motion/sidePanelAnchors.test.ts`** — the drawers' snap arithmetic: offsets, clamping, velocity projection, flick gating against a mirrored (left-edge) drawer, and the tap-after-drag guard. (The bottom sheet's equivalent suite retired with the sheet.)
-- **`src/lib/firebase.test.ts`** — `readFirebaseConfig` returns a config only when all five keys are real, so a half-filled `.env` falls back to demo mode instead of half-initialising Firebase.
-- **`src/motion/readouts.test.ts`** — the data-derived copy: peek summary, anchor readout, dominant status, advisory share.
-- **`src/data/zones.test.ts`** — polygon sanity: 4–7 zones all starting `safe`; unique ids plus non-trivial names and descriptions; at least 3 plausible vertices each, all inside the Puerto Princesa box; raw `[lat, lng]` tuples still contain nested arrays (exactly why `scripts/seed.ts` must serialize them) and survive a Firestore round-trip intact; **no two zones overlap** — no interior edge crossings and no vertex of one strictly inside another, while shared boundary vertices and edges are allowed so neighbours can tile; every zone anchored within ~250 m of a real OpenStreetMap coastline node; **every zone a simple polygon (no self-intersections)**; **every point of the landward edge within 20 m of the zone's real OSM coastline run** (`src/data/coastline.ts` — the direct guard against both the "chords cutting across land" and "floating offshore gap" regressions); and `zonesBoundingBox` contains every vertex and `MAP_CENTER`.
-- **`src/lib/backend.firebase.test.ts`** — Cloudinary uploads use the correct endpoint and form fields, return `secure_url`, and surface configuration/API errors.
-- **`src/lib/firestoreSeedValidation.test.ts`** — seed payloads pass the shape Firestore actually rejects on.
-- **`src/data/shipping.test.ts`** — the PPTSS transcription: every coordinate round-trips against its published DMS values, the circular's stated geometry holds (60 m separation-zone ends, lane boundaries 400 m ±30 m off the zone, inbound/outbound bearings match the published 292°T/112°T), every feature carries a plain-language note, and the source citation names the PCG circular (not OSM) with the unofficial-transcription disclaimer (§11).
+Coverage includes:
 
-The Firestore mapping tests matter because that code only runs against a real project — the demo backend never touches it.
+- Opening-film/reel lifecycle, first-visit storage, replay, hidden-tab timing, reduced motion and focus/scroll cleanup.
+- Landing geometry/motion guards, sample-data/source labels and the QR dialog's accessibility and lazy QR load.
+- Map polygons, desktop drawers, mobile panel, street-map dialog, report form, admin workflow and submit → approve → community warning behavior.
+- Backend selection, Firebase configuration completeness/build guard, Cloudinary request shape and Firestore value/seed mapping.
+- Zone/coastline geometry, shipping transcription and isolated synthetic-device API/storage behavior.
+- Team readiness against the **real disabled roster**, empty-field rendering and one-decoder clip policy. Synthetic members are confined to test inputs.
 
-### Browser pass (real Chromium)
+The CI workflow runs typecheck, **plain `npm test`**, build and a separate redacted full-history Gitleaks scan on main pushes and pull requests. Gitleaks is version/digest-pinned and uses the existing single test-fixture fingerprint in `.gitleaksignore`. Mapping/mocked backend tests are **not** Firestore Rules emulator authorization tests; those remain absent.
 
-The six-item visual checklist (peek row, drag/flick anchors, polygon fill ramp, attribution legibility, zoom-control clearance, report → approve E2E) no longer has a single script of record: `scripts/final-pass.mjs` was deleted with the bottom sheet. Five of the six items still run in a real browser:
+### Browser and device evidence
 
-- `scripts/map-drawers-pass.mjs` — items **2, 4 and 5**: structural clip tracking at every sampled drag position plus the fast flick for both drawers (with the tap-after-drag guard, ArrowLeft/Right and reduced motion), attribution present/visible/on top *through* the open drawer, and zoom-control clearance with its 44px hit areas and the pills × zoom × tabs × windows × attribution overlap matrix.
-- `scripts/map-motion-pass.mjs` — item **3**: the `zone-path` fill ramp, computed mid-ramp and at rest, plus the selection stroke/thickening and dim steps.
-- `scripts/live-data-map-pass.mjs` — item **6**: the report → approve E2E through a real popup, report form and admin approve, plus the live-region ARIA contract, at four widths × reduced motion on and off. Its bottom-sheet anchor walk was replaced by the drawer's grab tab and zone list on 2026-09-24.
+Scripts in `scripts/` and write-ups in `docs/` record specific builds, viewports, request interception and motion settings. Older drawer/intro scripts may target earlier layouts; read their header and scope before using them as a current acceptance test. Tile-blocked or locally mocked browser checks establish only the UI behavior they exercised, not live backend behavior, external tile rendering or physical-device performance.
 
-Item **1** (peek row) has **no browser-side check**: it retired with the bottom sheet, and its successor, the drawer header strip, is covered in jsdom only. The same report → approve loop also runs in jsdom — `src/pages/mapPass.test.tsx`, with the whole loop in `src/App.test.tsx`. (Admin actions keep their own live pass: `scripts/admin-responsive-pass.mjs`.)
+The existing `.github/workflows/team-roster-shots.yml` capture workflow and `scripts/team-roster-shots.mjs` provide Team measurements. [PR #97](https://github.com/franshessss2/red-tide-ppc/pull/97) records the landing before/after capture and its temporary CI verification; those temporary capture files are not part of main. Review the configuration and dated artifacts before interpreting results. Capture helpers are not production enable paths.
 
-These browser passes drive the **production build** in headless Chromium:
-
-```bash
-npm run preview                     # in one terminal — serves dist/ on :4173
-node scripts/map-drawers-pass.mjs   # in another — clip/drag/flick, attribution, zoom
-node scripts/map-motion-pass.mjs    # zone load-in/fill ramp, pulse, pins, location, glide, orbs
-node scripts/live-data-map-pass.mjs # fonts, live region, popup, report → approve E2E
-```
-
-Tiles and webfonts are allowed to fail (offline sandboxes): every assertion targets the app's own UI. Where a sandbox has no browser at all, the DOM/behaviour half of all six items runs in CI via `src/pages/mapPass.test.tsx`.
-
-Additional one-off verification scripts (side-drawer layout, header fade timing, coastal polygon accuracy, hero full-bleed) live in `scripts/` alongside their write-ups in `docs/` — check there before re-deriving something that has already been measured.
-
-Two more real-browser passes cover this session's motion work. `scripts/map-motion-pass.mjs` drives `/map` at 320/390/1280 plus a reduced-motion run and asserts the animation itself rather than only its settled state: the zone load-in stagger, the advisory stroke pulse and dash march (and their freeze while the camera moves), selection dimming, the `flyTo` focus flight, the drawer's first-open stagger, the pill indicator slide and the chevron geometry morph, the pin drop + one-shot ring, the location halo's pause/resume, the intro glide firing exactly once per session, and orb placement never landing over the pills — with a rAF trace, so a loop that costs frames fails. `scripts/route-transition-pass.mjs` does the same for the dissolve: exit/enter fade timing read off the live animation, mean luminance across the dark handover, zero frames showing a blank map, and the enter holding at opacity 0 until the lazy chunk lands. The map-motion pass keeps its full check list in the script header and writes shots to `tmp/map-motion-shots/`; the dissolve is written up in `docs/design-references.md` §21, with before/after frames in `docs/route-transition-shots/`.
+From `android-app/android`, run `gradlew.bat :app:connectedDebugAndroidTest` with an actual connected device (Unix: `./gradlew`). This covers Android Back and the native safe viewport. The test APK compiling is not proof that those tests executed. Physical-phone gestures, software keyboards, GPU smoothness, complete tile behavior and combined-board electrical behavior still require recorded manual checks.
 
 ---
 
@@ -464,7 +418,7 @@ Two more real-browser passes cover this session's motion work. `scripts/map-moti
 
 | I want to… | Touch this |
 | --- | --- |
-| **Add or edit a zone** | `src/data/zones.ts` → then `npm run seed -- --force` to push it. In demo mode, clear `localStorage` to re-seed. Verify the new polygon actually touches the coastline (see §10) before shipping. |
+| **Add or edit a zone** | `src/data/zones.ts`; verify geometry (§10). Preview any Firebase migration and preserve existing statuses. For disposable sample data, use the scoped reset (§3). |
 | **Re-shape a zone polygon** | Don't hand-edit coordinates — adjust the anchors/width in `scripts/generate-zones.ts`, re-fetch the coast if needed (see §10), then run `npx tsx scripts/generate-zones.ts` to rewrite `src/data/zones.ts` + `src/data/coastline.ts`. `name` values are asserted verbatim by `src/App.test.tsx`, so change them there too; `description` is free text. Run `npm test` afterwards — `zones.test.ts` asserts the 20 m landward-edge tolerance, self-intersection freedom and non-overlap. |
 | **Replace the polygons with real boundaries** | Same file. `polygon` accepts `[lat, lng]` pairs; the mapper also tolerates `{latitude, longitude}` GeoPoints entered in the console. |
 | **Change a status colour** | `src/lib/status.ts` (`hex` is what Leaflet draws) **and** the `@theme` block in `src/index.css` — they are duplicated on purpose and must be kept in sync. |
@@ -476,19 +430,24 @@ Two more real-browser passes cover this session's motion work. `scripts/map-moti
 | **Adjust a drawer's snap feel** | `src/motion/sidePanelAnchors.ts` (projection time, flick velocity, spring constants) — pure and unit-tested, change here before touching `ZoneDrawer.tsx` / `AdvisoryDrawer.tsx`. |
 | **Adjust map zone/camera animation timing** | `src/motion/mapMotion.ts` (stagger, flight duration, focus padding), then `src/styles/map-motion.css`. |
 | **Adjust the route transition feel** | `src/motion/RouteTransition.tsx` (variants, durations) — re-run `scripts/route-transition-pass.mjs` after any change. |
-| **Adjust the intro timing or look** | `src/motion/tokens.ts` (`introExit` and the entrance values) and `src/styles/tide-intro.css`; the behaviour is in `src/components/SplashScreen.tsx`. Keep the surface and curtain exits on the same `dvh` unit. |
+| **Adjust the intro timing or look** | `src/components/SplashScreen.tsx`, `src/components/intro/reelScenes.ts`, `src/styles/showroom.css` and the intro illustration styles. The opening film is separate; see the film/reel guides. Legacy `tide-intro.css` and `introHold`/`introExit` tokens do not define the active reel clock. |
+| **Fill the Team roster** | `src/data/team.ts`: fill all three names, roles, initials, `posterSrc` and `videoSrc`; supply real files in `public/media/team/`; clear each real entry's `placeholder`, remove replaced paths from `TEAM_PLACEHOLDER_ASSETS`, then set `TEAM_SECTION_ENABLED=true`. Run the real-roster gate and media checks before enabling. |
+| **Publish a new Android build** | Build root `dist/`, sync/verify it in `android-app/`, rebuild and test the APK. Upload and verify it in the existing shared folder, then remove older APKs. Keep the folder URL stable for the QR. |
 
 ---
 
 ## 16. Recent UI work
 
-Five motion passes — presentation only, no data, network or geometry changes (the full check list for the first three lives in the header of `scripts/map-motion-pass.mjs`, or in the linked write-up):
+These are merged changes on main as of **13 October 2026**, not claims of physical-device acceptance:
 
-- **Zone & camera** — polygons fade in on a 70 ms stagger, advisory zones pulse their stroke and march their dash (frozen while the camera moves), a selection dims the other zones, and focusing a zone glides the camera with drawer-aware padding. `scripts/map-motion-pass.mjs`, Phase 1.
-- **Drawer, pill & chevron** — the drawer's first open staggers, the status pill's indicator slides, and the chevron folds through a `d` morph rather than spinning. `scripts/map-motion-pass.mjs`, Phase 2.
-- **Pins, location, glide & orbs** — report pins drop onto their zone's centroid with one expanding ring, the location dot's halo pauses with the camera, the wide-to-bay intro glide runs once per session, and the ambient orbs never sit over the pills. `scripts/map-motion-pass.mjs`, Phase 3; shots in `tmp/map-motion-shots/`.
-- **Route dissolve** — `/` <-> `/map` fades out then rises in, gated on the lazy chunk so the enter never fades in a spinner; `/admin` stays instant. `docs/design-references.md` §21; frames in `docs/route-transition-shots/`.
-- **Intro** — the first-visit splash was retimed (about 2.1 s hold, 0.8 s exit) so the water surface and curtain leave together on the same `115dvh` reference and do not drift with mobile browser chrome. The skip button and centre dot were removed, and the background gained layered depth and an acquisition ripple. Escape and reduced motion still skip it.
+- **Film and nine-chapter reel:** full opening film before each sequence; persistent observation/review illustration, shared chapter clock, 450ms crossfades, 650ms landing exit and a 120ms reduced-motion exit. The reel loop is 38.25 seconds, excluding the film. First-visit state uses `red-tide-ppc:intro:v3`; the film does not loop. See [Film](docs/opening-video.md), [Reel](docs/reel-intro.md) and [Archived intro](docs/intro-archive.md).
+- **#92:** empty Team cards and media guards, retained behind the OFF flag. No placeholder people are shown to visitors.
+- **#96:** opt-in Firebase build guard; missing configuration still selects sample mode when the guard is unset.
+- **#97:** reserved landing geometry/font fallback metrics, restrained amber shader rims, steadier dark overview surface and one coordinated hero entrance timeline. Landing reduced-motion/Save-Data guards are scoped so the opening film/reel retains its behavior.
+- **#98:** Android debug packaging, landing QR dialog, public sample-mode admin passcode and maintenance workflows restricted to main pushes.
+- **#99:** native system-bar/cutout/keyboard viewport reservation. Build/lint/signature checks passed; actual phone behavior remains pending.
+
+The existing coastal map motion and desktop drawers remain, with the compact mobile panel below 768px and the separate street-map dialog. Historical screenshots and docs are evidence for their recorded versions; they do not replace current phone tests.
 
 ---
 
@@ -500,59 +459,17 @@ React 19 · TypeScript 5.9 · Vite 8 · React Router 7 · Zustand 5 · Motion 13
 
 ---
 
-## 18. Running costs
+## 18. Running costs and external services
 
-Production hosting is Vercel. The provider allowances and cost examples below are estimates, not a verified bill or guarantee of a free deployment; check current plan limits before relying on them. Sample-data mode does not use Firestore or Cloudinary for its records.
+No current account bill, free-tier guarantee or production usage budget was verified in this README. Check the actual account and provider limits before relying on an estimate:
 
----
-
-### Firebase (Firestore)
-
-The free **Spark plan** covers:
-
-| Quota | Free allowance | Typical use |
+| Service | Used for | Current provider reference |
 | --- | --- | --- |
-| Reads | 50,000 / day | Each page load reads 7 zone docs + live report counts. ~6,000 reads per day = ~850 active users. |
-| Writes | 20,000 / day | One write per report submission + one per admin action (approve/reject). |
-| Deletes | 20,000 / day | Not used — reports and zones are never deleted, only updated. |
-| Storage | 1 GB | Zone docs + reports are tiny text. Storage is effectively free until thousands of reports accumulate. |
-| Network egress | 10 GB / month | Firestore payloads are small JSON — well within free tier for a community-scale deployment. |
+| Vercel | Production web hosting and optional device function | [Plans](https://vercel.com/pricing) |
+| Firebase Firestore | Configured community records; unused for sample-mode records | [Quotas](https://firebase.google.com/docs/firestore/quotas), [Pricing](https://firebase.google.com/docs/firestore/pricing) |
+| Cloudinary | Configured photo uploads; sample photos stay browser-local | [Plans](https://cloudinary.com/pricing) |
+| Upstash | Optional synthetic-device storage | [Redis pricing](https://upstash.com/pricing/redis) |
+| Google Drive | Shared testing-APK distribution | Account storage and sharing limits |
+| Map tile providers | Online basemap requests even in sample mode | [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) |
 
-If traffic meaningfully exceeds the Spark limits, **Blaze (pay-as-you-go)** pricing is:
-- Reads: \$0.06 per 100,000
-- Writes: \$0.18 per 100,000
-- Storage: \$0.108 per GB / month
-
-At realistic community scale (5,000 visits/month, 50 reports/month), Blaze cost would be under **\$1/month**.
-
----
-
-### Cloudinary (photo uploads)
-
-The free plan includes 25 credits per month, measured over a rolling 30 days. One credit equals 1,000 transformations, or 1 GB of storage, or 1 GB of delivered bandwidth, all drawn from the same pool. Free-plan accounts are not billed for overage.
-
-At 50 photo reports a month this is far below the allowance: 50 photos of 500 KB is about 25 MB of storage (about 0.025 credit) before derived copies. Resizing photos client-side before upload (§13, item 6) is still worth doing for load time on weak mobile signal. If photo uploads are removed, Cloudinary cost is \$0. The first paid plan was listed at \$89/month in mid-2026; check Cloudinary's pricing page before relying on that figure.
-
----
-
-### OpenStreetMap tiles
-
-Free, no API key, no account. OSM's tile servers are a public service — heavy production traffic should use a tile CDN instead (Stadia Maps, Maptiler, or self-hosted). For a community-scale deployment the default OSM tiles are fine; for a city-wide rollout, budget **\$0–\$25/month** for a tile CDN depending on map usage.
-
----
-
-### Vercel (production hosting)
-
-Production uses Vercel. Current account quotas and billing were not verified for this README. Measure browser/network transfer in a deployed session; `npm run build` reports emitted asset sizes and gzip estimates, not actual full-page transfer. Netlify credits and deploy-cost estimates do not apply to this deployment.
-
-
-### Summary
-
-| Service | Free tier covers | Paid if exceeded |
-| --- | --- | --- |
-| Firebase Firestore | ~850 daily active users | ~\$0.06–\$0.18 per 100k ops |
-| Cloudinary | 25 credits/month (about 25 GB of storage or bandwidth); no overage billing on Free | Plus plan, about \$89/month (verify) |
-| OpenStreetMap tiles | Community scale | \$0–\$25/month (CDN) |
-| Vercel hosting | Check the project/account dashboard; allowance not verified here | Check the current Vercel plan |
-
-Actual costs depend on configuration, usage and current account limits. No production bill or zero-cost guarantee was verified for this README.
+OSM's standard tile service has a usage policy, not unlimited hosting capacity; bulk/offline tile downloading is prohibited there. The Android package does not add an offline tile cache. Use a provider that permits the intended usage rather than assuming a community prototype is exempt. `npm run build` asset-size reports are not a measurement of full-page network transfer or provider billing.
