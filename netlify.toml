@@ -1,0 +1,7 @@
+# VITE_* values are compiled into the public client bundle by design (see
+# README "Environment"), so the admin passcode is not a server-side secret and
+# will always appear in dist/. Exclude these public keys from secrets scanning.
+# This overrides the SECRETS_SCAN_OMIT_KEYS value set in the Netlify UI, so it
+# keeps the existing VITE_FIREBASE_PROJECT_ID entry.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "VITE_FIREBASE_PROJECT_ID,VITE_ADMIN_PASSCODE"
