@@ -12,6 +12,8 @@ name: Fetch coastline
 
 on:
   push:
+    # Maintenance commits belong on main; release tags must not run write-back jobs.
+    branches: [main]
     paths:
       - 'scripts/fetch-coastline.mjs'
   workflow_dispatch:

@@ -13,6 +13,8 @@ name: inlet shots
 
 on:
   push:
+    # Maintenance commits belong on main; release tags must not run write-back jobs.
+    branches: [main]
     paths:
       - 'scripts/inlet-shots.mjs'
   workflow_dispatch:

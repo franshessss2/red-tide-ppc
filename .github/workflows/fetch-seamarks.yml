@@ -12,6 +12,8 @@ name: Fetch seamarks
 
 on:
   push:
+    # Maintenance commits belong on main; release tags must not run write-back jobs.
+    branches: [main]
     paths:
       - 'scripts/fetch-seamarks.mjs'
   workflow_dispatch:

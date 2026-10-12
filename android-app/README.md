@@ -6,7 +6,8 @@ The native version is `0.2.0-alpha.1`, version code `1`. Finalize the ID before
 registering a store listing or configuring app-specific services.
 
 The wrapper bundles `../dist`; it does not load the Vercel site remotely.
-All repository changes for this alpha are confined to `android-app/`.
+The native project is confined to `android-app/`. PR #98 also adds a landing
+QR download control and limits legacy maintenance workflows to main pushes.
 The existing web routes, intro, animations, Team flag, data selection and backend
 behavior are preserved. No iOS project, native Firebase configuration, Vercel
 configuration or production signing key is included.
