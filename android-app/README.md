@@ -85,8 +85,16 @@ There is no shipped test hook or additional plugin for this behavior.
 - Android Back traverses WebView history; at the root it delegates to Android.
 - The wrapper uses a dark WebView/launch background and light system bar icons.
   Its native icon reuses the existing `public/favicon.svg` design as a vector.
+- The native window reserves the current status bar, navigation bar and display
+  cutout insets around the entire WebView. This keeps landing/admin headers,
+  fixed map controls and native HTML dialogs out of the system bars in portrait
+  and landscape. Padding is replaced on each inset update, never accumulated.
+  SystemBars CSS inset injection is disabled because MainActivity owns this
+  native viewport protection. Other insets remain available to the WebView.
 - Keyboard resize is requested in the native manifest; actual keyboard and
-  system inset behavior still require a device run.
+  system inset behavior still require a device run. While the keyboard is
+  visible, the reserved bottom space is the greater of its inset and the
+  navigation bar inset; it returns to the navigation inset when dismissed.
 - This build has no Firebase environment configuration and uses the existing
   sample-data fallback. The public prototype admin passcode is `137950FrT`
   when `VITE_ADMIN_PASSCODE` is unset. This is readable in the web bundle.
@@ -100,6 +108,12 @@ There is no shipped test hook or additional plugin for this behavior.
   Play Store distribution are not verified by this alpha.
 
 ## Local verification — 2026-10-12
+
+PR #99 adds `SafeViewportTest` alongside the existing Back regression. On a
+connected Android device, `:app:connectedDebugAndroidTest` checks actual WebView
+bounds against the visible system bars/cutout, plus repeated, landscape,
+keyboard and zero-inset updates. A desktop browser capture or an instrumentation
+APK compiling does **not** establish that these device tests pass.
 
 Base: main `f36bc7a8a59753ec5f1515c4f7bfa2a3d3a48d66`.
 The root commands were recorded before adding packaging, then repeated.
