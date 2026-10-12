@@ -57,6 +57,7 @@ function configurePermissions(session, getWindow, dialog) {
     } catch { callback('') }
     finally { choosing = false; session.removeListener('serial-port-removed', removed) }
   })
+  session.on('serial-port-removed', (_event, port) => grants.delete(serialKey(port)))
   session.on('serial-port-revoked', (_event, details) => grants.delete(serialKey(details.device)))
   return () => grants.clear()
 }

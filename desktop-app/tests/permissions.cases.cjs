@@ -39,10 +39,14 @@ test('one port still requires consent; cancellation/rejected prompt leaves no gr
 })
 
 test('selection grants only the chosen device; navigation, revocation and cleanup deny it', async () => {
-  const f = fixture([1, 0])
+  const f = fixture([1, 0, 0])
   assert.equal(await f.select([A, B]), B.portId)
   const permission = device => f.session.device({ deviceType: 'serial', origin: 'rtp://app', device })
   assert.equal(permission(A), false)
+  assert.equal(permission(B), true)
+  f.session.emit('serial-port-removed', {}, B)
+  assert.equal(permission(B), false)
+  assert.equal(await f.select([B]), B.portId)
   assert.equal(permission(B), true)
   f.navigate('rtp://app/map')
   assert.equal(permission(B), false)
@@ -62,7 +66,7 @@ test('foreign frames, other routes and unrelated permissions are denied', async 
   f.navigate('rtp://app/admin')
   assert.equal(await f.select([A]), '')
   assert.equal(f.dialogs.length, 0)
-  assert.equal(f.session.listenerCount('serial-port-removed'), 0)
+  assert.equal(f.session.listenerCount('serial-port-removed'), 1)
 })
 
 test('unplugged port cannot be granted after the dialog opens', async () => {
@@ -71,5 +75,5 @@ test('unplugged port cannot be granted after the dialog opens', async () => {
   const pending = f.select([A])
   f.session.emit('serial-port-removed', {}, A)
   assert.equal(await pending, '')
-  assert.equal(f.session.listenerCount('serial-port-removed'), 0)
+  assert.equal(f.session.listenerCount('serial-port-removed'), 1)
 })
