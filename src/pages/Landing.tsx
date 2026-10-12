@@ -307,7 +307,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
               </section>
 
               <motion.div
-                className="mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/60 lg:p-6 xl:p-8"
+                className="landing-overview mt-14 min-w-0 sm:mt-16 lg:mt-0 lg:rounded-xl lg:border lg:border-line lg:bg-ink-2/95 lg:p-6 xl:p-8"
               >
                 <h2 className="mb-5 hidden text-base font-semibold text-paper lg:block"><TextReveal text="Coastal overview" /></h2>
                 <CommunitySource />

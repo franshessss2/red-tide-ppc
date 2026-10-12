@@ -38,6 +38,9 @@
 .landing-figure-label { min-height: 2.75em; }
 /* Reserve the loaded-font button widths, including the narrow-screen wrap. */
 .landing-report-cta { min-width: 7.5rem; }
+/* Opaque phone figures and an almost opaque desktop panel keep their reading
+   surface steady. No backdrop-filter on the scroll-transformed hero. */
+.landing-overview [aria-label="Figures"] > div { background-color: #141414; }
 
 /* The primary CTA shares timing with the map controls. Paint stays static;
    only a small lift and press signal interaction. */
