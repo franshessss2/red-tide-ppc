@@ -1,0 +1,10 @@
+node_modules/
+**/build/
+**/.gradle/
+**/.kotlin/
+**/.cxx/
+**/.externalNativeBuild/
+android/app/src/main/assets/public/
+**/local.properties
+**/*.jks
+**/*.keystore

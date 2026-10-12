@@ -1,0 +1,17 @@
+{
+  "name": "red-tide-ppc-android",
+  "version": "0.2.0-alpha.1",
+  "private": true,
+  "scripts": {
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "verify:sync": "node scripts/verify-sync.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.2",
+    "@capacitor/android": "8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}
