@@ -1,0 +1,47 @@
+{
+  "name": "redtide-ppc-desktop",
+  "productName": "RedTide ppc",
+  "version": "0.2.0-alpha.1",
+  "private": true,
+  "description": "RTP Windows desktop alpha for the Red Tide PPC school prototype",
+  "author": "Red Tide PPC contributors",
+  "main": "main.cjs",
+  "scripts": {
+    "setup:runtime": "install-electron",
+    "sync": "node scripts/sync.cjs",
+    "verify:sync": "node scripts/sync.cjs --verify",
+    "icons": "electron scripts/icons.cjs",
+    "start": "electron .",
+    "test": "node --test tests/*.cases.cjs",
+    "test:smoke": "node tests/smoke.cjs",
+    "test:packaged": "node tests/packaged.cjs",
+    "verify:package": "node scripts/verify-package.cjs",
+    "pack": "node scripts/package.cjs --dir",
+    "dist:win": "node scripts/package.cjs"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.redtideppc.desktop",
+    "productName": "RedTide ppc",
+    "artifactName": "RTP-${version}-windows-${arch}-setup.${ext}",
+    "directories": { "output": "release", "buildResources": "resources" },
+    "files": ["main.cjs", "src/**", "resources/icon.png", "resources/icon.ico", "package.json"],
+    "extraResources": [{ "from": "web", "to": "web", "filter": ["**/*"] }],
+    "asar": true,
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "resources/icon.ico", "signAndEditExecutable": true },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RedTide ppc",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": false
+    }
+  }
+}

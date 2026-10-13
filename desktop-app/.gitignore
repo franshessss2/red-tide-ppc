@@ -1,0 +1,6 @@
+node_modules/
+web/
+release/
+test-results/
+.cache/
+*.log
