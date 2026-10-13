@@ -1,0 +1,60 @@
+name: Community discussions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/community/**
+      - scripts/community-discussions*
+      - .github/workflows/community-discussions.yml
+      - .github/DISCUSSION_TEMPLATE/**
+  pull_request:
+    paths:
+      - docs/community/**
+      - scripts/community-discussions*
+      - .github/workflows/community-discussions.yml
+      - .github/DISCUSSION_TEMPLATE/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-discussions-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate community sources
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: node scripts/community-discussions.mjs --check
+      - run: node --test scripts/community-discussions.test.mjs
+
+  publish:
+    name: Publish starter discussions
+    needs: validate
+    if: github.repository == 'franshessss2/red-tide-ppc' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      discussions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Create missing starter posts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/community-discussions.mjs

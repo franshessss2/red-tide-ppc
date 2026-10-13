@@ -1,0 +1,24 @@
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: "Describe a useful improvement to RTP. Use Issues for reproducible bugs. Do not include credentials, env files or personal details."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Include who encounters it and on which device or app.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the behavior you want and how we could check whether it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Optional examples
+      description: Add a cropped screenshot, sketch or relevant link without private information.
