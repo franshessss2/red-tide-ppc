@@ -20,7 +20,7 @@ async function run() {
     })
     const actual = await application.evaluate(({ app }) => ({ name: app.getName(), version: app.getVersion(), packaged: app.isPackaged, profile: app.getPath('userData') }))
     assert.equal(actual.name, 'RedTide ppc')
-    assert.equal(actual.version, '0.2.0-alpha.1')
+    assert.equal(actual.version, require('../package.json').version)
     assert.equal(actual.packaged, true)
     assert.equal(actual.profile, profile)
     const page = await application.firstWindow()
@@ -43,6 +43,20 @@ async function run() {
     assert.equal(result.sampleLabel, true); assert.equal(result.mapRoute.status, 200)
     assert.equal(result.film.status, 206); assert.equal(result.film.bytes, 32)
     assert.equal(result.qr.status, 200); assert.equal(result.sketch.status, 200)
+    // Exercise the real bundled gate in an isolated profile. Do not submit or
+    // approve reports; only sample-mode access is tested.
+    const source = await fs.readFile(path.join(__dirname, '../../src/lib/demoAdminPasscode.ts'), 'utf8')
+    const passcode = source.match(/export const DEMO_ADMIN_PASSCODE = '([^']+)'/)[1]
+    await page.goto('rtp://app/admin')
+    await page.getByLabel('Passcode').fill('137950FrT')
+    await page.getByRole('button', { name: 'Unlock' }).click()
+    await page.getByText('That passcode is not correct.').waitFor()
+    await page.getByLabel('Passcode').fill(passcode)
+    await page.getByRole('button', { name: 'Unlock' }).click()
+    await page.getByLabel('Passcode').waitFor({ state: 'detached' })
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('red-tide-ppc:admin-unlocked')), '1')
+    result.currentAdminPasscodeVerified = true
+    result.oldAdminPasscodeRejected = true
     console.log(JSON.stringify({ executable, ...actual, ...result }, null, 2))
   } finally {
     if (application) await application.close()

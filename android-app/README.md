@@ -2,7 +2,8 @@
 
 Android-only Capacitor packaging of the root production build. The app name is
 **Red Tide PPC** and the application ID is **`com.redtideppc.app` (placeholder)**.
-The native version is `0.2.0-alpha.1`, version code `1`. Finalize the ID before
+The initial native version was `0.2.0-alpha.1`, version code `1`. Current version
+settings are in `package.json` and `android/app/build.gradle`. Finalize the ID before
 registering a store listing or configuring app-specific services.
 
 The wrapper bundles `../dist`; it does not load the Vercel site remotely.
@@ -33,6 +34,10 @@ The Android Gradle Plugin is `8.13.0`; Gradle is `9.3.1`, pinned with the
 official distribution SHA-256 in `android/gradle/wrapper/gradle-wrapper.properties`.
 
 ## Build and install a debug alpha
+
+For synchronized APK and Windows releases, use the root `npm run apps:build`
+command and [shared release checklist](../docs/native-app-updates.md). It always
+rebuilds both downloads from fresh web code and the shared passcode source.
 
 Prerequisites: the root web dependencies, Node 22 or later, a JDK capable of
 compiling Java 21, Android SDK platform 36, and Android Build Tools 36.0.0.
@@ -96,8 +101,10 @@ There is no shipped test hook or additional plugin for this behavior.
   visible, the reserved bottom space is the greater of its inset and the
   navigation bar inset; it returns to the navigation inset when dismissed.
 - This build has no Firebase environment configuration and uses the existing
-  sample-data fallback. The public prototype admin passcode is `137950FrT`
-  when `VITE_ADMIN_PASSCODE` is unset. This is readable in the web bundle.
+  sample-data fallback. The public prototype admin passcode comes from
+  `src/lib/demoAdminPasscode.ts` when `VITE_ADMIN_PASSCODE` is unset. The shared
+  native release command explicitly uses that current value for both apps.
+  This is readable in the web bundle.
   The existing **Sample data** label remains. Reports in
   this mode are demonstrations; they are not sent to a live moderation service.
 - Bundling the UI does not provide offline map tiles or cached live advisories.
