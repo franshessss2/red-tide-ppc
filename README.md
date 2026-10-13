@@ -6,6 +6,8 @@ Explore seven approximate coastal zones, submit an observation, and demonstrate 
 
 [Production website](https://red-tide-ppc.vercel.app/) · [Public map](https://red-tide-ppc.vercel.app/map) · [Android download folder](https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing) · [GitHub releases](https://github.com/franshessss2/red-tide-ppc/releases)
 
+[Community guide](docs/community/wiki/Home.md) · [Discussions](https://github.com/franshessss2/red-tide-ppc/discussions) · [Wiki publication and sources](docs/community/README.md)
+
 ## Current state — 13 October 2026
 
 - **Hosting:** Vercel, deployed from `main`. Record labels distinguish sample/local data, cached records and server delivery. Hosting does not imply live or official data.
@@ -13,6 +15,7 @@ Explore seven approximate coastal zones, submit an observation, and demonstrate 
 - **Introduction:** an opening film followed by a nine-chapter reel. The reel loops until the visitor enters; reduced motion skips the film and shows a static equivalent. Replay restarts the sequence. See [Opening film](docs/opening-video.md) and [Reel intro](docs/reel-intro.md).
 - **Map:** below 768px, a compact bottom panel; at desktop widths, the original zone/advisory drawers. A separate street-map dialog uses MapLibre. See [Mobile map layout](docs/mobile-map-layout.md) and [Street map](docs/mapcn-text-motion.md).
 - **Android:** a Capacitor debug alpha bundles the web build. The shared Drive folder currently contains the PR #99 status-bar/cutout fix as `RTP.apk`; it is outside Google Play. Real-phone verification remains pending. Build details are in §9 and [Android setup](android-app/README.md).
+- **Windows:** **RedTide ppc (RTP)** is an Electron x64 testing alpha with a native window, menus and per-user installer. It bundles the web build; sample/local records are separate from the website and Android. The installer is unsigned and is not yet attached to a GitHub release. See [Windows setup and limits](desktop-app/README.md).
 - **Team:** three empty roster slots remain disabled. Supplying real names, roles, initials and media is a separate follow-up; see §15.
 
 For the school rehearsal, see [Presentation review](docs/presentation-review.md); some older walkthroughs and screenshot scripts describe earlier layouts, so use the current behavior above when following them. The isolated device demonstrations are documented in [Virtual device setup](docs/virtual-device-setup.md) and [Combined Arduino UNO](docs/arduino-combined.md).

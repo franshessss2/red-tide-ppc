@@ -1,0 +1,1 @@
+RedTide ppc (RTP) · School community-record prototype · Not an official BFAR advisory. Read the data-source labels and [official bulletins](https://www.bfar-frmdhabmonitoring.com.ph/shellfishBulletinFile).
