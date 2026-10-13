@@ -1,10 +1,14 @@
 # RedTide ppc — RTP Windows alpha
 
-Windows x64 desktop packaging of the existing Red Tide PPC school community-record prototype. App, installer, window, Start menu and shortcuts use **RedTide ppc**; **RTP** is the short name. Version: `0.2.0-alpha.1`. This is a testing build, not an official BFAR advisory.
+Windows x64 desktop packaging of the existing Red Tide PPC school community-record prototype. App, installer, window, Start menu and shortcuts use **RedTide ppc**; **RTP** is the short name. The current version is in `package.json`. This is a testing build, not an official BFAR advisory.
 
 The wrapper bundles a byte-for-byte copy of the root `dist/` in a local `rtp://app/` origin. Website source, Firebase behavior, opening film, Android packaging and deployment settings are unchanged. `com.redtideppc.desktop` is a placeholder application ID; settle it before a stable release because it identifies the installed app.
 
 ## Build on Windows
+
+For a fresh Windows installer and Android APK together, use the root
+`npm run apps:build` command and [shared release checklist](../docs/native-app-updates.md).
+It always rebuilds the web code and uses the current shared prototype passcode.
 
 Use Windows x64 and Node.js 22.12 or newer. Run these commands from the repository root:
 
@@ -22,7 +26,7 @@ npm run verify:package
 npm run test:packaged
 ```
 
-`setup:runtime` explicitly downloads the pinned Electron runtime. `dist:win` downloads app-scoped packaging tools and produces `release/RTP-0.2.0-alpha.1-windows-x64-setup.exe`; it does not publish or consume ambient signing credentials. `pack` creates the unpacked app instead. `start` runs the synced app locally. `icons` regenerates the tracked PNG/ICO from the existing `public/favicon.svg`; no new artwork is needed. A stale or missing `web/` fails the packaging verification: rebuild the root app and run `sync` first.
+`setup:runtime` explicitly downloads the pinned Electron runtime. `dist:win` downloads app-scoped packaging tools and produces `release/RTP-<version>-windows-x64-setup.exe`; it does not publish or consume ambient signing credentials. Full installer compression and English/Filipino Electron locale packs keep it within the connected Drive uploader's 100 MiB limit; differential-update packaging is disabled because this alpha has no updater. `pack` creates the unpacked app instead. `start` runs the synced app locally. `icons` regenerates the tracked PNG/ICO from the existing `public/favicon.svg`; no new artwork is needed. A stale or missing `web/` fails the packaging verification: rebuild the root app and run `sync` first.
 
 Only `desktop-app/` is tracked by this change. Generated web files, installers, dependency folders, tool caches and screenshots are ignored. Build tools and tests are excluded from the installed ASAR; the root web build is a separate resource directory so MP4 byte-range loading works.
 

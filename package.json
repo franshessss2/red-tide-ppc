@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "node scripts/demo.mjs",
     "build": "tsc -b && vite build",
+    "apps:build": "node scripts/build-native-apps.mjs",
+    "apps:test": "node --test scripts/native-apps.test.mjs",
+    "apps:verify:android": "node scripts/test-android-bundle.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --force",
     "test": "vitest run",
