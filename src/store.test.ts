@@ -245,7 +245,7 @@ describe('admin passcode gate', () => {
     vi.stubEnv('VITE_ADMIN_PASSCODE', undefined)
 
     expect(useAppStore.getState().tryUnlockAdmin('demo-review')).toBe(false)
-    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(true)
+    expect(useAppStore.getState().tryUnlockAdmin('137950')).toBe(true)
     useAppStore.getState().lockAdmin()
     expect(useAppStore.getState().adminUnlocked).toBe(false)
   })
@@ -255,7 +255,7 @@ describe('admin passcode gate', () => {
     setBackendForTesting({ ...createDemoBackend(), kind: 'firebase' })
     vi.stubEnv('VITE_ADMIN_PASSCODE', undefined)
 
-    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(false)
+    expect(useAppStore.getState().tryUnlockAdmin('137950')).toBe(false)
     expect(useAppStore.getState().adminUnlocked).toBe(false)
     expect(useAppStore.getState().formError).toContain('VITE_ADMIN_PASSCODE')
   })
@@ -264,7 +264,7 @@ describe('admin passcode gate', () => {
     startApp()
     vi.stubEnv('VITE_ADMIN_PASSCODE', 'test-override')
 
-    expect(useAppStore.getState().tryUnlockAdmin('137950FrT')).toBe(false)
+    expect(useAppStore.getState().tryUnlockAdmin('137950')).toBe(false)
     expect(useAppStore.getState().tryUnlockAdmin('test-override')).toBe(true)
     useAppStore.getState().lockAdmin()
   })
