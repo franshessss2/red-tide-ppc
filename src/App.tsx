@@ -47,6 +47,8 @@ const MapPage = lazy(() =>
   prefetchMapPage().then((module) => ({ default: module.MapPage })),
 )
 
+const ArduinoZones = lazy(() => import('./pages/ArduinoZones'))
+
 /**
  * Which promise makes each lazy route renderable, keyed by pathname.
  *
@@ -106,6 +108,7 @@ export default function App() {
         />
         <Route path="/admin" element={<Admin />} />
         <Route path="/devices" element={<Devices />} />
+        <Route path="/arduino-zones" element={<Suspense fallback={<p role="status" className="p-8">Loading zone display…</p>}><ArduinoZones /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </RouteTransition>
           </RouteErrorBoundary>
