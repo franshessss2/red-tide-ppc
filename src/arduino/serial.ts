@@ -60,7 +60,7 @@ export class ZoneSerial {
         if (!this.port && selected) await selected.close().catch(() => {})
         await this.disconnect(error instanceof Error ? error.message : 'USB unavailable', true)
       }
-    } finally { this.connecting = false }
+    } finally { if (generation === this.generation) this.connecting = false }
   }
   private write(line: string) {
     const port = this.port, generation = this.generation

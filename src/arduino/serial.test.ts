@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZoneSerial } from './serial'
-import type { LinkState } from './serial'
+import type { LinkState, ZonePort } from './serial'
 import { FakeZonePort } from './serial.fixture'
 import { checkedLine, encodeFrame, STALE_FRAME } from './protocol'
 
@@ -58,5 +58,20 @@ describe('zone serial lifecycle', () => {
     port.input('x'.repeat(81)); await flush()
     expect(changed.mock.lastCall?.[0].phase).toBe('error')
     expect(port.close).toHaveBeenCalledOnce()
+  })
+  it('does not let an obsolete USB chooser unlock a newer pending connection', async () => {
+    await client.disconnect()
+    let finishFirst!: (port: ZonePort) => void
+    let finishSecond!: (port: ZonePort) => void
+    const first = client.connect({ requestPort: () => new Promise(resolve => { finishFirst = resolve }) })
+    await client.disconnect()
+    const second = client.connect({ requestPort: () => new Promise(resolve => { finishSecond = resolve }) })
+    const obsolete = new FakeZonePort()
+    finishFirst(obsolete); await first
+    const extra = vi.fn(async () => new FakeZonePort())
+    await client.connect({ requestPort: extra })
+    expect(extra).not.toHaveBeenCalled()
+    expect(obsolete.open).not.toHaveBeenCalled()
+    finishSecond(new FakeZonePort()); await second
   })
 })
