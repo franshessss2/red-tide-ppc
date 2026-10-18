@@ -1,0 +1,33 @@
+name: Arduino zone display
+on:
+  pull_request:
+    paths: ['arduino/red_tide_zones/**', 'arduino/red_tide_pin_test/**', 'arduino/libraries/RedTideZones/**', 'tests/arduino/**', 'scripts/test-zone-firmware.mjs', '.github/workflows/arduino-zones.yml']
+  push:
+    branches: [main]
+    paths: ['arduino/red_tide_zones/**', 'arduino/red_tide_pin_test/**', 'arduino/libraries/RedTideZones/**', 'tests/arduino/**', 'scripts/test-zone-firmware.mjs', '.github/workflows/arduino-zones.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  uno:
+    name: UNO compile and hardware-free tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+      - name: Run actual sketches against fake GPIO and serial; reject invalid pins
+        run: node scripts/test-zone-firmware.mjs
+      - uses: arduino/setup-arduino-cli@81d310742121c928ea9c8bbd407b4217b432ae02 # v2
+        with:
+          version: '1.5.1'
+      - name: Install pinned AVR core
+        run: arduino-cli core update-index && arduino-cli core install arduino:avr@1.8.8
+      - name: Compile zone display for UNO
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries arduino/libraries arduino/red_tide_zones
+      - name: Compile pin-order test for UNO
+        run: arduino-cli compile --fqbn arduino:avr:uno --libraries arduino/libraries arduino/red_tide_pin_test
