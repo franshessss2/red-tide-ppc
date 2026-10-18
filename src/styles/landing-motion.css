@@ -36,6 +36,51 @@
 .landing-status { min-height: 3.25em; }
 .landing-figure-value { min-height: 1em; }
 .landing-figure-label { min-height: 2.75em; }
+.landing-nav { position: relative; display: flex; align-items: center; gap: 8px; }
+.landing-nav__map, .landing-nav__toggle {
+  display: inline-flex; min-height: 44px; min-width: 44px; align-items: center;
+  justify-content: center; gap: 8px; border: 1px solid var(--color-line);
+  border-radius: 6px; background: var(--color-ink-2); color: var(--color-paper);
+}
+.landing-nav__map { padding: 0 14px; font-size: 12px; }
+.landing-nav__map:hover, .landing-nav__toggle:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.landing-nav :is(a, button):focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.landing-nav__panel {
+  position: absolute; top: calc(100% + 12px); right: 0; width: min(248px, calc(100vw - 40px));
+  max-height: calc(100dvh - 100px); overflow-y: auto; padding: 12px;
+  border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-ink-2);
+  box-shadow: 0 16px 40px #0008;
+}
+.landing-nav__panel :is(a, button) { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 13px; }
+.landing-nav__panel :is(a, button):hover { background: #ffffff08; color: var(--color-accent); }
+.coastal-steps__list { display: grid; gap: 20px; }
+.coastal-step { min-width: 0; padding: 20px; border: 1px solid var(--color-line); border-radius: 12px; background: #141414; }
+.coastal-step__art { position: relative; overflow: hidden; border-radius: 6px; background: linear-gradient(120deg, #d69c1712, #141414); }
+.coastal-step__art svg { display: block; width: 100%; height: 92px; }
+.coastal-step__grid { stroke: #ffffff06; }
+.coastal-step__shore { stroke: #e9af38; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.coastal-step__contour { stroke: #c4aa7048; stroke-width: 1.5; }
+.coastal-step__marker { fill: #e9af38; }
+.coastal-step__shield { fill: #1e1b13; stroke: #e9af3860; }
+.coastal-step__number { position: absolute; left: 12px; top: 8px; font: 9px var(--font-mono); color: #e9af38; }
+@media (min-width: 640px) {
+  .landing-nav__toggle, .landing-nav__caption { display: none; }
+  .landing-nav__panel { position: static; display: flex; gap: 8px; width: auto; padding: 0; border: 0; overflow: visible; box-shadow: none; background: transparent; }
+  .landing-nav__panel :is(a, button) { width: auto; padding: 10px; border: 1px solid var(--color-line); background: var(--color-ink-2); }
+  .landing-nav__panel [data-intro-replay] { font-size: 0; gap: 0; width: 44px; }
+  .landing-nav__panel [data-intro-replay] span { font-size: 22px; }
+  .coastal-steps__list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .android-download-qr { order: 1; }
+  .android-download-link { order: 2; }
+  .android-download-body > p:last-child { order: 3; }
+}
+@media (max-width: 639px) {
+  .landing-nav__panel[data-open="false"] { display: none; }
+  .landing-figure { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+  .landing-figure-value { min-width: 1.75em; text-align: center; }
+  .landing-figure-label { margin-top: 0; min-height: 0; font-size: 12px; }
+  .coastal-step { padding: 16px; }
+}
 /* Reserve the loaded-font button widths, including the narrow-screen wrap. */
 .landing-report-cta { min-width: 7.5rem; }
 /* Opaque phone figures and an almost opaque desktop panel keep their reading

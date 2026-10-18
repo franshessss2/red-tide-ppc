@@ -6,7 +6,8 @@ import { useEntrance } from '../motion/useEntrance'
 import { usePulse } from '../motion/usePulse'
 import { MorphChevronIcon } from './MorphChevron'
 import { formatRecordTime } from '../lib/format'
-import { DataProvenance } from './DataProvenance'
+import { CommunitySource } from './DataProvenance'
+import { FeedConnectionNotice, ZoneConnectionDetails } from './ZoneConnectionDetails'
 import {
   dominantZoneStatus,
   sidePanelReadout,
@@ -84,6 +85,7 @@ export const ZONE_PANEL_FALLBACK_WIDTH = 380
 export interface ZoneDrawerProps {
   zones: Zone[]
   zonesReady: boolean
+  reportsReady?: boolean
   pendingCounts: Record<string, number>
   counts: Record<ZoneStatus, number>
   selectedZoneId: string | null
@@ -243,6 +245,7 @@ export function Primer({ scrollRoot, open }: { scrollRoot: Element | null; open:
 export function ZoneDrawer({
   zones,
   zonesReady,
+  reportsReady = true,
   pendingCounts,
   counts,
   selectedZoneId,
@@ -485,8 +488,10 @@ export function ZoneDrawer({
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-4"
               data-testid="zone-drawer-scroll"
             >
-              <AdvisoryBanner counts={counts} total={zones.length} ready={zonesReady} />
-              <div className="mt-3"><DataProvenance /></div>
+              <CommunitySource />
+              <FeedConnectionNotice />
+              <p className="mt-2 text-xs tabular-nums text-muted">{reportsReady ? `${Object.values(pendingCounts).reduce((sum, count) => sum + count, 0)} pending reports` : 'Report records loading'}</p>
+              <div className="mt-3"><AdvisoryBanner counts={counts} total={zones.length} ready={zonesReady} /></div>
 
               <div className="mt-4 flex items-baseline justify-between gap-2">
                 <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">
@@ -530,6 +535,7 @@ export function ZoneDrawer({
                 </p>
               )}
 
+              <ZoneConnectionDetails counts={counts} ready={zonesReady} />
               <Primer
                 scrollRoot={scrollRoot}
                 open={open}

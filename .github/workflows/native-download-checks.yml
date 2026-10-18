@@ -1,0 +1,74 @@
+name: Native download checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'android-app/**'
+      - 'desktop-app/**'
+      - 'scripts/*native*'
+      - 'scripts/test-android-bundle.mjs'
+      - 'scripts/visual-smoke.mjs'
+      - 'package*.json'
+      - '.github/workflows/native-download-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-downloads-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packages:
+    name: Build and verify Android and Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out full history for synchronized version codes
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # Build the PR source commit, not a synthetic merge with a different version count.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: |
+          npm ci
+          npm ci --prefix android-app
+          npm ci --prefix desktop-app
+          npm run setup:runtime --prefix desktop-app
+      - name: Verify native release guards and desktop tests
+        run: |
+          npm run apps:test
+          npm test --prefix desktop-app
+      - name: Build both packages from one sample-data web build
+        shell: pwsh
+        run: |
+          $env:JAVA_HOME = $env:JAVA_HOME_21_X64
+          if (!(Test-Path "$env:ANDROID_HOME/platforms/android-36/android.jar")) {
+            throw 'Android SDK 36 is not available on this runner; no SDK is installed by this workflow.'
+          }
+          npm run apps:build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Chromium visual acceptance against the packaged app
+        run: node scripts/visual-smoke.mjs
+      - name: Upload verified testing builds
+        uses: actions/upload-artifact@v7
+        with:
+          name: rtp-native-testing-builds
+          path: |
+            android-app/android/app/build/outputs/apk/debug/app-debug.apk
+            desktop-app/release/*-windows-x64-setup.exe
+            .cache/native-apps/build-all.json
+            .cache/visual-review/*.png
+            .cache/visual-review/browser-results.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

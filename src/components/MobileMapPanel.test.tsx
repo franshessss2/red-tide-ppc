@@ -13,6 +13,7 @@ vi.mock('./ZoneDrawer', () => ({
 }))
 vi.mock('./DataProvenance', () => ({
   DataProvenance: () => <p>Data source</p>,
+  CommunitySource: () => <p>Sample data · Not an official clearance.</p>,
 }))
 afterEach(cleanup)
 function Panel({
@@ -58,6 +59,7 @@ describe('mobile map information', () => {
     await user.click(
       screen.getByRole('button', { name: /Zone records loading/ }),
     )
+    await user.click(screen.getByText('Status counts and connection'))
     expect(
       screen.getAllByRole('definition').map((el) => el.textContent),
     ).toEqual(['—', '—', '—', '—'])

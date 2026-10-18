@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom'
 import type { Map as LeafletMap } from 'leaflet'
 import { AnimatePresence, motion } from 'motion/react'
 import { RegistrationMarks, Scanline } from '../components/Ambient'
-import { AdvisoryDrawer } from '../components/AdvisoryDrawer'
 import {
   MobileMapPanel,
   type MobilePanelState,
@@ -370,17 +369,10 @@ export function MapPage() {
       )}
 
       <MapControlColumn map={leafletMap}>
-        <AdvisoryDrawer
-          advisory={statusCounts.advisory}
-          zones={zones.length}
-          pending={pendingTotal}
-          unavailable={statusCounts.unknown}
-          ready={zonesReady}
-          reportsReady={reportsReady}
-        />
         <ZoneDrawer
           zones={zones}
           zonesReady={zonesReady}
+          reportsReady={reportsReady}
           pendingCounts={pendingCounts}
           counts={statusCounts}
           selectedZoneId={selectedZoneId}

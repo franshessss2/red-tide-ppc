@@ -307,34 +307,20 @@ describe('AdvisoryDrawer on the map page', () => {
     })
   })
 
-  it('is wired into the control column with a live gauge, a working tab, and a separate fixed key', async () => {
+  it('consolidates the map summary into the zone drawer while retaining the fixed key', async () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('link', { name: /open the map/i }))
     await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
-
-    const live = await screen.findByTestId('advisory-drawer')
-    expect(live.dataset.state).toBe('open')
-    // Seeded demo data: 7 zones, none under advisory.
-    expect(screen.getByText('Community warnings')).toBeTruthy()
-    expect(screen.getByText('0 of 7 zones flagged')).toBeTruthy()
-
-    // The drawer lives in the top-right control column now, under the zoom.
     const column = screen.getByTestId('map-control-column')
-    expect(column.contains(live)).toBe(true)
-    expect(column.contains(screen.getByTestId('advisory-drawer-tab'))).toBe(true)
-
-    // The pills row is a separate fixed element, not in the drawer.
-    const key = await screen.findByTestId('status-key')
-    expect(live.contains(key)).toBe(false)
+    const drawer = screen.getByTestId('zone-drawer')
+    expect(column.contains(drawer)).toBe(true)
+    expect(screen.queryByTestId('advisory-drawer')).toBeNull()
+    expect(screen.getByText('No community warnings recorded')).toBeTruthy()
+    const key = screen.getByTestId('status-key')
     expect(column.contains(key)).toBe(false)
-
-    const liveTab = screen.getByTestId('advisory-drawer-tab')
-    await user.click(liveTab)
-    await waitFor(() => expect(live.dataset.state).toBe('collapsed'))
-    // The key never moves with the drawer.
+    await user.click(screen.getByTestId('zone-drawer-tab'))
+    await waitFor(() => expect(drawer.dataset.state).toBe('open'))
     expect(key.style.transform).toBe('')
-    await user.click(liveTab)
-    await waitFor(() => expect(live.dataset.state).toBe('open'))
   })
 })

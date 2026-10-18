@@ -379,12 +379,8 @@ describe('ZoneDrawer on the map page', () => {
     const column = screen.getByTestId('map-control-column')
     expect(column.contains(live)).toBe(true)
     const rows = Array.from(column.children)
-    expect(rows.indexOf(screen.getByTestId('advisory-drawer'))).toBeLessThan(
-      rows.indexOf(live),
-    )
-    expect(rows.indexOf(screen.getByTestId('zoom-controls'))).toBeLessThan(
-      rows.indexOf(screen.getByTestId('advisory-drawer')),
-    )
+    expect(screen.queryByTestId('advisory-drawer')).toBeNull()
+    expect(rows.indexOf(screen.getByTestId('zoom-controls'))).toBeLessThan(rows.indexOf(live))
 
     // The bottom sheet's contract is gone from the document.
     expect(document.querySelector('[data-anchor]')).toBeNull()
