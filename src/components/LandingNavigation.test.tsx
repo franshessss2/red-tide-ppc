@@ -1,0 +1,37 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
+import { LandingNavigation } from './LandingNavigation'
+
+vi.mock('../App', () => ({ prefetchMapPage: vi.fn() }))
+afterEach(cleanup)
+
+it('keeps Map and QR available and closes secondary navigation on Escape and outside tap', async () => {
+  const user = userEvent.setup()
+  render(<MemoryRouter><LandingNavigation /><button>Outside</button></MemoryRouter>)
+  expect(screen.getByRole('link', { name: /Map/ }).getAttribute('href')).toBe('/map')
+  expect(screen.getByRole('button', { name: 'Android app download QR code' })).toBeTruthy()
+  const trigger = screen.getByRole('button', { name: 'More options' })
+  await user.click(trigger)
+  expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  expect(screen.getByRole('link', { name: 'Admin' }).getAttribute('href')).toBe('/admin')
+  await user.keyboard('{Escape}')
+  expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  expect(document.activeElement).toBe(trigger)
+  await user.click(trigger)
+  await user.click(screen.getByRole('button', { name: 'Outside' }))
+  expect(trigger.getAttribute('aria-expanded')).toBe('false')
+})
+
+it('retains the replay control for the existing introduction focus return', async () => {
+  const user = userEvent.setup()
+  const replay = vi.fn()
+  render(<MemoryRouter><LandingNavigation onReplay={replay} /></MemoryRouter>)
+  const trigger = screen.getByRole('button', { name: 'More options' })
+  await user.click(trigger)
+  await user.click(screen.getByRole('button', { name: 'Watch introduction' }))
+  expect(replay).toHaveBeenCalledOnce()
+  expect(trigger.getAttribute('aria-expanded')).toBe('true')
+})

@@ -10,6 +10,18 @@ export function AndroidDownloadButton() {
   const dialog = useRef<HTMLDialogElement>(null)
   const id = useId()
 
+  // Desktop presents a scannable code immediately; phones lead with the link.
+  useEffect(() => {
+    if (!open) return
+    const media = window.matchMedia?.('(min-width: 640px)')
+    const qr = dialog.current?.querySelector('details')
+    if (!media || !qr) return
+    const update = () => { qr.open = media.matches }
+    update()
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const node = dialog.current
@@ -36,7 +48,7 @@ export function AndroidDownloadButton() {
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen(true)}
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span aria-hidden="true" className="font-mono text-[10px] font-semibold tracking-[0.05em]">QR</span>
       </button>
@@ -63,13 +75,16 @@ export function AndroidDownloadButton() {
               <span aria-hidden="true">×</span>
             </button>
           </div>
-          <div className="p-5">
-            <p id={`${id}-description`} className="text-sm text-muted">Scan with your phone to open the download folder, then choose the APK. On your phone already? Use the link below.</p>
-            <img src="/media/android/red-tide-download-qr.svg" width="900" height="900" alt="QR code for the Red Tide PPC Android download folder" className="mx-auto mt-5 aspect-square w-full max-w-[252px] rounded-lg bg-white" />
-            <a href={DOWNLOAD_FOLDER} target="_blank" rel="noopener noreferrer" className="mt-5 flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          <div className="android-download-body flex flex-col p-5">
+            <p id={`${id}-description`} className="text-sm text-muted">Open the download folder and choose the APK. To send it to another phone, scan the QR below.</p>
+            <a href={DOWNLOAD_FOLDER} target="_blank" rel="noopener noreferrer" className="android-download-link mt-5 flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 py-3 text-sm font-semibold text-ink hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
               Open download folder <span aria-hidden="true">↗</span>
               <span className="sr-only">(opens in a new tab)</span>
             </a>
+            <details className="android-download-qr mt-4">
+              <summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm text-muted focus-visible:outline-2 focus-visible:outline-accent">Send to another phone <span aria-hidden="true">QR ＋</span></summary>
+              <img src="/media/android/red-tide-download-qr.svg" width="900" height="900" alt="QR code for the Red Tide PPC Android download folder" className="mx-auto mt-3 aspect-square w-full max-w-[252px] rounded-lg bg-white" />
+            </details>
             <p className="mt-4 text-xs leading-relaxed text-muted">Android testing build · Sample data. Installation is outside Google Play. Real-phone behavior is still unverified.</p>
           </div>
         </dialog>

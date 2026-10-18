@@ -8,11 +8,11 @@ import { useMemo, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useSpring, useTransform } from 'motion/react'
 import type { Variants } from 'motion/react'
-import { BlurText } from '../components/BlurText'
 import { CommunitySource, DataProvenance } from '../components/DataProvenance'
 import { TextPressure } from '../components/TextPressure'
 import { Header } from '../components/Header'
-import { AndroidDownloadButton } from '../components/AndroidDownloadButton'
+import { LandingNavigation } from '../components/LandingNavigation'
+import { CoastalSteps } from '../components/CoastalSteps'
 import { HeroBackdrop } from '../components/HeroBackdrop'
 import { StatusPip } from '../components/StatusPip'
 import { Waves } from '../components/Waves'
@@ -80,11 +80,6 @@ const LANDING_CONTAINER =
 
 const EASE_OUT_QUINT = MOTION.ease.out
 
-const HOW_IT_WORKS = [
-  'Find your shore — seven zones cover the coast, from the city bay to St. Paul Bay.',
-  'Report an observation — describe what you see in at least 10 characters.',
-  'An admin reviews community reports — a reviewed report can prompt a community warning. Check BFAR for official bulletins.',
-] as const
 
 export function Landing({ onReplay, covered = false }: { onReplay?: () => void; covered?: boolean }) {
   const zones = useAppStore((state) => state.zones)
@@ -192,28 +187,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
           containerClassName={`${LANDING_CONTAINER} [&>a]:gap-1 [&>div]:gap-1 min-[400px]:[&>a]:gap-2.5 min-[400px]:[&>div]:gap-2.5`}
           eyebrow="Puerto Princesa, Palawan"
           title="Red Tide"
-          right={
-            <>
-              <AndroidDownloadButton />
-              {onReplay && <button type="button" data-intro-replay aria-label="Watch introduction" title="Watch introduction" onClick={onReplay} className="grid h-11 w-11 place-items-center text-2xl text-muted transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-accent"><span aria-hidden="true">↻</span></button>}
-              <a href="/arduino.html" aria-label="Open Arduino" title="Arduino" className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-accent">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4" /><rect x="10" y="10" width="4" height="4" rx=".5" /></svg>
-              </a>
-              <Link
-                to="/admin"
-                className="rounded-md border border-line bg-ink-2/85 px-1.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
-              >
-                Admin
-              </Link>
-              <Link
-                to="/map"
-                {...MAP_CTA_PREFETCH}
-                className="rounded-md border border-line bg-ink-2/85 px-1.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-paper/75 transition-colors hover:border-accent/40 hover:text-accent min-[400px]:px-3 min-[400px]:tracking-[0.12em] sm:px-2.5 sm:py-1.5"
-              >
-                Map
-              </Link>
-            </>
-          }
+          right={<LandingNavigation onReplay={onReplay} />}
         />
 
         {/*
@@ -307,7 +281,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
                 {/* ------------------------------------------------------ figures */}
                 <motion.section
                   aria-label="Figures"
-                  className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,8em),1fr))] gap-2.5 sm:mt-4 sm:gap-3"
+                  className="landing-figures mt-3.5 grid grid-cols-1 gap-2.5 sm:mt-4 sm:grid-cols-3 sm:gap-3"
                 >
                   <Figure label="Zone records" value={zones.length} ready={zonesReady} />
                   <Figure label="Pending reports" value={pendingTotal} ready={reportsReady} />
@@ -325,7 +299,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
         </div>
 
         <main className={`mx-auto flex-1 ${LANDING_CONTAINER}`}>
-          <div className="mt-14 grid gap-14 sm:mt-16 sm:gap-16 md:grid-cols-2 md:gap-10 lg:mt-20 xl:gap-20 2xl:gap-24">
+          <div className="mt-14 grid gap-12 sm:mt-16 sm:gap-14 lg:mt-20">
             {/* ------------------------------------------------ how it works */}
             {/*
               Its own scroll trigger, well below the hero: by the time this is on
@@ -334,26 +308,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
 
               Same copy as before, verbatim — only the delivery changed.
             */}
-            <section className="min-w-0" aria-label="How it works">
-              <h2 className="text-base font-semibold text-paper lg:text-lg">
-                <BlurText text="How it works" animateBy="words" direction="top" delay={70} />
-              </h2>
-              <ul className="mt-4 space-y-3.5 text-sm leading-relaxed text-muted sm:mt-3 sm:space-y-2.5 lg:text-base">
-                {HOW_IT_WORKS.map((item, index) => (
-                  <Bullet key={item}>
-                    <BlurText
-                      text={item}
-                      animateBy="words"
-                      direction="top"
-                      delay={18}
-                      // Each item waits for the one above it, so the list reads
-                      // top-to-bottom rather than as three simultaneous blocks.
-                      rootMargin={`0px 0px ${-8 - index * 4}% 0px`}
-                    />
-                  </Bullet>
-                ))}
-              </ul>
-            </section>
+            <CoastalSteps />
 
             {/* ----------------------------------------------------- primer */}
             {hasIntersectionObserver && !reduceMotion ? (
@@ -469,7 +424,7 @@ function Figure({
   ready?: boolean
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
+    <div className="landing-figure min-w-0 rounded-lg border border-line bg-ink-2/50 px-3 py-3 sm:py-2.5 lg:px-4 lg:py-5">
       <p
         className={`landing-figure-value font-display text-3xl leading-none tabular-nums sm:text-4xl xl:text-5xl ${valueClass ?? 'text-paper'}`}
       >

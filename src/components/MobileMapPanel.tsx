@@ -1,13 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { ZONE_STATUS_ORDER } from '../lib/status'
-import { zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { Zone, ZoneStatus } from '../types'
 import { AdvisoryBanner, Primer, ZoneCardItem } from './ZoneDrawer'
 import { useAppStore } from '../store'
 import { feedLabel } from '../lib/feed'
-import { DataProvenance } from './DataProvenance'
+import { CommunitySource } from './DataProvenance'
 import { ZoneListSkeleton } from './LoadingState'
-import { ZoneStatusIcon } from './ZoneStatusIcon'
+import { ZoneConnectionDetails } from './ZoneConnectionDetails'
 
 export type MobilePanelState = 'peek' | 'mid' | 'full'
 interface Props {
@@ -92,7 +90,7 @@ export function MobileMapPanel(props: Props) {
           className="mobile-map-panel__body"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="font-display text-xl">Zone status</h2>
+            <h2 className="font-display text-xl">Coastal zones</h2>
             <button
               type="button"
               className="min-h-11 rounded-md border border-line px-3 text-xs text-paper"
@@ -101,27 +99,7 @@ export function MobileMapPanel(props: Props) {
               {state === 'full' ? 'Smaller panel' : 'Expand panel'}
             </button>
           </div>
-          <dl className="mobile-map-status-grid">
-            {ZONE_STATUS_ORDER.map((status) => (
-              <div
-                key={status}
-                className="flex items-center justify-between gap-2 rounded-md border border-line p-2.5"
-              >
-                <dt className="flex items-center gap-2 text-xs">
-                  <span style={{ color: zoneTheme(status).hex }}>
-                    <ZoneStatusIcon status={status} />
-                  </span>
-                  {zoneLabel(status)}
-                </dt>
-                <dd
-                  className="font-mono text-sm"
-                  style={{ color: zoneTheme(status).hex }}
-                >
-                  {zonesReady ? counts[status] : '—'}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <CommunitySource />
           <p className="my-3 text-xs text-muted">
             {reportsReady
               ? `${props.pending} pending reports`
@@ -132,10 +110,7 @@ export function MobileMapPanel(props: Props) {
             total={zones.length}
             ready={zonesReady}
           />
-          <div className="mt-3">
-            <DataProvenance />
-          </div>
-          <h2 className="mb-3 mt-5 font-display text-xl">Coastal zones</h2>
+          <p className="mb-3 mt-4 font-mono text-[10px] uppercase tracking-widest text-faint">Choose a zone to locate it</p>
           {!zonesReady ? (
             <ZoneListSkeleton />
           ) : (
@@ -161,6 +136,7 @@ export function MobileMapPanel(props: Props) {
               No coastal records available. Check official BFAR bulletins.
             </p>
           )}
+          <ZoneConnectionDetails counts={counts} ready={zonesReady} />
           <Primer scrollRoot={scrollRoot} open={open} />
         </div>
       )}
