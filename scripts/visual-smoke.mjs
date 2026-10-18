@@ -15,8 +15,33 @@ delete env.ELECTRON_RUN_AS_NODE
 let app
 try {
   app = await electron.launch({ executablePath: join(root, 'desktop-app/release/win-unpacked/RedTide ppc.exe'), args: [`--user-data-dir=${profile}`], env })
-  await app.evaluate(({ BrowserWindow }) => { for (const window of BrowserWindow.getAllWindows()) { window.on('show', () => window.hide()); window.hide() } })
-  const page = await app.firstWindow()
+  // The packaged protocol/session is used unchanged. An offscreen test window
+  // supplies compositor frames without putting a window on the user's desktop.
+  const newWindow = app.waitForEvent('window')
+  const offscreenId = await app.evaluate(async ({ BrowserWindow }) => {
+    const originals = BrowserWindow.getAllWindows()
+    for (const original of originals) { original.on('show', () => original.hide()); original.hide() }
+    const window = new BrowserWindow({ show: false, width: 1440, height: 900,
+      webPreferences: { offscreen: true, backgroundThrottling: false, sandbox: true, contextIsolation: true, nodeIntegration: false } })
+    await window.loadURL('rtp://app/')
+    return window.id
+  })
+  const page = await newWindow
+  const capture = async name => {
+    await page.evaluate(() => document.fonts.ready)
+    // Electron's native capture supports hidden windows without waiting for a
+    // foreground compositor frame. This does not measure real GPU smoothness.
+    const png = await app.evaluate(async ({ BrowserWindow }, id) => {
+      const window = BrowserWindow.fromId(id)
+      const image = await Promise.race([
+        window.capturePage(undefined, { stayHidden: true, stayAwake: true }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Offscreen capture did not produce a frame in 15 seconds')), 15000)),
+      ])
+      if (image.isEmpty()) throw new Error('Offscreen capture is empty')
+      return image.toPNG().toString('base64')
+    }, offscreenId)
+    await writeFile(join(output, name), Buffer.from(png, 'base64'))
+  }
   const errors = []
   const writes = []
   page.on('pageerror', error => errors.push(error.message))
@@ -25,6 +50,7 @@ try {
   await page.evaluate(() => localStorage.setItem('red-tide-ppc:intro:v3', 'seen'))
   const results = []
   for (const width of [360, 390, 768, 1440]) {
+    await app.evaluate(({ BrowserWindow }, { id, width }) => BrowserWindow.fromId(id).setContentSize(width, 900), { id: offscreenId, width })
     await page.setViewportSize({ width, height: 900 })
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await page.goto('rtp://app/')
@@ -50,14 +76,15 @@ try {
     assert.equal(await qr.isVisible(), width >= 640)
     await page.getByRole('link', { name: /Open download folder/ }).waitFor({ state: 'visible' })
     await page.keyboard.press('Escape')
-    await page.screenshot({ path: join(output, `landing-${width}.png`) })
+    await capture(`landing-${width}.png`)
     await page.locator('.coastal-steps').scrollIntoViewIfNeeded()
-    await page.screenshot({ path: join(output, `steps-${width}.png`) })
+    await capture(`steps-${width}.png`)
     await page.getByRole('link', { name: /Open the map/ }).click()
     await page.getByTestId('zoom-controls').waitFor()
     assert.equal(await page.getByTestId('advisory-drawer').count(), 0)
     if (width < 768) {
       await page.getByRole('button', { name: /7 zones · 0 flagged/ }).click()
+      await page.waitForFunction(() => document.querySelector('.mobile-map-panel')?.getBoundingClientRect().height >= Math.min(innerHeight * .55, 480) - 1)
       const first = page.locator('.mobile-map-panel li button').first()
       await first.waitFor()
       const box = await first.boundingBox()
@@ -65,13 +92,13 @@ try {
       await page.getByRole('button', { name: 'Expand panel' }).click()
       await page.getByRole('heading', { name: 'Coastal zones', exact: true }).waitFor()
     }
-    await page.screenshot({ path: join(output, `map-${width}.png`) })
+    await capture(`map-${width}.png`)
     results.push({ width, landingOverflow: overflow, mobileControlsAtLeast44: width < 640 ? true : null, qrVisibleByDefault: width >= 640, duplicateCountDrawer: false })
   }
   await page.goto('rtp://app/')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
-  await page.screenshot({ path: join(output, 'landing-reduced-motion.png') })
+  await capture('landing-reduced-motion.png')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.context().addInitScript(() => {
     const connection = new EventTarget()
