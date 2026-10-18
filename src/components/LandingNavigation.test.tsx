@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { LandingNavigation } from './LandingNavigation'
+import { useState } from 'react'
 
 vi.mock('../App', () => ({ prefetchMapPage: vi.fn() }))
 afterEach(cleanup)
@@ -33,5 +34,20 @@ it('retains the replay control for the existing introduction focus return', asyn
   await user.click(trigger)
   await user.click(screen.getByRole('button', { name: 'Watch introduction' }))
   expect(replay).toHaveBeenCalledOnce()
+  expect(trigger.getAttribute('aria-expanded')).toBe('true')
+})
+
+it('leaves the focus-return target available while the introduction makes landing inert', async () => {
+  const user = userEvent.setup()
+  function Replay() {
+    const [covered, setCovered] = useState(false)
+    return <><div inert={covered}><LandingNavigation onReplay={() => setCovered(true)} /></div><button>Introduction</button></>
+  }
+  render(<MemoryRouter><Replay /></MemoryRouter>)
+  const trigger = screen.getByRole('button', { name: 'More options' })
+  await user.click(trigger)
+  await user.click(screen.getByRole('button', { name: 'Watch introduction' }))
+  await user.click(screen.getByRole('button', { name: 'Introduction' }))
+  await user.keyboard('{Escape}')
   expect(trigger.getAttribute('aria-expanded')).toBe('true')
 })

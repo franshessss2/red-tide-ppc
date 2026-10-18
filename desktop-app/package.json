@@ -1,7 +1,7 @@
 {
   "name": "redtide-ppc-desktop",
   "productName": "RedTide ppc",
-  "version": "0.2.0-alpha.399",
+  "version": "0.2.0-alpha.400",
   "private": true,
   "description": "RTP Windows desktop alpha for the Red Tide PPC school prototype",
   "author": "Red Tide PPC contributors",

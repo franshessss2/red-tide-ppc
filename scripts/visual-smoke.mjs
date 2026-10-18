@@ -99,6 +99,15 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
   await capture('landing-reduced-motion.png')
+  await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).setContentSize(390, 844), offscreenId)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'More options' }).click()
+  const replay = page.getByRole('button', { name: 'Watch introduction' })
+  await replay.click()
+  await page.getByRole('button', { name: 'Explore Red Tide' }).click()
+  await page.getByRole('dialog', { name: 'Introduction', exact: true }).waitFor({ state: 'hidden' })
+  assert.equal(await replay.evaluate(node => node === document.activeElement), true, 'Introduction returns focus to visible replay control')
+  await page.keyboard.press('Escape')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.context().addInitScript(() => {
     const connection = new EventTarget()
@@ -110,7 +119,7 @@ try {
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
   assert.deepEqual(errors, [])
   assert.deepEqual(writes, [])
-  const report = { results, reducedMotion: 'static', saveData: 'static', pageErrors: errors, httpWrites: writes, realPhoneAndGpu: 'not verified' }
+  const report = { results, reducedMotion: 'static', saveData: 'static', introReplayFocusReturn: true, pageErrors: errors, httpWrites: writes, realPhoneAndGpu: 'not verified' }
   await writeFile(join(output, 'browser-results.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify(report, null, 2))
 } finally {

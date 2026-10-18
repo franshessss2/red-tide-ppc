@@ -12,9 +12,11 @@ export function LandingNavigation({ onReplay }: { onReplay?: () => void }) {
   useEffect(() => {
     if (!open) return
     const outside = (event: PointerEvent) => {
+      if (root.current?.closest('[inert]')) return
       if (!root.current?.contains(event.target as Node)) setOpen(false)
     }
     const escape = (event: KeyboardEvent) => {
+      if (root.current?.closest('[inert]')) return
       if (event.key !== 'Escape') return
       setOpen(false)
       trigger.current?.focus()
@@ -34,6 +36,7 @@ export function LandingNavigation({ onReplay }: { onReplay?: () => void }) {
         <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6"><path d={open ? 'm6 6 12 12M6 18 18 6' : 'M4 7h16M4 12h16M4 17h16'} /></svg>
       </button>
       <div id={id} className="landing-nav__panel" data-open={open} onBlur={event => {
+        if (root.current?.closest('[inert]')) return
         if (!event.currentTarget.parentElement?.contains(event.relatedTarget as Node | null)) setOpen(false)
       }}>
         <p className="landing-nav__caption px-3 pb-2 font-mono text-[10px] uppercase tracking-widest text-faint">Explore RTP</p>
