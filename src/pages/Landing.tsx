@@ -301,13 +301,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
         <main className={`mx-auto flex-1 ${LANDING_CONTAINER}`}>
           <div className="mt-14 grid gap-12 sm:mt-16 sm:gap-14 lg:mt-20">
             {/* ------------------------------------------------ how it works */}
-            {/*
-              Its own scroll trigger, well below the hero: by the time this is on
-              screen the hero's reveal is long finished, so the page resolves
-              section by section instead of all at once.
-
-              Same copy as before, verbatim — only the delivery changed.
-            */}
+            {/* Original SVG illustrations enter once; the copy is always visible. */}
             <CoastalSteps />
 
             {/* ----------------------------------------------------- primer */}

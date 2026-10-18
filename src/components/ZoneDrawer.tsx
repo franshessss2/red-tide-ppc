@@ -7,7 +7,7 @@ import { usePulse } from '../motion/usePulse'
 import { MorphChevronIcon } from './MorphChevron'
 import { formatRecordTime } from '../lib/format'
 import { CommunitySource } from './DataProvenance'
-import { ZoneConnectionDetails } from './ZoneConnectionDetails'
+import { FeedConnectionNotice, ZoneConnectionDetails } from './ZoneConnectionDetails'
 import {
   dominantZoneStatus,
   sidePanelReadout,
@@ -489,6 +489,7 @@ export function ZoneDrawer({
               data-testid="zone-drawer-scroll"
             >
               <CommunitySource />
+              <FeedConnectionNotice />
               <p className="mt-2 text-xs tabular-nums text-muted">{reportsReady ? `${Object.values(pendingCounts).reduce((sum, count) => sum + count, 0)} pending reports` : 'Report records loading'}</p>
               <div className="mt-3"><AdvisoryBanner counts={counts} total={zones.length} ready={zonesReady} /></div>
 

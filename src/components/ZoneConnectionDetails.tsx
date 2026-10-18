@@ -3,6 +3,22 @@ import { zoneLabel, zoneTheme } from '../styles/statusTheme'
 import type { ZoneStatus } from '../types'
 import { DataProvenance } from './DataProvenance'
 import { ZoneStatusIcon } from './ZoneStatusIcon'
+import { useAppStore } from '../store'
+import { feedLabel } from '../lib/feed'
+
+/** Cached, pending or failed delivery must remain visible outside the disclosure. */
+export function FeedConnectionNotice() {
+  const zones = useAppStore(state => state.zonesFeed)
+  const reports = useAppStore(state => state.reportsFeed)
+  const retry = useAppStore(state => state.retryFeeds)
+  return <div className="space-y-1 text-xs leading-relaxed text-muted">
+    {([['zones', zones], ['reports', reports]] as const).map(([name, feed]) =>
+      feed.phase === 'sample' || feed.phase === 'synced' ? null :
+        <p key={name} className="mt-2">{name === 'zones' ? 'Zones' : 'Reports'}: {feedLabel(feed)}.
+          {feed.phase === 'error' && <button type="button" className="ml-2 inline-flex min-h-11 items-center text-accent underline" onClick={() => retry(name)}>Retry {name}</button>}
+        </p>)}
+  </div>
+}
 
 /** Secondary detail lives after zone selection; source and clearance stay above it. */
 export function ZoneConnectionDetails({ counts, ready }: { counts: Record<ZoneStatus, number>; ready: boolean }) {

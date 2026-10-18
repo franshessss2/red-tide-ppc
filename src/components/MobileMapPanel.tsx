@@ -5,7 +5,7 @@ import { useAppStore } from '../store'
 import { feedLabel } from '../lib/feed'
 import { CommunitySource } from './DataProvenance'
 import { ZoneListSkeleton } from './LoadingState'
-import { ZoneConnectionDetails } from './ZoneConnectionDetails'
+import { FeedConnectionNotice, ZoneConnectionDetails } from './ZoneConnectionDetails'
 
 export type MobilePanelState = 'peek' | 'mid' | 'full'
 interface Props {
@@ -100,6 +100,7 @@ export function MobileMapPanel(props: Props) {
             </button>
           </div>
           <CommunitySource />
+          <FeedConnectionNotice />
           <p className="my-3 text-xs text-muted">
             {reportsReady
               ? `${props.pending} pending reports`
