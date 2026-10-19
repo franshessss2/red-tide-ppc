@@ -62,13 +62,30 @@
 .coastal-step__contour { stroke: #c4aa7048; stroke-width: 1.5; }
 .coastal-step__marker { fill: #e9af38; }
 .coastal-step__shield { fill: #1e1b13; stroke: #e9af3860; }
+.coastal-step__orbit { fill: none; stroke: #e9af3860; stroke-width: 1.5; stroke-dasharray: 20 200; }
+/* Loop only small decorative details. Text, layout and the static drawing never
+   depend on animation. Paused offscreen/hidden; no timers or animation frames. */
+.coastal-step__pulse { transform-box: fill-box; transform-origin: center; }
+.coastal-steps[data-motion="enabled"] .coastal-step__pulse { animation: coastal-pulse 3.2s ease-out infinite; }
+.coastal-steps[data-motion="enabled"] .coastal-step__report { animation: coastal-report 4s ease-in-out infinite; }
+.coastal-steps[data-motion="enabled"] .coastal-step__send { animation: coastal-send 4s ease-in-out infinite; }
+.coastal-steps[data-motion="enabled"] .coastal-step__orbit { animation: coastal-orbit 6s linear infinite; }
+.coastal-step__art[data-running="false"] :is(.coastal-step__pulse, .coastal-step__report, .coastal-step__send, .coastal-step__orbit) { animation-play-state: paused; }
+@keyframes coastal-pulse { 0%, 100% { transform: scale(1); opacity: .8; } 75% { transform: scale(1.65); opacity: .15; } }
+@keyframes coastal-report { 0%, 100% { opacity: .55; } 45%, 65% { opacity: 1; } }
+@keyframes coastal-send { 0%, 30%, 100% { transform: translate(0, 0); } 60% { transform: translate(4px, -4px); } }
+@keyframes coastal-orbit { to { stroke-dashoffset: -220; } }
+@media (prefers-reduced-motion: reduce) {
+  .coastal-steps :is(.coastal-step__pulse, .coastal-step__report, .coastal-step__send, .coastal-step__orbit) { animation: none !important; }
+}
 .coastal-step__number { position: absolute; left: 12px; top: 8px; font: 9px var(--font-mono); color: #e9af38; }
 @media (min-width: 640px) {
   .landing-nav__toggle, .landing-nav__caption { display: none; }
   .landing-nav__panel { position: static; display: flex; gap: 8px; width: auto; padding: 0; border: 0; overflow: visible; box-shadow: none; background: transparent; }
   .landing-nav__panel :is(a, button) { width: auto; padding: 10px; border: 1px solid var(--color-line); background: var(--color-ink-2); }
-  .landing-nav__panel [data-intro-replay] { font-size: 0; gap: 0; width: 44px; }
-  .landing-nav__panel [data-intro-replay] span { font-size: 22px; }
+  .landing-nav__panel { align-items: center; }
+  .landing-nav__panel [data-intro-replay] { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .landing-nav__replay-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .coastal-steps__list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .android-download-qr { order: 1; }
   .android-download-link { order: 2; }
