@@ -13,6 +13,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --force",
     "test": "vitest run",
+    "test:admin-tool": "node --test scripts/admin-claims.test.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-red-tide-admin --config firebase.emulators.json \"node --test scripts/firestore-rules.test.mjs\"",
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts",
     "seed:dry-run": "tsx scripts/seed.ts --dry-run",
@@ -38,6 +40,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -48,6 +51,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.34.0",
     "jsdom": "^30.0.1",
     "playwright": "^1.63.0",
     "puppeteer": "^25.11.0",

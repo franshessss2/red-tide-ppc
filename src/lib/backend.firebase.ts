@@ -9,11 +9,12 @@ import {
 import type { NewReport, Report, ReportStatus, KnownZoneStatus } from '../types'
 import type { Backend } from './backend'
 import { firestore } from './firebase'
+import { requireFirebaseAdmin } from './adminAuth'
 import { mapReport, mapZone } from './firestoreMapping'
 
 /**
  * Production backend: Cloud Firestore for zones/reports and Cloudinary for
- * report photos. No Firebase Auth — see `firestore.rules` for what that costs.
+ * report photos. Moderation requires Firebase Auth and deployed admin rules.
  *
  * Document → domain mapping lives in `./firestoreMapping`, which is pure and
  * unit-tested; this file contains the Firestore and photo-upload plumbing.
@@ -127,6 +128,7 @@ export function createFirebaseBackend(): Backend {
     },
 
     async setReportStatus(reportId: string, status: ReportStatus) {
+      await requireFirebaseAdmin()
       await updateDoc(doc(firestore(), REPORTS_COLLECTION, reportId), {
         status,
         reviewedAt: serverTimestamp(),
@@ -134,6 +136,7 @@ export function createFirebaseBackend(): Backend {
     },
 
     async setZoneStatus(zoneId: string, status: KnownZoneStatus) {
+      await requireFirebaseAdmin()
       await updateDoc(doc(firestore(), ZONES_COLLECTION, zoneId), {
         status,
         lastUpdated: serverTimestamp(),

@@ -10,12 +10,12 @@ import { Header } from './Header'
 import { Notice } from './Notice'
 
 /**
- * Passcode gate for /admin.
+ * Local sample-data gate only. Firebase mode never renders this component.
  *
  * SECURITY: this is a plain string compare against `VITE_ADMIN_PASSCODE`, which
  * is compiled into the public JS bundle. It is a demo-grade lock, not
  * authentication — anyone can read the value in the page source. Replacing it
- * with Firebase Auth is the first thing to do before real use.
+ * Firebase mode uses FirebaseAdminAccess and deployed Firestore rules instead.
  */
 export function AdminGate() {
   const tryUnlockAdmin = useAppStore((state) => state.tryUnlockAdmin)
@@ -87,9 +87,9 @@ export function AdminGate() {
             <TextReveal text="Enter admin passcode" trigger="mount" />
           </h1>
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            Approving a report adds a community warning to its zone, so this view is
-            locked. There are no user accounts in this MVP — just a shared
-            passcode.
+            Local sample-data demonstration only. This public passcode prevents
+            accidental demo edits; it does not secure real records. Firebase
+            moderation uses Google sign-in and administrator permissions.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-5">
@@ -144,10 +144,9 @@ export function AdminGate() {
         </motion.div>
 
         <p className="mt-4 px-1 font-mono text-[10px] leading-relaxed text-faint">
-          The passcode comes from{' '}
-          <code className="text-muted">VITE_ADMIN_PASSCODE</code> in your{' '}
-          <code className="text-muted">.env</code> file. If it is not set, the gate
-          will tell you instead of guessing.
+          The public demo passcode can be overridden with{' '}
+          <code className="text-muted">VITE_ADMIN_PASSCODE</code>. Never use your
+          Google password here. This lock cannot grant Firebase permissions.
         </p>
       </main>
 
