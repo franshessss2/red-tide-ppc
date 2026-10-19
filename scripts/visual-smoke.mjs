@@ -88,7 +88,7 @@ try {
     // Each card can be outside the viewport on a phone, so visit it separately.
     for (const selector of ['.coastal-step__pulse', '.coastal-step__send', '.coastal-step__orbit']) {
       const detail = page.locator(selector)
-      await detail.scrollIntoViewIfNeeded()
+      await page.locator('.coastal-step__art').filter({ has: detail }).scrollIntoViewIfNeeded()
       await page.waitForFunction(selector => document.querySelector(selector).closest('.coastal-step__art').dataset.running === 'true', selector)
       const before = await detail.evaluate(node => {
         const style = getComputedStyle(node)
