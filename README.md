@@ -40,7 +40,7 @@ For Philippine official advice, check [BFAR shellfish bulletins](https://www.bfa
 
 - `/` — opening film/reel on eligible first visits, then the landing page with community figures, source labels, replay and the Android QR download dialog.
 - `/map` — the public map (lazy-loaded; the landing and admin never pay for Leaflet).
-- `/admin` — the passcode-gated review queue.
+- `/admin` — Google sign-in and an administrator claim in Firebase mode; a public demo lock in sample mode.
 - `/devices` — local rehearsal page for the optional virtual ESP32, with no accounts or hardware (see [Virtual device setup](docs/virtual-device-setup.md)).
 - `/arduino.html` — browser USB/serial demonstration; `/arduino-demo.html` remains an alias (see [Arduino setup](docs/arduino-combined.md)).
 - `/api/device-readings` — Vercel device-ingest/read endpoint. Server-only configuration is `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `DEVICE_INGEST_TOKEN` and `DEVICE_STORAGE_NAMESPACE`; see the virtual-device guide for constraints and setup. These values must not use the public `VITE_` prefix.
@@ -53,7 +53,7 @@ For Philippine official advice, check [BFAR shellfish bulletins](https://www.bfa
    - 🔴 **Community warning** (`advisory`) — an admin-reviewed community warning; check official BFAR bulletins before a food-safety decision.
 2. **Tap a zone** → read its community status, guidance, pending-report count and record-update time in the popup/panel; the report action opens the form. Record-update time is not water sampling time.
 3. **Report form** — a description plus an optional photo. No account, no name, no login. The report has status `pending`: stored in Firestore when configured, or in browser-local sample data in demo mode.
-4. **Admin view at `/admin`** — behind a passcode. Pending reports are listed with zone, description, photo and timestamp.
+4. **Admin view at `/admin`** — Firebase Google sign-in plus an administrator claim, or the local sample-data demo lock. Pending reports are listed with zone, description, photo and timestamp.
    - **Approve** → the report becomes `confirmed` **and** its zone becomes `advisory` with `lastUpdated = now`.
    - **Reject** → the report becomes `rejected` and the zone is left exactly as it was.
 5. **Manual control only** — zone status does not expire automatically. An admin can change it from the **Zones** tab. Setting `safe` means no community warning is recorded; it does not clear water or seafood officially.
@@ -68,7 +68,7 @@ npm ci
 npm run dev
 ```
 
-Use Node.js 22.12 or newer in the Node 22 line, matching CI's Node 22 setup. Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and sets the public prototype admin passcode to `137950FrT`. Open `/admin` with that passcode. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
+Use Node.js 22.12 or newer in the Node 22 line, matching CI's Node 22 setup. Open the URL Vite prints. `npm run dev` runs `scripts/demo.mjs`, which always selects the browser-local demo backend, ignores env files and uses the public demo passcode from `src/lib/demoAdminPasscode.ts`. This is only a local rehearsal lock. Community-record views show **Sample data**; connection details and the map status show **Sample data · local records**. There is no `DemoBanner.tsx` banner. Map tiles and other network assets can still be requested; sample reports stay local.
 
 For an env-configured local run, fill `.env`, then use `npx vite` or `npm run build` followed by `npm run preview`. The default demo launcher does not use those values.
 
@@ -85,7 +85,7 @@ For an env-configured local run, fill `.env`, then use `npx vite` or `npm run bu
 
 ## 4. Connecting a real Firebase backend
 
-The app uses **Firestore for data and Cloudinary for photo uploads — no Firebase Auth**.
+The app uses **Firestore for data, Firebase Auth for real administrator sign-in, and Cloudinary for photo uploads**.
 
 ### 4.1 Create the project
 
@@ -106,7 +106,7 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-upload-preset
 VITE_ADMIN_PASSCODE=change-me
 ```
 
-`.env` is gitignored. When sample-data mode is active and `VITE_ADMIN_PASSCODE` is unset, the public prototype passcode is `137950FrT` (also used in the Android sample-data bundle). An explicit value overrides this default; an explicit blank disables the gate. Firebase-backed builds require an explicit passcode. Everything prefixed `VITE_` is compiled into the public JavaScript bundle. Firebase web identifiers are public, and the admin passcode is also readable by visitors; do not put private credentials in `VITE_*`. Access control belongs in the security rules.
+`.env` is gitignored. `VITE_ADMIN_PASSCODE` controls only the public sample-data lock; it cannot authorize Firebase moderation. Firebase mode requires a verified Google account with a trusted boolean `admin` claim and deployed rules. Everything prefixed `VITE_` is public browser configuration: never put account passwords or private credentials there. See [administrator setup](docs/admin-auth.md).
 
 Restart an env-configured `npx vite` run after editing `.env`, or rebuild before preview/deployment. `npm run dev` deliberately forces demo mode and ignores env files.
 
@@ -137,16 +137,9 @@ firebase deploy --only firestore:rules
 
 Or paste the contents into the Firebase console under **Firestore → Rules**.
 
-> ### ⚠️ These rules are insecure by design
->
-> There is no authentication in this MVP, so the rules cannot distinguish a fisherman from an attacker:
->
-> - The shipped rules allow unauthenticated reads and restricted-field creates/updates for reports and zones.
-> - The public browser passcode cannot establish who is an admin.
->
-> Report creates must start `pending`; report updates can change `status`/`reviewedAt`; zone updates can change `status`/`lastUpdated`; deletes are denied. These checks do not provide reviewer authorization, private reports, rate limiting or complete schema validation. A direct client can change allowed fields without the UI gate.
->
-> Before any real deployment, add Firebase Auth with an admin custom claim and lock writes behind it. The rule files show the intended shape in a comment.
+Firebase moderation updates now require a verified Google identity and the boolean `admin` custom claim. Public pending submissions remain allowed with schema checks; zone creation/deletion and geometry edits are denied to clients. Reports remain publicly readable for the existing map/feed. These rules do not add private reports or rate limiting.
+
+**Merging a frontend PR does not deploy Firebase rules.** Follow the staged [administrator setup and acceptance checklist](docs/admin-auth.md), including provider/domain configuration, verified UID approval, emulator tests and explicit rules deployment. The old public-web-config seed command is blocked by these rules; do not reopen public writes to seed.
 
 ### 4.5 Seed the zones
 
@@ -154,10 +147,10 @@ Zones are **pre-seeded, never user-created**:
 
 ```bash
 npm run seed:dry-run   # show what would be written, write nothing
-npm run seed           # create any missing zones
+npm run seed           # legacy web-config command; denied by the secure rules
 ```
 
-The seed script loads `.env`/`.env.local` and process variables; it does not use the demo launcher's forced environment. `npm run seed` creates missing zones and skips existing ones. Its definitions come from `src/data/zones.ts`, with `lastUpdated = serverTimestamp()`. Inspect the selected Firebase project before a real seed run. Dry run validates/prints payloads without fetching existing documents or writing; it does not verify deployed authorization rules.
+The legacy seed script loads `.env`/`.env.local` and process variables; it does not use the demo launcher's forced environment. Its definitions come from `src/data/zones.ts`, with `lastUpdated = serverTimestamp()`. The secure rules deny client-side zone creation and geometry changes, so provision through separately reviewed trusted tooling. Dry run still validates/prints payloads without fetching documents or writing; it does not verify deployed authorization rules.
 
 `--force` is a deliberate destructive maintenance option: it overwrites existing zone definitions, resets their status and replaces `lastUpdated`. It is not routine deployment or geometry advice. Back up records and review a migration before changing existing zones; the current Firestore rules may reject geometry changes.
 
@@ -190,11 +183,12 @@ Submitting a report never changes a zone by itself — otherwise a rejected repo
 | `npm run preview` | Serve the production build locally |
 | `npm run typecheck` | Type-check only |
 | `npm test` | Run the Vitest suite once |
+| `npm run test:rules` | Real Firestore emulator authorization tests; no live credentials |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm --prefix android-app run cap:sync` | Copy the root `dist/` build into the Android project |
 | `npm --prefix android-app run verify:sync` | Verify synced web assets match root `dist/` byte for byte |
 | `npm --prefix android-app run cap:open` | Open the Android project in Android Studio |
-| `npm run seed` | Seed zones into Firestore |
+| `npm run seed` | Legacy web-config seed; blocked by secure rules (use reviewed trusted provisioning) |
 | `npm run seed:dry-run` | Seed preview, no writes |
 | `npx tsx scripts/generate-zones.ts` | Regenerate the zone polygons + coastline reference from `scripts/coastline-cache/` (verifies geometry, then writes `src/data/zones.ts` + `src/data/coastline.ts`) — `--check` verifies without writing (§10) |
 | `node scripts/fetch-coastline.mjs` | Raw OSM coastline fetch (runs in CI — `.github/workflows/fetch-coastline.yml` commits the result to `scripts/coastline-cache/`) |
@@ -364,7 +358,7 @@ A toggleable **navigation-hazard layer** under the advisory zones: the boundary 
 
 ## 12. Explicitly out of scope for this MVP
 
-- **No user accounts** and no auth beyond the admin passcode gate.
+- **Administrator accounts require manual Firebase setup**: Google provider, an explicitly approved UID/admin claim and deployed rules. Sample mode still uses a public demo lock.
 - **No push notifications** and no SMS/route-based alerts.
 - **No BFAR API integration or scraping** — status is entered by a human admin.
 - **No automatic expiry or decay** of zone status; reverting to `safe` is a deliberate admin action.
@@ -375,8 +369,8 @@ A toggleable **navigation-hazard layer** under the advisory zones: the boundary 
 
 ## 13. What to fix before real use
 
-1. **Replace the passcode with Firebase Auth** and an `admin` custom claim; lock `zones` and `reports` updates behind it. The current gate is a string compare against a value that is readable in the page source.
-2. **Tighten `firestore.rules`** once zones are seeded (`allow create: if false` on `zones`).
+1. **Activate and verify Firebase administrator authorization** using [the rollout checklist](docs/admin-auth.md). The frontend and emulator tests do not prove production Auth/rules configuration.
+2. **Preserve restricted Firestore writes**: zone provisioning requires trusted tooling; do not restore public zone creation.
 3. **Add rate limiting / basic spam control** on report creation — right now anyone can flood the queue.
 4. **Add an accountable moderation history:** the Firebase update writes `reviewedAt`, but the public report model and sample backend do not supply a reviewer identity or complete audit trail.
 5. **Replace the polygons** with real boundaries (see §10).
@@ -405,7 +399,7 @@ Coverage includes:
 - Zone/coastline geometry, shipping transcription and isolated synthetic-device API/storage behavior.
 - Team readiness against the **real disabled roster**, empty-field rendering and one-decoder clip policy. Synthetic members are confined to test inputs.
 
-The CI workflow runs typecheck, **plain `npm test`**, build and a separate redacted full-history Gitleaks scan on main pushes and pull requests. Gitleaks is version/digest-pinned and uses the existing single test-fixture fingerprint in `.gitleaksignore`. Mapping/mocked backend tests are **not** Firestore Rules emulator authorization tests; those remain absent.
+The CI workflow runs typecheck, **plain `npm test`**, trusted administrator-tool tests, build and a separate redacted full-history Gitleaks scan on main pushes and pull requests. Gitleaks is version/digest-pinned and uses the existing single test-fixture fingerprint in `.gitleaksignore`. Mapping/mocked backend tests are **not** Firestore Rules emulator authorization tests; those run separately with `npm run test:rules` in CI against a local demo project.
 
 ### Browser and device evidence
 
@@ -428,7 +422,7 @@ From `android-app/android`, run `gradlew.bat :app:connectedDebugAndroidTest` wit
 | **Change the advisory wording** | `guidance` in `src/lib/status.ts`; the long explainer is in `src/pages/MapPage.tsx`. |
 | **Change report validation limits** | `MIN/MAX_DESCRIPTION_LENGTH` in `src/store.ts`; the 2000-character cap is mirrored in `firestore.rules`. |
 | **Change the photo size limit** | `MAX_PHOTO_BYTES` in `src/lib/image.ts`; mirror the limit in the Cloudinary unsigned upload preset. |
-| **Tighten security** | Update `firestore.rules` and the Cloudinary unsigned preset restrictions. Replacing the passcode means adding Firebase Auth and gating `Admin.tsx` on it. |
+| **Tighten security** | Update `firestore.rules` and the Cloudinary unsigned preset restrictions. Firebase mode now uses Google Auth and admin claims; follow `docs/admin-auth.md` before live activation. |
 | **Add a new admin action** | Add the action to `src/store.ts` (all datastore calls live there) and call it from `src/pages/Admin.tsx`. |
 | **Adjust a drawer's snap feel** | `src/motion/sidePanelAnchors.ts` (projection time, flick velocity, spring constants) — pure and unit-tested, change here before touching `ZoneDrawer.tsx` / `AdvisoryDrawer.tsx`. |
 | **Adjust map zone/camera animation timing** | `src/motion/mapMotion.ts` (stagger, flight duration, focus padding), then `src/styles/map-motion.css`. |
@@ -456,7 +450,7 @@ The existing coastal map motion and desktop drawers remain, with the compact mob
 
 ## 17. Stack
 
-React 19 · TypeScript 5.9 · Vite 8 · React Router 7 · Zustand 5 · Motion 13 · Tailwind CSS 4 · Leaflet + react-leaflet 5 · ogl 1 (hero WebGL) · Firebase 12 (Firestore) · Cloudinary (photo uploads) · Vitest 5
+React 19 · TypeScript 5.9 · Vite 8 · React Router 7 · Zustand 5 · Motion 13 · Tailwind CSS 4 · Leaflet + react-leaflet 5 · ogl 1 (hero WebGL) · Firebase 12 (Firestore + Auth) · Cloudinary (photo uploads) · Vitest 5
 
 **Not a medical or food-safety authority.** If someone shows symptoms of PSP after eating shellfish, treat it as an emergency and get them to a hospital immediately.
 

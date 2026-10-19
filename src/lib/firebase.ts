@@ -33,7 +33,7 @@ export const hasFirebaseConfig: boolean = config !== null && !isDemoModeForced()
 let appInstance: FirebaseApp | null = null
 let dbInstance: Firestore | null = null
 
-function app(): FirebaseApp {
+export function firebaseApp(): FirebaseApp {
   if (!appInstance) {
     if (!config) {
       throw new Error(
@@ -46,6 +46,6 @@ function app(): FirebaseApp {
 }
 
 export function firestore(): Firestore {
-  if (!dbInstance) dbInstance = getFirestore(app())
+  if (!dbInstance) dbInstance = getFirestore(firebaseApp())
   return dbInstance
 }

@@ -6,6 +6,7 @@ import { useReducedMotion } from '../motion/preferences'
 import { MOTION, spring, tween } from '../motion/tokens'
 import { usePulse } from '../motion/usePulse'
 import { AdminGate } from '../components/AdminGate'
+import { FirebaseAdminAccess, type FirebaseAdminControls } from '../components/FirebaseAdminAccess'
 import { DataProvenance } from '../components/DataProvenance'
 import { Header } from '../components/Header'
 import { Notice } from '../components/Notice'
@@ -38,14 +39,17 @@ const REPORT_GRID = 'grid items-start gap-4 md:grid-cols-2 2xl:grid-cols-3'
 const ZONE_STATUS_CHOICES: KnownZoneStatus[] = ['safe', 'unconfirmed', 'advisory']
 
 /**
- * /admin — passcode-gated review queue.
+ * /admin — Firebase-authorized review queue, or a local sample-data demo gate.
  *
  * Approving a report confirms it AND flips its zone to `advisory`. Rejecting
  * only marks the report; the zone is left exactly as it was.
  */
 export function Admin() {
+  const backendKind = useAppStore((state) => state.backendKind)
   const adminUnlocked = useAppStore((state) => state.adminUnlocked)
   const reduce = useReducedMotion()
+  // Never use the demo passcode/sessionStorage flag for Firebase moderation.
+  if (backendKind === 'firebase') return <FirebaseAdminAccess>{(controls) => <AdminDashboard firebaseControls={controls} />}</FirebaseAdminAccess>
   // A state transition inside /admin, never a route entrance. Initial=false
   // leaves both direct admin visits and already-unlocked visits immediate.
   // Solid headers avoid backdrop-filter inside a temporarily transformed tree.
@@ -67,7 +71,7 @@ export function Admin() {
   </AnimatePresence>
 }
 
-function AdminDashboard() {
+function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdminControls }) {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
@@ -108,10 +112,10 @@ function AdminDashboard() {
             </Link>
             <button
               type="button"
-              onClick={lockAdmin}
+              onClick={firebaseControls?.lock ?? lockAdmin}
               className="rounded-md border border-line bg-ink-3 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/75 transition-colors hover:border-advisory/40 hover:text-advisory"
             >
-              Lock
+              {firebaseControls ? 'Sign out' : 'Lock demo'}
             </button>
           </>
         }
@@ -287,10 +291,9 @@ function AdminDashboard() {
         )}
 
         <p className="mt-8 rounded-lg border border-line bg-ink-2 p-3 font-mono text-[10px] leading-relaxed text-faint">
-          This view is protected by a client-side passcode only. Anyone with the
-          page source can read it, so the passcode does not provide secure
-          authentication. Replace it with Firebase Auth before this is used for real
-          advisories.
+          {firebaseControls
+            ? `Signed in as ${firebaseControls.email}. Firebase Auth verifies this account; deployed Firestore rules must enforce its administrator claim. Community records, not an official clearance.`
+            : 'Local sample-data demonstration only. This public passcode is not secure authentication and does not authorize Firebase moderation.'}
         </p>
       </main>
 

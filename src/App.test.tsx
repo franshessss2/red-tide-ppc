@@ -102,7 +102,7 @@ describe('landing page (/)', () => {
 })
 
 describe('backend indicators', () => {
-  it('shows no demo labels on the landing, header, map or admin dashboard', async () => {
+  it('keeps public sample labels and explicitly identifies the local admin demo', async () => {
     const user = userEvent.setup()
     render(<App />)
     const expectNoIndicator = () => {
@@ -114,11 +114,11 @@ describe('backend indicators', () => {
     expectNoIndicator()
     await user.click(screen.getByRole('link', { name: 'Admin' }))
     await screen.findByLabelText('Passcode')
-    expectNoIndicator()
+    expect(screen.getByText(/Local sample-data demonstration only/)).toBeTruthy()
     await user.type(screen.getByLabelText('Passcode'), PASSCODE)
     await user.click(screen.getByRole('button', { name: 'Unlock' }))
     await screen.findByRole('tab', { name: 'Pending' })
-    expectNoIndicator()
+    expect(screen.getByText(/Local sample-data demonstration only/)).toBeTruthy()
   })
 })
 
