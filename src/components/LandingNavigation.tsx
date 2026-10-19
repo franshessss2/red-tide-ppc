@@ -41,7 +41,7 @@ export function LandingNavigation({ onReplay }: { onReplay?: () => void }) {
       }}>
         <p className="landing-nav__caption px-3 pb-2 font-mono text-[10px] uppercase tracking-widest text-faint">Explore RTP</p>
         {/* Keep the replay control visible for the intro's existing focus-return contract. */}
-        {onReplay && <button type="button" data-intro-replay onClick={onReplay}><span aria-hidden="true">↻</span> Watch introduction</button>}
+        {onReplay && <button type="button" data-intro-replay onClick={onReplay}><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10a9 9 0 1 1 2.6 8.4M3 4v6h6" /></svg><span className="landing-nav__replay-label">Watch introduction</span></button>}
         <a href="/arduino.html" onClick={() => setOpen(false)}><span aria-hidden="true">⌁</span> Arduino diagnostics</a>
         <Link to="/admin" onClick={() => setOpen(false)}><span aria-hidden="true">◇</span> Admin</Link>
       </div>

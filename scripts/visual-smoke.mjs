@@ -58,6 +58,12 @@ try {
     assert.equal(await page.locator('.coastal-steps').getAttribute('data-motion'), 'enabled')
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
     assert.equal(overflow, false, `Landing overflow at ${width}`)
+    if (width >= 640) {
+      const replay = await page.getByRole('button', { name: 'Watch introduction' }).boundingBox()
+      assert.equal(replay.width, 44, 'Replay width matches adjacent controls')
+      assert.equal(replay.height, 44, 'Replay glyph must not stretch the header')
+      assert.equal((await page.getByRole('link', { name: 'Map', exact: true }).boundingBox()).height, replay.height)
+    }
     if (width < 640) {
       const trigger = page.getByRole('button', { name: 'More options' })
       assert.equal(await page.locator('.landing-nav__panel').isVisible(), false)
@@ -78,7 +84,27 @@ try {
     await page.keyboard.press('Escape')
     await capture(`landing-${width}.png`)
     await page.locator('.coastal-steps').scrollIntoViewIfNeeded()
+    // Sample actual painted SVG styles over time, beyond the one-off entrance.
+    // Each card can be outside the viewport on a phone, so visit it separately.
+    for (const selector of ['.coastal-step__pulse', '.coastal-step__send', '.coastal-step__orbit']) {
+      const detail = page.locator(selector)
+      await page.locator('.coastal-step__art').filter({ has: detail }).scrollIntoViewIfNeeded()
+      await page.waitForFunction(selector => document.querySelector(selector).closest('.coastal-step__art').dataset.running === 'true', selector)
+      const before = await detail.evaluate(node => {
+        const style = getComputedStyle(node)
+        return [style.transform, style.opacity, style.strokeDashoffset].join('|')
+      })
+      await page.waitForFunction(({ selector, before }) => {
+        const style = getComputedStyle(document.querySelector(selector))
+        return [style.transform, style.opacity, style.strokeDashoffset].join('|') !== before
+      }, { selector, before }, { timeout: 6000 })
+    }
     await capture(`steps-${width}.png`)
+    if (width < 640) {
+      await page.getByRole('heading', { name: 'Red Tide', exact: true }).scrollIntoViewIfNeeded()
+      await page.waitForFunction(() => [...document.querySelectorAll('.coastal-step__art')].every(node => node.dataset.running === 'false'))
+      assert.equal(await page.locator('.coastal-step__orbit').evaluate(node => getComputedStyle(node).animationPlayState), 'paused')
+    }
     await page.getByRole('link', { name: /Open the map/ }).click()
     await page.getByTestId('zoom-controls').waitFor()
     assert.equal(await page.getByTestId('advisory-drawer').count(), 0)
@@ -98,6 +124,7 @@ try {
   await page.goto('rtp://app/')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
+  assert.equal(await page.locator('.coastal-step__orbit').evaluate(node => getComputedStyle(node).animationName), 'none')
   await capture('landing-reduced-motion.png')
   await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).setContentSize(390, 844), offscreenId)
   await page.setViewportSize({ width: 390, height: 844 })
@@ -117,6 +144,7 @@ try {
   await page.reload()
   await page.locator('.landing-surface[data-save-data="true"]').waitFor()
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
+  assert.equal(await page.locator('.coastal-step__orbit').evaluate(node => getComputedStyle(node).animationName), 'none')
   assert.deepEqual(errors, [])
   assert.deepEqual(writes, [])
   const report = { results, reducedMotion: 'static', saveData: 'static', introReplayFocusReturn: true, pageErrors: errors, httpWrites: writes, realPhoneAndGpu: 'not verified' }
