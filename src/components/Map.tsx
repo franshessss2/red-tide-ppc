@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Map as LeafletMap, Polygon as LeafletPolygon } from 'leaflet'
+import type { Map as LeafletMap, Polygon as LeafletPolygon, SVG as LeafletSVG } from 'leaflet'
 import { useReducedMotion } from '../motion/preferences'
 import { useSaveData } from '../motion/LandingMotionPolicy'
 import { cameraFor } from '../motion/camera'
+import { createZoneRenderer } from '../motion/zoneRenderer'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
 import { MapMotionPolicy } from './MapMotionPolicy'
@@ -25,7 +26,7 @@ import { ZonePopup } from './ZonePopup'
 export interface MapProps {
   zones: Zone[]
   onEmptyClick?: () => void
-  /** Live report feed — pins land on zone centroids (see MapMarkers.tsx). */
+  /** Live report feed — grouped badges use approximate zone centroids. */
   reports: Report[]
   /** zoneId → number of pending reports, for the popup hint. */
   pendingCounts: Record<string, number>
@@ -67,6 +68,7 @@ export interface MapProps {
  * selects exactly the interactive zone polygons — the tests rely on that.)
  */
 const ZONE_CASING_PANE = 'zoneCasingPane'
+type ZoneRenderers = { status: LeafletSVG; casing: LeafletSVG }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 /** Matches `@keyframes zone-ping` (600ms) plus a little slack for cleanup. */
@@ -559,6 +561,7 @@ function ZoneHoverGlowBridge() {
  */
 function ZonePolygon({
   zone,
+  renderers,
   isSelected,
   isDimmed,
   isHovered,
@@ -571,6 +574,7 @@ function ZonePolygon({
   pingRef,
 }: {
   zone: Zone
+  renderers: ZoneRenderers
   isSelected: boolean
   isDimmed: boolean
   isHovered: boolean
@@ -743,6 +747,7 @@ function ZonePolygon({
           instead of dissolving into one continuous fill. */}
       <Polygon
         positions={zone.polygon}
+        renderer={renderers.casing}
         pane={ZONE_CASING_PANE}
         className="zone-casing"
         interactive={false}
@@ -756,6 +761,7 @@ function ZonePolygon({
       />
     <Polygon
       ref={layerRef}
+      renderer={renderers.status}
       positions={zone.polygon}
       // Constructor prop — applied by Leaflet when the path is created.
       className="zone-path"
@@ -850,6 +856,10 @@ export function Map({
   onEmptyClick,
 }: MapProps) {
   const reduceMotion = useReducedMotion()
+  const renderers = useMemo<ZoneRenderers>(() => ({
+    status: createZoneRenderer(),
+    casing: createZoneRenderer({ pane: ZONE_CASING_PANE }),
+  }), [])
   const box = useMemo(
     () => zonesBoundingBox(zones.map((zone) => zone.polygon)),
     [zones],
@@ -920,6 +930,7 @@ export function Map({
         <ZonePolygon
           key={zone.id}
           zone={zone}
+          renderers={renderers}
           isSelected={zone.id === selectedZoneId}
           // Everything except the current selection recedes while a
           // selection exists (element opacity 0.6 in `map-motion.css`).

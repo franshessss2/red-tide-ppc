@@ -1,47 +1,60 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { divIcon } from 'leaflet'
 import type { DivIcon } from 'leaflet'
-import { Marker, useMap } from 'react-leaflet'
+import { Marker, Popup, useMap } from 'react-leaflet'
 import { polygonCentroid, INTRO_GLIDE_SECONDS, INTRO_GLIDE_SESSION_KEY, INTRO_GLIDE_WIDE_ZOOM } from '../motion/pins'
 import { MAP_CENTER, MAP_DEFAULT_ZOOM } from '../data/zones'
-import { zoneTheme } from '../styles/statusTheme'
+import { formatRecordTime } from '../lib/format'
+import { CommunitySource } from './DataProvenance'
+import { ZoneStatusBadge } from './StatusBadge'
+import { useSaveData } from '../motion/LandingMotionPolicy'
 import type { Report, Zone } from '../types'
 import { cameraFor } from '../motion/camera'
 import { prefersReducedMotion, useReducedMotion } from '../motion/preferences'
 import { createMotionScope } from '../motion/scope'
 
 /**
- * Phase 3 map markers: report pins at zone centroids, the user-location
+ * Zone report badges at computed centroids, the user-location
  * dot, and the once-per-session intro glide.
  *
  * Everything here degrades to "simply not there" when its input is missing:
  * no geolocation permission → no dot; a session that already saw the glide
- * → a normal load; reduced motion → no glide, no drop, no ring.
+ * → a normal load; reduced motion → no glide or badge arrival animation.
  */
 
-const PIN_COLORS: Record<Report['status'], string> = {
-  pending: zoneTheme('unconfirmed').hex,
-  confirmed: zoneTheme('safe').hex,
-  rejected: '#8a8f98',
+const REPORT_LABELS: Record<Report['status'], string> = {
+  pending: 'Awaiting review',
+  confirmed: 'Reviewed · confirmed',
+  rejected: 'Reviewed · rejected',
 }
 
 /**
- * Report pins. Reports carry only a `zoneId`, so each pin sits on the zone
- * polygon's centroid (computed, never stored).
- *
- * Pins that already existed when the map mounted render plain — a load is
- * not news. Only reports that ARRIVE after mount get the drop-with-overshoot
- * and the single expanding ring; both are one-shot CSS animations on the
- * inserted node, so they can never replay on a re-render (icons are cached
- * per report id — handing Leaflet a fresh DivIcon would reset its DOM).
+ * One accessible report badge per zone, anchored at its computed centroid.
+ * The popup explicitly describes this as an approximate zone-level location.
+ * Report review and zone advisory status remain separate, read-only concepts.
+ * Only new arrivals animate; cached icons prevent replay on unrelated updates.
  */
 export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[] }) {
   const reduce = useReducedMotion()
-  const centroids = useMemo(() => {
-    const byZone = new Map<string, [number, number]>()
-    for (const zone of zones) byZone.set(zone.id, polygonCentroid(zone.polygon))
-    return byZone
-  }, [zones])
+  const saveData = useSaveData()
+  const staticMotion = reduce || saveData
+  const groups = useMemo(() => {
+    const byZone = new Map<string, Report[]>()
+    for (const report of reports) {
+      const group = byZone.get(report.zoneId) ?? []
+      group.push(report)
+      byZone.set(report.zoneId, group)
+    }
+    return zones.flatMap(zone => {
+      const records = byZone.get(zone.id)
+      if (!records?.length) return []
+      return [{ zone, records: records.sort((a, b) =>
+        Number(b.status === 'pending') - Number(a.status === 'pending') ||
+        (b.submittedAt ?? 0) - (a.submittedAt ?? 0) || a.id.localeCompare(b.id)),
+        pending: records.filter(report => report.status === 'pending').length,
+        at: polygonCentroid(zone.polygon) }]
+    })
+  }, [reports, zones])
 
   // The id set as of first mount — everything in it is "pre-existing".
   const knownAtMount = useRef<Set<string> | null>(null)
@@ -49,49 +62,85 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
     knownAtMount.current = new Set(reports.map((report) => report.id))
   }
 
-  // Icons cached per id so later report mutations never reset older pins'
-  // DOM (a reset would replay the drop on pins that already landed).
-  const iconCache = useRef<Map<string, { status: Report['status']; reduced: boolean; icon: DivIcon }>>(new Map())
+  const iconCache = useRef<Map<string, { signature: string; icon: DivIcon }>>(new Map())
   const icons = useMemo(() => {
-    const present = new Set(reports.map(report => report.id))
+    const present = new Set(groups.map(group => group.zone.id))
     for (const id of iconCache.current.keys()) if (!present.has(id)) iconCache.current.delete(id)
-    for (const report of reports) {
-      const cached = iconCache.current.get(report.id)
-      if (cached?.status === report.status && cached.reduced === reduce) continue
-      const fresh = !reduce && !cached && !knownAtMount.current?.has(report.id)
-      knownAtMount.current?.add(report.id)
-      const color = PIN_COLORS[report.status]
+    for (const group of groups) {
+      const { zone, records, pending } = group
+      const signature = JSON.stringify([records.map(record => record.id), pending, staticMotion])
+      const cached = iconCache.current.get(zone.id)
+      if (cached?.signature === signature) continue
+      const fresh = !staticMotion && records.some(record => !knownAtMount.current?.has(record.id))
+      records.forEach(record => knownAtMount.current?.add(record.id))
       iconCache.current.set(
-        report.id,
-        { status: report.status, reduced: reduce, icon: divIcon({
-          className: 'report-pin-wrap',
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
+        zone.id,
+        { signature, icon: divIcon({
+          className: 'report-badge-wrap',
+          iconSize: [144, 44],
+          iconAnchor: [72, 50],
+          popupAnchor: [0, -48],
           html:
-            `<span class="report-pin${fresh ? ' report-pin--fresh' : ''}" style="color:${color}">` +
-            (fresh ? '<span class="report-ring" aria-hidden="true"></span>' : '') +
-            '<span class="report-pin-body" aria-hidden="true"></span></span>',
+            `<span class="report-badge${pending ? ' report-badge--pending' : ''}${fresh ? ' report-badge--fresh' : ''}">` +
+            '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h7l4 4v14H6V3Z M14 3v5h4 M9 12h6 M9 16h4"/></svg>' +
+            `<span class="report-badge__copy"><strong>${records.length} ${records.length === 1 ? 'report' : 'reports'}</strong>` +
+            `<span>${pending ? `${pending} awaiting review` : 'Reviewed records'}</span></span></span>`,
         }) },
       )
     }
     return iconCache.current
-  }, [reports, reduce])
+  }, [groups, staticMotion])
 
   return (
     <>
-      {reports.map((report) => {
-        const at = centroids.get(report.zoneId)
-        const icon = icons.get(report.id)?.icon
-        if (!at || !icon) return null
+      {groups.map(({ zone, records, pending, at }) => {
+        const icon = icons.get(zone.id)?.icon
+        if (!icon) return null
+        const label = `${zone.name}: ${records.length} community ${records.length === 1 ? 'report' : 'reports'}, ${pending} awaiting review. Zone-level location.`
         return (
           <Marker
-            key={report.id}
+            key={zone.id}
             position={at}
             icon={icon}
-            interactive={false}
-            keyboard={false}
+            title={label}
+            alt={label}
+            ref={marker => { marker?.getElement()?.setAttribute('aria-label', label) }}
+            keyboard
+            eventHandlers={{
+              add: event => { event.target.getElement()?.setAttribute('aria-label', label) },
+              keypress: event => {
+                if (event.originalEvent.key === ' ') {
+                  event.originalEvent.preventDefault()
+                  event.target.openPopup()
+                }
+              },
+            }}
             zIndexOffset={200}
-          />
+          >
+            <Popup className="zone-popup report-popup" maxWidth={320}
+              autoPanPaddingTopLeft={[16, 190]} autoPanPaddingBottomRight={[16, 150]}>
+              <div className="report-popup__body">
+                <span className="report-popup__eyebrow">Community reports</span>
+                <h3>{zone.name}</h3>
+                <p className="report-popup__location">Zone-level report · location approximate</p>
+                <div className="report-popup__summary">
+                  <span>{pending ? `${pending} awaiting review` : 'Review complete'}</span>
+                  <ZoneStatusBadge status={zone.status} size="sm" />
+                </div>
+                <p className="report-popup__guidance">Reports do not automatically change the zone status.</p>
+                <ol className="report-popup__records" aria-label={`Reports for ${zone.name}`}>
+                  {records.map(record => <li key={record.id}>
+                    <span className={`report-popup__status${record.status === 'pending' ? ' report-popup__status--pending' : ''}`}>{REPORT_LABELS[record.status]}</span>
+                    <p className="report-popup__description">{record.description}</p>
+                    <span className="report-popup__time">{formatRecordTime(record.submittedAt, record.submittedAtPending)}</span>
+                    {record.photoUrl && <img src={record.photoUrl} alt="Community report attachment" loading="lazy" referrerPolicy="no-referrer" />}
+                  </li>)}
+                </ol>
+                <CommunitySource />
+                <p className="report-popup__clearance">Community records, not an official clearance.</p>
+              </div>
+            </Popup>
+          </Marker>
         )
       })}
     </>
