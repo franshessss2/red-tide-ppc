@@ -1,4 +1,4 @@
-import { checkFirebaseConfig } from '../src/lib/firebaseConfig'
+import { checkFirebaseConfig } from '../src/lib/firebaseConfig.js'
 
 /** Only browser identifiers may leave this endpoint. Never return process.env. */
 export function clientConfiguration(env: Record<string, unknown>) {
