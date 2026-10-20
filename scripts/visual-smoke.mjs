@@ -58,13 +58,8 @@ try {
     assert.equal(await page.locator('.coastal-steps').getAttribute('data-motion'), 'enabled')
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
     assert.equal(overflow, false, `Landing overflow at ${width}`)
-    if (width >= 640) {
-      const replay = await page.getByRole('button', { name: 'Watch introduction' }).boundingBox()
-      assert.equal(replay.width, 44, 'Replay width matches adjacent controls')
-      assert.equal(replay.height, 44, 'Replay glyph must not stretch the header')
-      assert.equal((await page.getByRole('link', { name: 'Map', exact: true }).boundingBox()).height, replay.height)
-    }
-    if (width < 640) {
+    // The same compact navigation now applies at every breakpoint.
+    {
       const trigger = page.getByRole('button', { name: 'More options' })
       assert.equal(await page.locator('.landing-nav__panel').isVisible(), false)
       for (const control of [trigger, page.getByRole('button', { name: 'Android app download QR code' }), page.getByRole('link', { name: 'Map', exact: true })]) {
@@ -73,15 +68,26 @@ try {
       }
       await trigger.click()
       await page.getByRole('link', { name: 'Admin', exact: true }).waitFor({ state: 'visible' })
+      const replay = await page.getByRole('button', { name: 'Watch introduction' }).boundingBox()
+      assert.ok(replay.width >= 44 && replay.height >= 44, 'Replay remains a readable full menu row')
       await page.keyboard.press('Escape')
       assert.equal(await trigger.getAttribute('aria-expanded'), 'false')
       assert.equal(await trigger.evaluate(node => node === document.activeElement), true)
+      await page.locator('.landing-nav__panel').waitFor({ state: 'hidden' })
     }
+    const headingX = await page.locator('.landing-heading').evaluate(node => node.getBoundingClientRect().x)
     await page.getByRole('button', { name: 'Android app download QR code' }).click()
     const qr = page.getByRole('img', { name: /QR code for/ })
     assert.equal(await qr.isVisible(), width >= 640)
     await page.getByRole('link', { name: /Open download folder/ }).waitFor({ state: 'visible' })
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.android-download-dialog')).opacity === '1')
+    assert.equal(await page.locator('.landing-heading').evaluate(node => node.getBoundingClientRect().x), headingX, 'Opening QR preserves landing alignment')
     await page.keyboard.press('Escape')
+    await page.locator('.android-download-dialog[data-closing="true"]').waitFor()
+    assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden', 'Scroll remains locked during exit')
+    await page.getByRole('dialog', { name: 'Get Red Tide PPC' }).waitFor({ state: 'detached' })
+    assert.equal(await page.locator('.landing-heading').evaluate(node => node.getBoundingClientRect().x), headingX, 'Closing QR preserves landing alignment')
+    assert.equal(await page.getByRole('button', { name: 'Android app download QR code' }).evaluate(node => node === document.activeElement), true)
     await capture(`landing-${width}.png`)
     await page.locator('.coastal-steps').scrollIntoViewIfNeeded()
     // Sample actual painted SVG styles over time, beyond the one-off entrance.
@@ -119,12 +125,16 @@ try {
       await page.getByRole('heading', { name: 'Coastal zones', exact: true }).waitFor()
     }
     await capture(`map-${width}.png`)
-    results.push({ width, landingOverflow: overflow, mobileControlsAtLeast44: width < 640 ? true : null, qrVisibleByDefault: width >= 640, duplicateCountDrawer: false })
+    results.push({ width, landingOverflow: overflow, headerControlsAtLeast44: true, moreMenuAllWidths: true, qrFadeOut: true, qrStableAlignment: true, qrVisibleByDefault: width >= 640, duplicateCountDrawer: false })
   }
   await page.goto('rtp://app/')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
   assert.equal(await page.locator('.coastal-step__orbit').evaluate(node => getComputedStyle(node).animationName), 'none')
+  await page.getByRole('button', { name: 'Android app download QR code' }).click()
+  assert.equal(await page.locator('.android-download-dialog').getAttribute('data-motion'), 'static')
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: 'Get Red Tide PPC' }).waitFor({ state: 'detached' })
   await capture('landing-reduced-motion.png')
   await app.evaluate(({ BrowserWindow }, id) => BrowserWindow.fromId(id).setContentSize(390, 844), offscreenId)
   await page.setViewportSize({ width: 390, height: 844 })
@@ -145,6 +155,10 @@ try {
   await page.locator('.landing-surface[data-save-data="true"]').waitFor()
   await page.locator('.coastal-steps[data-motion="static"]').waitFor()
   assert.equal(await page.locator('.coastal-step__orbit').evaluate(node => getComputedStyle(node).animationName), 'none')
+  await page.getByRole('button', { name: 'Android app download QR code' }).click()
+  assert.equal(await page.locator('.android-download-dialog').getAttribute('data-motion'), 'static')
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: 'Get Red Tide PPC' }).waitFor({ state: 'detached' })
   assert.deepEqual(errors, [])
   assert.deepEqual(writes, [])
   const report = { results, reducedMotion: 'static', saveData: 'static', introReplayFocusReturn: true, pageErrors: errors, httpWrites: writes, realPhoneAndGpu: 'not verified' }
