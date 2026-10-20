@@ -68,6 +68,22 @@
   animation: zone-ping var(--motion-pulse, 550ms) var(--ease-out-quint) forwards;
 }
 
+/* Review stays distinct from a red warning: only its existing 6 5 dash
+   pattern moves, with no flashing or fill pulse. Two full periods (22 SVG
+   units) make a seamless slow loop. Status changes remove this rule, and
+   loading retains its own animation until its cleanup runs. */
+@keyframes zone-review-dash {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -22; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .leaflet-container[data-review-motion="enabled"] .leaflet-overlay-pane path.zone-path[data-zone-status="unconfirmed"]:not(.zone-path--loading) {
+    animation: zone-review-dash 5.5s linear infinite;
+    animation-play-state: var(--map-review-play-state, running);
+  }
+}
+
 /* --- 2. Advisory zones: stroke pulse + marching dash ----------------------
    Strokes only — animating fill on these large polygons repaints too much on
    mobile. The pulse swings stroke-opacity 0.6 → 1 on a slow loop; the dash
@@ -211,6 +227,7 @@
 /* --- Loop gate: no decoration moves while the camera does -----------------
    Applied by <MapLoopGate/> on movestart/zoomstart, cleared on moveend/
    zoomend. Later phases add their loop selectors to this same rule. */
+.leaflet-container.map-motion-paused { --map-review-play-state: paused; }
 .leaflet-container.map-motion-paused .leaflet-overlay-pane path.zone-path--advisory,
 .leaflet-container.map-motion-paused .leaflet-overlay-pane path.zone-path--advisory.zone-path--advisory-breathe:not(.zone-path--loading):not(.zone-path--selected):not(.zone-path--pressed) {
   animation-play-state: paused;

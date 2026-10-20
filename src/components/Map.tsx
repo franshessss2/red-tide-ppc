@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Map as LeafletMap, Polygon as LeafletPolygon } from 'leaflet'
 import { useReducedMotion } from '../motion/preferences'
+import { useSaveData } from '../motion/LandingMotionPolicy'
 import { cameraFor } from '../motion/camera'
 import { createMotionScope } from '../motion/scope'
 import { MOTION } from '../motion/tokens'
@@ -277,6 +278,13 @@ function FocusZone({
  */
 function MapLoopGate() {
   const map = useMap()
+  const saveData = useSaveData()
+
+  useEffect(() => {
+    const container = map.getContainer()
+    container.dataset.reviewMotion = saveData ? 'static' : 'enabled'
+    return () => { delete container.dataset.reviewMotion }
+  }, [map, saveData])
 
   useEffect(() => {
     const container = map.getContainer()

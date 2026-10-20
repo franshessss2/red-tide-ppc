@@ -9,6 +9,31 @@ import { useState } from 'react'
 vi.mock('../App', () => ({ prefetchMapPage: vi.fn() }))
 afterEach(cleanup)
 
+it('keeps secondary actions hidden until expanded and closes when keyboard focus leaves navigation', async () => {
+  const user = userEvent.setup()
+  render(<MemoryRouter><LandingNavigation onReplay={vi.fn()} /><button>Outside</button></MemoryRouter>)
+  expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Watch introduction' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'Map' }).textContent).toBe('Map')
+  const trigger = screen.getByRole('button', { name: 'More options' })
+  const panel = document.getElementById(trigger.getAttribute('aria-controls')!)!
+  expect(panel.hasAttribute('inert')).toBe(true)
+  await user.click(trigger)
+  expect(panel.hasAttribute('inert')).toBe(false)
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Watch introduction' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Arduino diagnostics' }))
+  expect(document.activeElement?.getAttribute('href')).toBe('/arduino.html')
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Admin' }))
+  await user.tab()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Outside' }))
+  expect(trigger.getAttribute('aria-expanded')).toBe('false')
+  expect(panel.hasAttribute('inert')).toBe(true)
+  expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
+})
+
 it('keeps Map and QR available and closes secondary navigation on Escape and outside tap', async () => {
   const user = userEvent.setup()
   render(<MemoryRouter><LandingNavigation /><button>Outside</button></MemoryRouter>)

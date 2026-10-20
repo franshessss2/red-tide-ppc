@@ -1,14 +1,35 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { useReducedMotion } from '../motion/preferences'
+import { useSaveData } from '../motion/LandingMotionPolicy'
 
 const DOWNLOAD_FOLDER =
   'https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing'
 
 /** Landing-only download entry point; the QR image is fetched after opening. */
 export function AndroidDownloadButton() {
-  const [open, setOpen] = useState(false)
+  const [phase, setPhase] = useState<'closed' | 'open' | 'closing'>('closed')
+  const open = phase !== 'closed'
+  const closing = phase === 'closing'
+  const reducedMotion = useReducedMotion()
+  const saveData = useSaveData()
+  const motionDisabled = reducedMotion || saveData
   const button = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const id = useId()
+
+  function requestClose() {
+    if (closing) return
+    setPhase(motionDisabled ? 'closed' : 'closing')
+  }
+
+  // Keep the native modal and scroll lock until its 180ms exit finishes.
+  // The fallback also releases them if a transition is cancelled or unsupported.
+  useEffect(() => {
+    if (!closing) return
+    if (motionDisabled) { setPhase('closed'); return }
+    const timer = window.setTimeout(() => setPhase('closed'), 260)
+    return () => window.clearTimeout(timer)
+  }, [closing, motionDisabled])
 
   // Desktop presents a scannable code immediately; phones lead with the link.
   useEffect(() => {
@@ -47,8 +68,9 @@ export function AndroidDownloadButton() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        onClick={() => setOpen(true)}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        onClick={() => setPhase('open')}
+        data-motion={motionDisabled ? 'static' : 'enabled'}
+        className="android-download-trigger grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line bg-ink-2/85 text-muted transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span aria-hidden="true" className="font-mono text-[10px] font-semibold tracking-[0.05em]">QR</span>
       </button>
@@ -58,12 +80,17 @@ export function AndroidDownloadButton() {
           id={id}
           aria-labelledby={`${id}-title`}
           aria-describedby={`${id}-description`}
-          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-sm overflow-y-auto rounded-2xl border border-line bg-ink-2 p-0 text-paper shadow-2xl backdrop:bg-black/75"
-          onCancel={(event) => { event.preventDefault(); setOpen(false) }}
+          data-closing={closing}
+          data-motion={motionDisabled ? 'static' : 'enabled'}
+          className="android-download-dialog m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-sm overflow-y-auto rounded-2xl border border-line bg-ink-2 p-0 text-paper shadow-2xl backdrop:bg-black/75"
+          onCancel={(event) => { event.preventDefault(); requestClose() }}
+          onTransitionEnd={(event) => {
+            if (closing && event.target === event.currentTarget && event.propertyName === 'opacity') setPhase('closed')
+          }}
           onClick={(event) => {
             if (event.target !== event.currentTarget) return
             const box = event.currentTarget.getBoundingClientRect()
-            if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) setOpen(false)
+            if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) requestClose()
           }}
         >
           <div className="flex items-start justify-between gap-3 border-b border-line p-5">
@@ -71,7 +98,7 @@ export function AndroidDownloadButton() {
               <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Android alpha</p>
               <h2 id={`${id}-title`} className="mt-1 text-lg font-semibold">Get Red Tide PPC</h2>
             </div>
-            <button type="button" autoFocus onClick={() => setOpen(false)} aria-label="Close Android download" className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line text-xl text-muted hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <button type="button" autoFocus onClick={requestClose} aria-label="Close Android download" className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-line text-xl text-muted hover:border-accent/40 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
               <span aria-hidden="true">×</span>
             </button>
           </div>
