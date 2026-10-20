@@ -5,6 +5,7 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
+  type Firestore,
 } from 'firebase/firestore'
 import type { NewReport, Report, ReportStatus, KnownZoneStatus } from '../types'
 import type { Backend } from './backend'
@@ -20,8 +21,9 @@ import { mapReport, mapZone } from './firestoreMapping'
  * unit-tested; this file contains the Firestore and photo-upload plumbing.
  */
 
-const ZONES_COLLECTION = 'zones'
-const REPORTS_COLLECTION = 'reports'
+const DATASET = 'datasets/community-v1'
+const ZONES_COLLECTION = `${DATASET}/zones`
+const REPORTS_COLLECTION = `${DATASET}/reports`
 
 interface CloudinaryUploadResponse {
   secure_url?: unknown
@@ -73,7 +75,7 @@ export async function uploadPhotoToCloudinary(file: File): Promise<string> {
   return result.secure_url
 }
 
-export function createFirebaseBackend(): Backend {
+export function createFirebaseBackend(database: () => Firestore = firestore): Backend {
   return {
     kind: 'firebase',
 
@@ -82,7 +84,7 @@ export function createFirebaseBackend(): Backend {
       // dropped from the snapshot, which would hide freshly-seeded zones.
       // Sorting happens in the store instead.
       return onSnapshot(
-        collection(firestore(), ZONES_COLLECTION),
+        collection(database(), ZONES_COLLECTION),
         { includeMetadataChanges: true },
         (snapshot) => {
           onChange(snapshot.docs.map((d) => mapZone(d.id, d.data(), d.metadata.hasPendingWrites)), snapshot.metadata)
@@ -93,7 +95,7 @@ export function createFirebaseBackend(): Backend {
 
     subscribeToReports(onChange, onError) {
       return onSnapshot(
-        collection(firestore(), REPORTS_COLLECTION),
+        collection(database(), REPORTS_COLLECTION),
         { includeMetadataChanges: true },
         (snapshot) => {
           onChange(snapshot.docs.map((d) => mapReport(d.id, d.data(), d.metadata.hasPendingWrites)), snapshot.metadata)
@@ -104,7 +106,7 @@ export function createFirebaseBackend(): Backend {
 
     async addReport(input: NewReport): Promise<Report> {
       const reference = await addDoc(
-        collection(firestore(), REPORTS_COLLECTION),
+        collection(database(), REPORTS_COLLECTION),
         {
           zoneId: input.zoneId,
           description: input.description,
@@ -129,7 +131,7 @@ export function createFirebaseBackend(): Backend {
 
     async setReportStatus(reportId: string, status: ReportStatus) {
       await requireFirebaseAdmin()
-      await updateDoc(doc(firestore(), REPORTS_COLLECTION, reportId), {
+      await updateDoc(doc(database(), REPORTS_COLLECTION, reportId), {
         status,
         reviewedAt: serverTimestamp(),
       })
@@ -137,7 +139,7 @@ export function createFirebaseBackend(): Backend {
 
     async setZoneStatus(zoneId: string, status: KnownZoneStatus) {
       await requireFirebaseAdmin()
-      await updateDoc(doc(firestore(), ZONES_COLLECTION, zoneId), {
+      await updateDoc(doc(database(), ZONES_COLLECTION, zoneId), {
         status,
         lastUpdated: serverTimestamp(),
       })

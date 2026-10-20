@@ -9,6 +9,7 @@ async function run() {
   const executable = process.argv[2] || path.join(__dirname, '..', 'release', 'win-unpacked', 'RedTide ppc.exe')
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'rtp-packaged-'))
   const env = { ...process.env }
+  const live = process.argv.includes('--live')
   delete env.ELECTRON_RUN_AS_NODE
   let application
   try {
@@ -40,7 +41,7 @@ async function run() {
         qr: await check('/media/android/red-tide-download-qr.svg'), sketch: await check('/red_tide_combined.ino') }
     })
     assert.equal(result.secure, true); assert.equal(result.node, 'undefined')
-    assert.equal(result.sampleLabel, true); assert.equal(result.mapRoute.status, 200)
+    assert.equal(result.sampleLabel, !live); assert.equal(result.mapRoute.status, 200)
     assert.equal(result.film.status, 206); assert.equal(result.film.bytes, 32)
     assert.equal(result.qr.status, 200); assert.equal(result.sketch.status, 200)
     // Exercise the real bundled gate in an isolated profile. Do not submit or
@@ -48,6 +49,15 @@ async function run() {
     const source = await fs.readFile(path.join(__dirname, '../../src/lib/demoAdminPasscode.ts'), 'utf8')
     const passcode = source.match(/export const DEMO_ADMIN_PASSCODE = '([^']+)'/)[1]
     await page.goto('rtp://app/admin')
+    if (live) {
+      const link = page.getByRole('link', { name: 'Open secure Admin' })
+      await link.waitFor()
+      assert.equal(await link.getAttribute('href'), 'https://red-tide-ppc.vercel.app/admin')
+      assert.equal(await page.getByLabel('Passcode').count(), 0)
+      result.hostedAdminVerified = true
+      console.log(JSON.stringify({ executable, ...actual, ...result }, null, 2))
+      return
+    }
     await page.getByLabel('Passcode').fill('137950FrT')
     await page.getByRole('button', { name: 'Unlock' }).click()
     await page.getByText('That passcode is not correct.').waitFor()

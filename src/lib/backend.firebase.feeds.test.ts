@@ -14,7 +14,7 @@ describe('Firestore snapshot metadata', () => {
     const next = vi.fn(); const error = vi.fn()
     const unsubscribe = name === 'zones' ? backend.subscribeToZones(next, error) : backend.subscribeToReports(next, error)
     const [collection, options, receive, fail] = sdk.onSnapshot.mock.calls[0]
-    expect(collection).toBe(name)
+    expect(collection).toBe(`datasets/community-v1/${name}`)
     expect(options).toEqual({ includeMetadataChanges: true })
     const metadata = { fromCache: true, hasPendingWrites: true }
     receive({ metadata, docs: [{ id: 'a', data: () => ({ status: 'advisory', lastUpdated: null, submittedAt: null }), metadata: { hasPendingWrites: true } }] })
