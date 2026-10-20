@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SEED_ZONES } from '../data/zones'
 import { zoneLoadDelayMs } from '../motion/mapMotion'
 import type { Zone, ZoneStatus } from '../types'
@@ -25,6 +25,7 @@ function makeZones(statusOverrides: Record<string, ZoneStatus> = {}): Zone[] {
 }
 
 const NOOP = () => {}
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 function renderMap({
   zones = makeZones(),
@@ -124,6 +125,49 @@ describe('advisory modifier', () => {
     await waitFor(() => {
       expect(zonePaths(container)[0].classList.contains('zone-path--advisory')).toBe(false)
     })
+  })
+})
+
+describe('under-review boundary motion', () => {
+  it('marks every yellow zone, including a selected zone, and follows status changes', async () => {
+    const zones = makeZones(Object.fromEntries(SEED_ZONES.map(zone => [zone.id, 'unconfirmed'])))
+    const { container, rerender } = renderMap({ zones, selectedZoneId: zones[0].id })
+    await waitFor(() => {
+      expect(zonePaths(container)).toHaveLength(7)
+      for (const path of zonePaths(container)) {
+        expect(path.getAttribute('data-zone-status')).toBe('unconfirmed')
+        expect(path.getAttribute('stroke-dasharray')).toBe('6 5')
+        expect(path.classList.contains('zone-path--advisory')).toBe(false)
+      }
+    })
+    expect(zonePaths(container)[0].getAttribute('fill-opacity')).toBe('0.6')
+    const updated = zones.map((zone, index) => ({ ...zone, status: (index === 0 ? 'advisory' : 'safe') as ZoneStatus }))
+    rerender(<Map zones={updated} reports={[]} pendingCounts={{}} selectedZoneId={null}
+      resetToken={0} focusZoneId={null} focusToken={0} onSelectZone={NOOP} onReport={NOOP} />)
+    await waitFor(() => {
+      expect(container.querySelectorAll('.zone-path[data-zone-status="unconfirmed"]')).toHaveLength(0)
+      expect(zonePaths(container)[0].classList.contains('zone-path--advisory')).toBe(true)
+    })
+  })
+
+  it('honors Save-Data changes and pauses the map loops when the tab is hidden', async () => {
+    const network = Object.assign(new EventTarget(), { saveData: true })
+    vi.stubGlobal('navigator', { connection: network })
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+    const { container, unmount } = renderMap()
+    const map = container.querySelector<HTMLElement>('.leaflet-container')!
+    expect(map.dataset.reviewMotion).toBe('static')
+    act(() => { network.saveData = false; network.dispatchEvent(new Event('change')) })
+    expect(map.dataset.reviewMotion).toBe('enabled')
+    hidden.mockReturnValue(true)
+    fireEvent(document, new Event('visibilitychange'))
+    expect(map.classList.contains('map-motion-paused')).toBe(true)
+    hidden.mockReturnValue(false)
+    fireEvent(document, new Event('visibilitychange'))
+    expect(map.classList.contains('map-motion-paused')).toBe(false)
+    unmount()
+    expect(map.dataset.reviewMotion).toBeUndefined()
+    expect(document.body.classList.contains('map-motion-paused')).toBe(false)
   })
 })
 

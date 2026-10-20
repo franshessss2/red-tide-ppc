@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../App'
@@ -78,11 +78,44 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
   setBackendForTesting(null)
   window.history.pushState({}, '', '/')
 })
 
 describe('six-item pass on /map (jsdom side)', () => {
+  it.each([390, 1440])('clears the zone highlight on an empty-map click at %ipx without changing drawer state', async (width) => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: /min-width:\s*768px/.test(query) && width >= 768,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(),
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+    const user = userEvent.setup()
+    render(<App />)
+    await openMap(user)
+    const paths = document.querySelectorAll<SVGPathElement>('.zone-path')
+    expect(paths).toHaveLength(7)
+    // Click real Leaflet paths: their bubbling event must select the zone,
+    // rather than being mistaken for a background click.
+    fireEvent.click(paths[0])
+    await waitFor(() => expect(paths[0].classList.contains('zone-path--selected')).toBe(true))
+    fireEvent.click(paths[1])
+    await waitFor(() => expect(paths[1].classList.contains('zone-path--selected')).toBe(true))
+    expect(document.querySelectorAll('.zone-path--dimmed')).toHaveLength(6)
+    const drawerState = drawer().dataset.state
+    fireEvent.click(document.querySelector('.leaflet-container')!)
+    await waitFor(() => {
+      expect(useAppStore.getState().selectedZoneId).toBeNull()
+      expect(document.querySelectorAll('.zone-path--selected')).toHaveLength(0)
+      expect(document.querySelectorAll('.zone-path--dimmed')).toHaveLength(0)
+    })
+    expect(drawer().dataset.state).toBe(drawerState)
+    for (const path of paths) expect(path.getAttribute('fill-opacity')).toBe('0.34')
+  })
+
   it('1 · bottom strip absent: the drawer header strip carries the summary line, the 01/02 readout and © OSM', async () => {
     const user = userEvent.setup()
     render(<App />)

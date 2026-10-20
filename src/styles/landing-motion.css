@@ -25,6 +25,9 @@
   descent-override: 30%;
   line-gap-override: 0%;
 }
+/* Keep the landing's content width when a modal locks body scrolling and
+   removes the vertical scrollbar. Full-screen map routes keep their layout. */
+html:has(.landing-surface) { scrollbar-gutter: stable; }
 .landing-surface {
   --font-sans: "Space Grotesk", "Landing Sans Fallback", Arial, sans-serif;
   --font-display: "Bebas Neue", "Landing Display Fallback", "Arial Narrow", sans-serif;
@@ -36,23 +39,69 @@
 .landing-status { min-height: 3.25em; }
 .landing-figure-value { min-height: 1em; }
 .landing-figure-label { min-height: 2.75em; }
+/* The native modal stays open through its exit so the backdrop, focus trap
+   and scroll lock last until the fade ends. Transitions can reverse smoothly
+   if a user dismisses during entry. The QR image itself never animates. */
+@media (prefers-reduced-motion: no-preference) {
+  .android-download-trigger {
+    transition: transform 140ms ease-out, color 140ms ease-out,
+      background-color 140ms ease-out, border-color 140ms ease-out;
+  }
+  .android-download-trigger:active { transform: scale(.94); }
+  .android-download-dialog[open] {
+    opacity: 1; transform: none;
+    transition: opacity 220ms ease-out, transform 220ms cubic-bezier(.16, 1, .3, 1);
+  }
+  .android-download-dialog[open]::backdrop { opacity: 1; transition: opacity 180ms ease-out; }
+  .android-download-dialog[open][data-closing="true"] {
+    opacity: 0; transform: translateY(8px) scale(.985); transition-duration: 180ms;
+  }
+  .android-download-dialog[open][data-closing="true"]::backdrop { opacity: 0; }
+  @starting-style {
+    .android-download-dialog[open]:not([data-closing="true"]) { opacity: 0; transform: translateY(12px) scale(.98); }
+    .android-download-dialog[open]::backdrop { opacity: 0; }
+  }
+}
+.android-download-trigger[data-motion="static"],
+.landing-surface[data-save-data="true"] .android-download-trigger { transition: none; transform: none; }
+.android-download-dialog[data-motion="static"],
+.android-download-dialog[data-motion="static"]::backdrop,
+.landing-surface[data-save-data="true"] .android-download-dialog,
+.landing-surface[data-save-data="true"] .android-download-dialog::backdrop { transition: none; }
 .landing-nav { position: relative; display: flex; align-items: center; gap: 8px; }
 .landing-nav__map, .landing-nav__toggle {
   display: inline-flex; min-height: 44px; min-width: 44px; align-items: center;
-  justify-content: center; gap: 8px; border: 1px solid var(--color-line);
-  border-radius: 6px; background: var(--color-ink-2); color: var(--color-paper);
+  justify-content: center; gap: 6px; border: 0;
+  border-radius: 6px; background: transparent; color: var(--color-paper);
+  padding: 0 10px; font-size: 13px; font-weight: 500;
 }
-.landing-nav__map { padding: 0 14px; font-size: 12px; }
-.landing-nav__map:hover, .landing-nav__toggle:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.landing-nav__map:hover, .landing-nav__toggle:hover, .landing-nav__toggle[aria-expanded="true"] { background: #ffffff06; color: var(--color-accent); }
+.landing-nav__toggle svg { color: var(--color-muted); transition: transform 180ms ease-out; }
+.landing-nav__toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .landing-nav :is(a, button):focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.landing-nav__panel[hidden] { display: none; opacity: 0; transform: translateY(-6px); pointer-events: none; }
 .landing-nav__panel {
-  position: absolute; top: calc(100% + 12px); right: 0; width: min(248px, calc(100vw - 40px));
-  max-height: calc(100dvh - 100px); overflow-y: auto; padding: 12px;
-  border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-ink-2);
+  display: block; opacity: 1; transform: translateY(0);
+  transition: opacity 160ms ease-out, transform 180ms ease-out, display 180ms allow-discrete;
+  position: absolute; z-index: 10; top: calc(100% + 12px); right: 0; width: min(248px, calc(100vw - 40px));
+  max-height: calc(100dvh - 100px); overflow-y: auto; padding: 8px;
+  border: 1px solid var(--color-line); border-radius: 10px; background: #161616;
   box-shadow: 0 16px 40px #0008;
 }
+.landing-nav__caption { padding: 8px 12px 10px; font: 10px var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--color-muted); }
 .landing-nav__panel :is(a, button) { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 13px; }
+.landing-nav__panel svg { flex-shrink: 0; color: var(--color-muted); }
+.landing-nav__panel .landing-nav__admin { margin-top: 6px; border-top: 1px solid var(--color-line); border-radius: 0 0 6px 6px; padding-top: 14px; }
 .landing-nav__panel :is(a, button):hover { background: #ffffff08; color: var(--color-accent); }
+/* Animate the disclosure without a delayed React unmount or a focusable closed
+   panel. Browsers without discrete transitions simply close it immediately. */
+@starting-style {
+  .landing-nav__panel:not([hidden]) { opacity: 0; transform: translateY(-6px); }
+}
+.landing-surface[data-save-data="true"] :is(.landing-nav__panel, .landing-nav__toggle svg) { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .landing-nav__panel, .landing-nav__toggle svg { transition: none; }
+}
 .coastal-steps__list { display: grid; gap: 20px; }
 .coastal-step { min-width: 0; padding: 20px; border: 1px solid var(--color-line); border-radius: 12px; background: #141414; }
 .coastal-step__art { position: relative; overflow: hidden; border-radius: 6px; background: linear-gradient(120deg, #d69c1712, #141414); }
@@ -80,19 +129,12 @@
 }
 .coastal-step__number { position: absolute; left: 12px; top: 8px; font: 9px var(--font-mono); color: #e9af38; }
 @media (min-width: 640px) {
-  .landing-nav__toggle, .landing-nav__caption { display: none; }
-  .landing-nav__panel { position: static; display: flex; gap: 8px; width: auto; padding: 0; border: 0; overflow: visible; box-shadow: none; background: transparent; }
-  .landing-nav__panel :is(a, button) { width: auto; padding: 10px; border: 1px solid var(--color-line); background: var(--color-ink-2); }
-  .landing-nav__panel { align-items: center; }
-  .landing-nav__panel [data-intro-replay] { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; justify-content: center; }
-  .landing-nav__replay-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .coastal-steps__list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .android-download-qr { order: 1; }
   .android-download-link { order: 2; }
   .android-download-body > p:last-child { order: 3; }
 }
 @media (max-width: 639px) {
-  .landing-nav__panel[data-open="false"] { display: none; }
   .landing-figure { display: flex; align-items: center; gap: 16px; min-height: 64px; }
   .landing-figure-value { min-width: 1.75em; text-align: center; }
   .landing-figure-label { margin-top: 0; min-height: 0; font-size: 12px; }

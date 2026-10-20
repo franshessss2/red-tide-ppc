@@ -317,8 +317,10 @@ export function MapPage() {
             setMobilePanel('peek')
           }}
           onEmptyClick={() => {
+            // Closing Leaflet's popup must also release the selected fill and
+            // neighbour dimming on desktop, just as it does on phones.
+            selectZone(null)
             if (isBelowDrawerBreakpoint()) {
-              selectZone(null)
               setMobilePanel('peek')
             }
           }}
