@@ -12,6 +12,7 @@ import { _electron as electron } from 'playwright'
 import { assertAndroidAssets, currentPasscode, inventory } from './native-apps.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const live = process.argv.includes('--live')
 const apk = join(root, 'android-app/android/app/build/outputs/apk/debug/app-debug.apk')
 assert.ok(process.env.JAVA_HOME, 'JAVA_HOME must identify the existing JDK.')
 const temporary = await mkdtemp(join(tmpdir(), 'rtp-apk-check-'))
@@ -59,6 +60,16 @@ app.whenReady().then(() => {
   await page.waitForLoadState('domcontentloaded')
   await page.evaluate(() => localStorage.setItem('red-tide-ppc:intro:v3', 'seen'))
   await page.reload()
+  if (live) {
+    const link = page.getByRole('link', { name: 'Open secure Admin' })
+    await link.waitFor()
+    assert.equal(await link.getAttribute('href'), 'https://red-tide-ppc.vercel.app/admin')
+    assert.equal(await page.getByLabel('Passcode').count(), 0)
+    assert.deepEqual(errors, [])
+    console.log(JSON.stringify({ apk, verifiedWebFiles: Object.keys(expected).length,
+      hostedAdminVerified: true, pageErrors: errors,
+      note: 'Extracted APK browser check only; no production reports written and physical Android remains unverified.' }, null, 2))
+  } else {
   const passcode = await currentPasscode(root)
   await page.getByLabel('Passcode').fill('137950FrT')
   await page.getByRole('button', { name: 'Unlock' }).click()
@@ -71,6 +82,7 @@ app.whenReady().then(() => {
   console.log(JSON.stringify({ apk, verifiedWebFiles: Object.keys(expected).length,
     currentAdminPasscodeVerified: true, oldPasscodeRejected: true, pageErrors: errors,
     note: 'Real Chromium against extracted APK assets. Android hardware and WebView remain unverified.' }, null, 2))
+  }
 } finally {
   if (application) await application.close()
   if (server) await new Promise(resolve => server.close(resolve))

@@ -1,6 +1,6 @@
 {
   "name": "red-tide-ppc-android",
-  "version": "0.2.0-alpha.416",
+  "version": "0.2.0-alpha.419",
   "private": true,
   "scripts": {
     "cap:sync": "cap sync android",

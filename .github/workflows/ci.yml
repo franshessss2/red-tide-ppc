@@ -79,6 +79,8 @@ jobs:
         run: npm ci
       - name: Test rules against the local demo project (no credentials)
         run: npm run test:rules
+      - name: Verify reporting and manual review across three independent clients
+        run: npm run test:sync
 
   gitleaks:
     name: Gitleaks

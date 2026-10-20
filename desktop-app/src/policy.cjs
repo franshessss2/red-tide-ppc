@@ -6,6 +6,7 @@ const EXTERNAL_HOSTS = new Set([
   'www.bfar-frmdhabmonitoring.com.ph', 'github.com', 'drive.google.com',
   'www.openstreetmap.org', 'openstreetmap.org', 'wokwi.com',
   'carto.com', 'www.carto.com', 'maplibre.org', 'res.cloudinary.com',
+  'red-tide-ppc.vercel.app',
 ])
 
 function localUrl(value) {

@@ -56,7 +56,11 @@ export function ReportForm({
   onDismissed: () => void
 }) {
   const submitReport = useAppStore((state) => state.submitReport)
+  const backendKind = useAppStore((state) => state.backendKind)
   const formError = useAppStore((state) => state.formError)
+  const photoConfigured = Boolean(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME?.trim() &&
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET?.trim())
+  const canAttachPhoto = backendKind === 'demo' || photoConfigured
   const reduceMotion = useReducedMotion()
 
   const [description, setDescription] = useState('')
@@ -284,7 +288,8 @@ export function ReportForm({
                       </span>
                     </span>
 
-                    <div className="relative">
+                    {!canAttachPhoto && <p className="mt-2 text-xs text-muted">Photo attachments are unavailable right now. You can still send a description for review.</p>}
+                    {canAttachPhoto && <div className="relative">
                     <AnimatePresence mode="popLayout" initial={false} onExitComplete={releaseRetiredPhotos}>
                     {previewUrl ? (
                       <motion.div key={previewUrl}
@@ -346,7 +351,7 @@ export function ReportForm({
                       </motion.label>
                     )}
                     </AnimatePresence>
-                    </div>
+                    </div>}
                   </div>
 
                   <AnimatePresence initial={false}>
@@ -400,6 +405,8 @@ export function ReportForm({
                       </span>
                     </motion.button>
                   </div>
+
+                  {backendKind === 'firebase' && isSubmitting && <p role="status" className="mt-3 text-xs text-muted">Waiting for server confirmation. Keep this form open; if the connection drops, sending resumes when it returns.</p>}
 
                   <p className="mt-3 font-mono text-[10px] leading-relaxed text-faint">
                     Reports are reviewed by an admin before they change a zone's

@@ -13,8 +13,9 @@ vi.mock('../motion/preferences', () => ({ useReducedMotion: () => true }))
 const zone: Zone = { ...SEED_ZONES[0], polygon: [...SEED_ZONES[0].polygon], lastUpdated: 0 }
 const report: Report = { id: 'review-test', zoneId: zone.id, description: 'Demo observation near the shore.', photoUrl: null, status: 'pending', submittedAt: 0 }
 const originalSubmit = useAppStore.getState().submitReport
-beforeEach(() => useAppStore.setState({ formError: null, error: null, notice: null }))
-afterEach(() => { cleanup(); useAppStore.setState({ submitReport: originalSubmit, error: null, notice: null }); vi.restoreAllMocks() })
+const originalBackend = useAppStore.getState().backendKind
+beforeEach(() => useAppStore.setState({ formError: null, error: null, notice: null, backendKind: originalBackend }))
+afterEach(() => { cleanup(); useAppStore.setState({ submitReport: originalSubmit, error: null, notice: null, backendKind: originalBackend }); vi.restoreAllMocks(); vi.unstubAllEnvs() })
 function deferred() { let resolve!: () => void; let reject!: (error: Error) => void; const promise = new Promise<void>((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 function form(submit = vi.fn(async () => {}), description = 'Demo observation near the shore.') {
   useAppStore.setState({ submitReport: submit })
@@ -25,6 +26,29 @@ function form(submit = vi.fn(async () => {}), description = 'Demo observation ne
   return { ...result, node, onDismissed }
 }
 describe('report feedback ownership', () => {
+  it('keeps text reporting available without configured live photo storage and waits for server acknowledgement', async () => {
+    vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', '')
+    vi.stubEnv('VITE_CLOUDINARY_UPLOAD_PRESET', '')
+    useAppStore.setState({ backendKind: 'firebase' })
+    const task = deferred(), submit = vi.fn(() => task.promise)
+    const { node } = form(submit)
+    expect(screen.getByText(/Photo attachments are unavailable/)).toBeTruthy()
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+    fireEvent.submit(node)
+    expect(screen.getByText(/Waiting for server confirmation/)).toBeTruthy()
+    expect(screen.queryByText('Salamat!')).toBeNull()
+    await act(async () => task.resolve())
+    expect(await screen.findByText('Salamat!')).toBeTruthy()
+    expect(submit).toHaveBeenCalledExactlyOnceWith({ zoneId: zone.id, description: 'Demo observation near the shore.', photo: null })
+  })
+  it('offers the optional attachment when live photo storage is configured', () => {
+    vi.stubEnv('VITE_CLOUDINARY_CLOUD_NAME', 'synthetic-cloud')
+    vi.stubEnv('VITE_CLOUDINARY_UPLOAD_PRESET', 'synthetic-unsigned')
+    useAppStore.setState({ backendKind: 'firebase' })
+    form()
+    expect(screen.queryByText(/Photo attachments are unavailable/)).toBeNull()
+    expect(document.querySelector('input[type="file"]')).not.toBeNull()
+  })
   it('responds to a click on a short report with an accessible explanation, then accepts a corrected report', async () => {
     const user = userEvent.setup(), submit = vi.fn(async () => {})
     form(submit, '  red  ')

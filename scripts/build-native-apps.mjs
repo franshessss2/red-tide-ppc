@@ -9,10 +9,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { assertAndroidAssets, assertSameAssets, assertUploadSize, currentPasscode, inventory, nativeEnvironment, setNativeVersions } from './native-apps.mjs'
+import { liveNativeEnvironment, readLiveConfiguration } from './native-live.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const require = createRequire(join(root, 'package.json'))
 const target = process.argv[2] || 'all'
+const live = process.argv.includes('--live')
+const liveConfig = live ? await readLiveConfiguration(process.env.RTP_PUBLIC_CONFIG_URL) : null
 assert.ok(['all', 'android', 'windows'].includes(target), 'Target must be all, android or windows.')
 if (target !== 'android') assert.equal(process.platform, 'win32', 'Build the Windows app on Windows.')
 const run = (binary, args, cwd = root, env = process.env) => execFileSync(binary, args,
@@ -35,7 +38,7 @@ const originalEnv = { ...process.env }
 try {
   node(require.resolve('typescript/bin/tsc'), ['-b'])
   for (const key of Object.keys(process.env)) if (key.startsWith('VITE_')) delete process.env[key]
-  Object.assign(process.env, nativeEnvironment(originalEnv, passcode))
+  Object.assign(process.env, liveConfig ? liveNativeEnvironment(originalEnv, liveConfig.document) : nativeEnvironment(originalEnv, passcode))
   const { build } = await import('vite')
   await build({ root, envDir: emptyEnv })
 } finally {
@@ -66,18 +69,19 @@ if (target !== 'android') {
   assertSameAssets(web, await inventory(join(desktop, 'web')))
   node(join(desktop, 'scripts/package.cjs'), [], desktop)
   node(join(desktop, 'scripts/verify-package.cjs'), [], desktop)
-  node(join(desktop, 'tests/packaged.cjs'), [], desktop)
+  node(join(desktop, 'tests/packaged.cjs'), live ? [join(desktop, 'release/win-unpacked/RedTide ppc.exe'), '--live'] : [], desktop)
   artifacts.push(join(desktop, 'release', `RTP-${release.version}-windows-x64-setup.exe`))
 }
-if (target === 'all') node(join(root, 'scripts/test-android-bundle.mjs'))
+if (target === 'all') node(join(root, 'scripts/test-android-bundle.mjs'), live ? ['--live'] : [])
 const files = []
 for (const file of artifacts) {
   const bytes = await readFile(file)
   assertUploadSize(bytes.length)
   files.push({ path: file, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') })
 }
-const report = { ...release, sourceCommit, target, dataMode: 'sample',
-  passcodeSource: 'src/lib/demoAdminPasscode.ts', webFiles: Object.keys(web).length,
+const report = { ...release, sourceCommit, target, dataMode: live ? 'firebase' : 'sample',
+  ...(liveConfig ? { projectId: liveConfig.document.firebase.projectId, configSource: liveConfig.source, configSha256: liveConfig.configSha256 }
+    : { passcodeSource: 'src/lib/demoAdminPasscode.ts' }), webFiles: Object.keys(web).length,
   webSha256: createHash('sha256').update(JSON.stringify(web)).digest('hex'), artifacts: files }
 const output = join(root, '.cache/native-apps')
 await mkdir(output, { recursive: true })

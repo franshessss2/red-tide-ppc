@@ -10,6 +10,13 @@ Explore seven approximate coastal zones, submit an observation, and demonstrate 
 
 ## Current state — 13 October 2026
 
+**Shared reporting candidate, 21 October 2026:** the new live-mode downloads use
+the same clean Firebase dataset as the configured website. Legacy test advisories
+and device-local sample reports are preserved separately. Activation, provisioning,
+manual admin review and physical-device acceptance are documented in
+[Shared reporting release](docs/shared-reporting.md). The dated state below
+describes the earlier sample release, not proof of live cross-device activation.
+
 - **Hosting:** Vercel, deployed from `main`. Record labels distinguish sample/local data, cached records and server delivery. Hosting does not imply live or official data.
 - **Sample mode:** missing, incomplete or placeholder Firebase configuration falls back to browser-local records; `VITE_USE_DEMO_BACKEND=true` forces that mode. Visitors see **Sample data** beside community records and **Sample data · local records** in source details. The current production check is dated in §9.
 - **Introduction:** an opening film followed by a nine-chapter reel. The reel loops until the visitor enters; reduced motion skips the film and shows a static equivalent. Replay restarts the sequence. See [Opening film](docs/opening-video.md) and [Reel intro](docs/reel-intro.md).

@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { Header } from './Header'
 import { signInAdmin, signOutAdmin, watchAdminSession, type AdminSession } from '../lib/adminAuth'
 
+const installedApp = import.meta.env.VITE_NATIVE_APP === 'true'
+const HOSTED_ADMIN = 'https://red-tide-ppc.vercel.app/admin'
+
 export interface FirebaseAdminControls { email: string; lock: () => void }
 
 export function FirebaseAdminAccess({ children }: {
@@ -12,9 +15,25 @@ export function FirebaseAdminAccess({ children }: {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
+    if (installedApp) return
     try { return watchAdminSession(setSession) }
     catch { setSession({ status: 'error', message: 'Firebase sign-in is not configured. Administrator access is locked.' }) }
   }, [])
+
+  // Google OAuth must use the system browser, never a privileged embedded
+  // WebView. Public feeds/submissions stay native; moderation uses the same
+  // Firebase project on the hosted, authenticated dashboard.
+  if (installedApp) return <div className="min-h-full">
+    <Header eyebrow="Red Tide PPC" title="Admin review" right={<Link to="/map">Public map</Link>} />
+    <main className="mx-auto max-w-md px-5 py-12">
+      <h1 className="font-display text-3xl text-paper">Review in your browser</h1>
+      <p className="mt-3 text-sm text-muted">Reports and zone updates are shared with the website. Open the secure dashboard in your browser and sign in with your approved Google administrator account.</p>
+      <a href={HOSTED_ADMIN} target="_blank" rel="noopener noreferrer" className="mt-6 block rounded-xl bg-accent px-4 py-3 text-center font-semibold text-ink">Open secure Admin</a>
+      <p className="mt-4 break-all text-xs text-muted">{HOSTED_ADMIN}</p>
+      <p className="mt-4 text-xs text-muted">Approve or reject manually. Review results appear here when the server connection is available.</p>
+      <p className="mt-4 text-xs text-muted">Community records, not an official clearance.</p>
+    </main>
+  </div>
 
   async function authenticate(signingOut = false) {
     setBusy(true)
