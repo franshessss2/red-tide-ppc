@@ -125,7 +125,23 @@ try {
       await page.getByRole('heading', { name: 'Coastal zones', exact: true }).waitFor()
     }
     await capture(`map-${width}.png`)
-    results.push({ width, landingOverflow: overflow, headerControlsAtLeast44: true, moreMenuAllWidths: true, qrFadeOut: true, qrStableAlignment: true, qrVisibleByDefault: width >= 640, duplicateCountDrawer: false })
+    // Exercise actual pointer hit testing; DOM-only submit events cannot catch
+    // a disabled button or an overlay intercepting taps on the shared form.
+    await page.getByRole('button', { name: /Report here/ }).first().click()
+    const form = page.getByRole('dialog', { name: 'Report something here' })
+    const submit = form.getByRole('button', { name: 'Submit report' })
+    const description = form.getByLabel('What did you see?')
+    assert.equal(await submit.isEnabled(), true, 'Empty Submit must explain validation when clicked')
+    await submit.click()
+    await form.getByRole('alert').filter({ hasText: 'Add 10 more to submit.' }).waitFor()
+    assert.equal(await description.evaluate(node => node === document.activeElement), true)
+    await capture(`report-validation-${width}.png`)
+    await description.fill('Isolated sample observation for report-button verification.')
+    await submit.click()
+    await page.getByRole('dialog', { name: 'Report sent', exact: true }).waitFor()
+    await capture(`report-success-${width}.png`)
+    await page.getByRole('dialog', { name: 'Report sent', exact: true }).waitFor({ state: 'detached' })
+    results.push({ width, landingOverflow: overflow, headerControlsAtLeast44: true, moreMenuAllWidths: true, qrFadeOut: true, qrStableAlignment: true, qrVisibleByDefault: width >= 640, duplicateCountDrawer: false, reportValidationClick: true, reportSubmitClick: true })
   }
   await page.goto('rtp://app/')
   await page.emulateMedia({ reducedMotion: 'reduce' })

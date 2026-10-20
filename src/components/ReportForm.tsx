@@ -63,6 +63,7 @@ export function ReportForm({
   const [photo, setPhoto] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [failedAttempt, setFailedAttempt] = useState(0)
   const shakeX = useMotionValue(0)
@@ -87,6 +88,7 @@ export function ReportForm({
     retiredPhotoUrls.current.clear()
   }
   const textareaId = useId()
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const characterCount = description.trim().length
   const tooShort = characterCount < MIN_DESCRIPTION_LENGTH
 
@@ -146,7 +148,13 @@ export function ReportForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (tooShort || submittingRef.current || !open) return
+    if (submittingRef.current || !open) return
+    if (tooShort) {
+      setDescriptionError(`Please describe what you saw in at least ${MIN_DESCRIPTION_LENGTH} characters. Add ${MIN_DESCRIPTION_LENGTH - characterCount} more to submit.`)
+      descriptionRef.current?.focus()
+      return
+    }
+    setDescriptionError(null)
     submittingRef.current = true
 
     setPhase('submitting')
@@ -239,8 +247,14 @@ export function ReportForm({
                   </label>
                   <textarea
                     id={textareaId}
+                    ref={descriptionRef}
                     value={description}
-                    onChange={(event) => setDescription(event.target.value)}
+                    onChange={(event) => {
+                      setDescription(event.target.value)
+                      setDescriptionError(null)
+                    }}
+                    aria-invalid={descriptionError ? true : undefined}
+                    aria-describedby={`${textareaId}-hint${descriptionError ? ` ${textareaId}-error` : ''}`}
                     rows={4}
                     maxLength={MAX_DESCRIPTION_LENGTH}
                     placeholder="e.g. Water turned reddish-brown near the shallows this morning, and there were dead shellfish on the sand."
@@ -248,12 +262,13 @@ export function ReportForm({
                   />
                   <div className="mt-1 flex items-center justify-between font-mono text-[10px]">
                     <span
+                      id={`${textareaId}-hint`}
                       className={`transition-colors duration-[var(--motion-base)] ${
                         tooShort ? 'text-faint' : 'text-safe'
                       }`}
                     >
                       {tooShort
-                        ? `At least ${MIN_DESCRIPTION_LENGTH} characters`
+                        ? `Add ${MIN_DESCRIPTION_LENGTH - characterCount} more characters to submit`
                         : 'Looks good'}
                     </span>
                     <span className="tabular-nums text-faint">
@@ -335,17 +350,18 @@ export function ReportForm({
                   </div>
 
                   <AnimatePresence initial={false}>
-                  {(localError || formError) && (
+                  {(descriptionError || localError || formError) && (
                     <motion.div key="error"
                       initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }} transition={tween(reduceMotion, MOTION.time.errorExpand)}
                       className="overflow-hidden"
                     >
                     <p
+                      id={`${textareaId}-error`}
                       role="alert"
                       className="mt-3 rounded-lg border border-advisory/30 bg-advisory/10 px-3 py-2 text-xs font-medium text-advisory"
                     >
-                      {localError ?? formError}
+                      {descriptionError ?? localError ?? formError}
                     </p>
                     </motion.div>
                   )}
@@ -363,12 +379,8 @@ export function ReportForm({
 
                     <motion.button
                       type="submit"
-                      disabled={tooShort || isSubmitting}
-                      className={`motion-press relative flex-[1.4] overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition-colors duration-[var(--motion-base)] ${
-                        tooShort
-                          ? 'cursor-not-allowed bg-line text-faint'
-                          : 'bg-accent text-ink hover:bg-accent/90'
-                      }`}
+                      disabled={isSubmitting}
+                      className="motion-press relative flex-[1.4] overflow-hidden rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-ink transition-colors duration-[var(--motion-base)] hover:bg-accent/90 disabled:cursor-wait"
                     >
                       {/* Indeterminate sweep while the photo uploads and the
                           write lands — feedback that survives a slow network. */}
