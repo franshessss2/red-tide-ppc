@@ -174,8 +174,9 @@ describe('map page (/map)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Submit report' }))
 
     expect(useAppStore.getState().reports).toHaveLength(0)
-    // Still open — the submit button stays disabled until it is long enough.
+    // Still open — an actionable validation message explains what is missing.
     expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain('Add 7 more to submit.')
   })
 })
 

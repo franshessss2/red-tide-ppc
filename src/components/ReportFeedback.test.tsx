@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SEED_ZONES } from '../data/zones'
 import { reportSuccessMessage } from '../lib/reportFeedback'
@@ -15,19 +16,42 @@ const originalSubmit = useAppStore.getState().submitReport
 beforeEach(() => useAppStore.setState({ formError: null, error: null, notice: null }))
 afterEach(() => { cleanup(); useAppStore.setState({ submitReport: originalSubmit, error: null, notice: null }); vi.restoreAllMocks() })
 function deferred() { let resolve!: () => void; let reject!: (error: Error) => void; const promise = new Promise<void>((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
-function form(submit = vi.fn(async () => {})) {
+function form(submit = vi.fn(async () => {}), description = 'Demo observation near the shore.') {
   useAppStore.setState({ submitReport: submit })
   const onDismissed = vi.fn()
   const result = render(<ReportForm zone={zone} open onClose={vi.fn()} onDismissed={onDismissed} />)
-  fireEvent.change(screen.getByLabelText('What did you see?'), { target: { value: 'Demo observation near the shore.' } })
+  fireEvent.change(screen.getByLabelText('What did you see?'), { target: { value: description } })
   const node = screen.getByRole('button', { name: 'Submit report' }).closest('form')!
   return { ...result, node, onDismissed }
 }
 describe('report feedback ownership', () => {
+  it('responds to a click on a short report with an accessible explanation, then accepts a corrected report', async () => {
+    const user = userEvent.setup(), submit = vi.fn(async () => {})
+    form(submit, '  red  ')
+    const description = screen.getByLabelText('What did you see?')
+    const button = screen.getByRole('button', { name: 'Submit report' }) as HTMLButtonElement
+    expect(button.disabled).toBe(false)
+    await user.click(button)
+    expect(submit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toContain('Add 7 more to submit.')
+    expect(description.getAttribute('aria-invalid')).toBe('true')
+    expect(description.getAttribute('aria-describedby')).toContain(screen.getByRole('alert').id)
+    expect(document.activeElement).toBe(description)
+    fireEvent.change(description, { target: { value: '123456789' } })
+    await user.click(button)
+    expect(submit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toContain('Add 1 more to submit.')
+    fireEvent.change(description, { target: { value: '1234567890' } })
+    expect(description.hasAttribute('aria-invalid')).toBe(false)
+    await user.click(button)
+    expect(submit).toHaveBeenCalledExactlyOnceWith({ zoneId: zone.id, description: '1234567890', photo: null })
+    expect(await screen.findByText('Salamat!')).toBeTruthy()
+  })
   it('submits once under repeated submit events, and shows no early success', async () => {
     const task = deferred(), submit = vi.fn(() => task.promise)
     const { node } = form(submit)
     fireEvent.submit(node); fireEvent.submit(node)
+    expect((screen.getByRole('button', { name: 'Sending…' }) as HTMLButtonElement).disabled).toBe(true)
     expect(submit).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('Salamat!')).toBeNull()
     await act(async () => task.resolve())
