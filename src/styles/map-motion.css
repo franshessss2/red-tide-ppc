@@ -283,57 +283,49 @@ body.map-motion-paused .animate-tide-scan {
    Phase 3 — report pins, user location, ambient orbs
    =========================================================================== */
 
-/* --- Report pins ----------------------------------------------------------
-   The pin is a 16px divIcon; only the inner body/ring animate, and only via
-   transform + opacity. Fresh pins (reports that arrive AFTER mount) drop in
-   with one small overshoot and fire ONE expanding ring; pre-existing pins
-   render plain. */
-.report-pin-wrap {
-  background: none;
-  border: none;
+/* One zone-level badge avoids stacking indistinguishable report dots. Only
+   its child animates, preserving Leaflet's marker positioning transform. */
+.report-badge-wrap { background: none; border: none; border-radius: 12px; }
+.report-badge {
+  display: flex; align-items: center; gap: 9px; width: 144px; height: 44px;
+  box-sizing: border-box; padding: 7px 11px; position: relative;
+  background: #141414; color: var(--color-muted); border: 1px solid #66665b;
+  border-radius: 12px; box-shadow: 0 5px 18px #0008; cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
+.report-badge::after {
+  content: ''; position: absolute; bottom: -5px; left: 67px; width: 8px; height: 8px;
+  background: #141414; border-right: 1px solid #66665b; border-bottom: 1px solid #66665b;
+  transform: rotate(45deg);
+}
+.report-badge--pending { color: var(--color-accent); border-color: #b27c18; }
+.report-badge--pending::after { border-color: #b27c18; }
+.report-badge svg { width: 20px; height: 20px; flex-shrink: 0; }
+.report-badge__copy { display: grid; gap: 2px; text-align: left; line-height: 1.15; white-space: nowrap; }
+.report-badge__copy strong { font: 600 13px var(--font-sans); color: var(--color-paper); }
+.report-badge__copy > span { font: 10px var(--font-sans); }
+.report-badge-wrap:hover .report-badge { background: #22221c; border-color: var(--color-accent); }
+.report-badge-wrap:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+.report-badge--fresh { animation: report-arrive var(--motion-reveal, 380ms) var(--ease-out-quint) both; }
+@keyframes report-arrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 
-.report-pin {
-  position: relative;
-  display: block;
-  width: 16px;
-  height: 16px;
-}
-
-.report-pin-body {
-  position: absolute;
-  inset: 2px;
-  border-radius: 9999px;
-  background: currentColor;
-  border: 2px solid rgba(10, 12, 10, 0.85);
-  box-sizing: border-box;
-}
-
-.report-pin--fresh .report-pin-body {
-  animation: pin-drop var(--motion-pulse, 550ms) var(--ease-out-quint) both;
-}
-
-@keyframes pin-drop {
-  0%   { transform: translateY(-16px); opacity: 0; }
-  55%  { transform: translateY(2px);   opacity: 1; }
-  75%  { transform: translateY(-3px); }
-  100% { transform: translateY(0); }
-}
-
-.report-ring {
-  position: absolute;
-  inset: -2px;
-  border-radius: 9999px;
-  border: 2px solid currentColor;
-  opacity: 0;
-  transform: scale(0.4);
-  animation: pin-ring var(--motion-wash, 800ms) var(--ease-out-quint) var(--motion-fast, 140ms) 1 both;
-}
-
-@keyframes pin-ring {
-  0%   { opacity: 0.7; transform: scale(0.4); }
-  100% { opacity: 0;   transform: scale(2.6); }
-}
+.report-popup { --popup-accent: var(--color-accent); }
+.report-popup__body { padding: 18px; max-height: calc(100svh - 370px); overflow-y: auto; overscroll-behavior: contain; }
+.leaflet-container .report-popup a.leaflet-popup-close-button { width: 44px; height: 44px; top: 0; right: 0; display: grid; place-items: center; }
+.report-popup__eyebrow { font: 10px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--color-accent); }
+.report-popup__body h3 { margin: 9px 18px 0 0; font: 24px/.98 var(--font-display); color: var(--color-paper); }
+.report-popup .report-popup__location { margin: 9px 0 14px; font-size: 11px; color: var(--color-muted); }
+.report-popup__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.report-popup__summary > span:first-child { font-size: 12px; font-weight: 600; color: var(--color-accent); }
+.report-popup .report-popup__guidance { margin: 9px 0 14px; color: var(--color-muted); font-size: 11px; }
+.report-popup__records { max-height: min(28svh, 230px); overflow-y: auto; overscroll-behavior: contain; margin: 0 0 15px; padding: 0; list-style: none; }
+.report-popup__records li { border-top: 1px solid var(--color-line); padding: 12px 2px; }
+.report-popup__status { font: 10px var(--font-mono); color: var(--color-muted); }
+.report-popup__status--pending { color: var(--color-accent); }
+.report-popup .report-popup__description { margin: 7px 0; color: var(--color-paper); font-size: 13px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.report-popup__time { color: var(--color-muted); font-size: 10px; }
+.report-popup__records img { display: block; width: 100%; max-height: 160px; object-fit: contain; margin-top: 10px; border-radius: 6px; }
+.report-popup .report-popup__clearance { margin: 9px 0 0; font-size: 10px; color: var(--color-muted); }
 
 /* --- User location dot ------------------------------------------------------
    Rendered only when navigator.geolocation yields a position. The halo is a
@@ -417,14 +409,10 @@ body.map-motion-paused .animate-tide-scan {
 
 /* --- Reduced motion: everything above becomes a static state ---------------- */
 @media (prefers-reduced-motion: reduce) {
-  .report-pin--fresh .report-pin-body,
-  .report-ring,
+  .report-badge--fresh,
   .loc-halo,
   .orb {
     animation: none;
-  }
-  .report-ring {
-    opacity: 0;
   }
   .loc-halo {
     opacity: 0.3;
