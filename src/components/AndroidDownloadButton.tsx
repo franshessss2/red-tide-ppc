@@ -1,12 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useReducedMotion } from '../motion/preferences'
 import { useSaveData } from '../motion/LandingMotionPolicy'
+import { useAppStore } from '../store'
 
 const DOWNLOAD_FOLDER =
   'https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing'
 
 /** Landing-only download entry point; the QR image is fetched after opening. */
 export function AndroidDownloadButton() {
+  const demo = useAppStore(state => state.backendKind === 'demo')
   const [phase, setPhase] = useState<'closed' | 'open' | 'closing'>('closed')
   const open = phase !== 'closed'
   const closing = phase === 'closing'
@@ -112,7 +114,7 @@ export function AndroidDownloadButton() {
               <summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm text-muted focus-visible:outline-2 focus-visible:outline-accent">Send to another phone <span aria-hidden="true">QR ＋</span></summary>
               <img src="/media/android/red-tide-download-qr.svg" width="900" height="900" alt="QR code for the Red Tide PPC Android download folder" className="mx-auto mt-3 aspect-square w-full max-w-[252px] rounded-lg bg-white" />
             </details>
-            <p className="mt-4 text-xs leading-relaxed text-muted">Android testing build · Sample data. Installation is outside Google Play. Real-phone behavior is still unverified.</p>
+            <p className="mt-4 text-xs leading-relaxed text-muted">Android testing build · {demo ? 'This page uses local sample data.' : 'Current downloads use the shared Firebase feed.'} Installation is outside Google Play. Real-phone behavior is still unverified.</p>
           </div>
         </dialog>
       )}

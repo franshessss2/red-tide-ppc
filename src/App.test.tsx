@@ -247,7 +247,9 @@ describe('the full report → approve loop', () => {
     await user.click(screen.getByTestId('zone-drawer-tab'))
     const card = zoneCard(ZONE)
     expect(within(card).getByText('Community warning')).toBeTruthy()
-  })
+  // This full multi-route walk includes real confirmation holds and route exits.
+  // Keep a bounded integration budget rather than the 5s unit-test default.
+  }, 15000)
 })
 
 describe('photo attachment', () => {

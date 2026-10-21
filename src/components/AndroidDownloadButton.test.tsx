@@ -29,7 +29,7 @@ it('only mounts the QR after opening and offers the same download destination', 
   const link = screen.getByRole('link', { name: /Open download folder/ })
   expect(link.getAttribute('href')).toBe('https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing')
   expect(link.getAttribute('rel')).toBe('noopener noreferrer')
-  expect(screen.getByText(/Android testing build · Sample data/)).toBeTruthy()
+  expect(screen.getByText(/Android testing build · This page uses local sample data/)).toBeTruthy()
 })
 
 it('dismisses on Escape or close and restores scrolling and trigger focus', () => {

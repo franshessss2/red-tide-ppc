@@ -6,6 +6,7 @@ import { SplashScreen } from './components/SplashScreen'
 import { RouteErrorBoundary } from './motion/RouteErrorBoundary'
 import { useAppStore } from './store'
 import { Devices } from './pages/Devices'
+import { SharedReportActivity } from './components/SharedReportActivity'
 
 /**
  * The map is the app's heaviest tree — Leaflet, react-leaflet, the zone sheet
@@ -91,6 +92,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <SharedReportActivity />
       <RouteErrorBoundary>
       {/*
         `RouteTransition` renders the <Routes> itself, so it can pin the
