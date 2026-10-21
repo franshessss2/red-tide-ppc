@@ -63,9 +63,19 @@ personal contact details; abuse prevention/rate limiting remains separate work.
 
 ## Acceptance evidence
 
+The Reports control opens the same latest-report list on every platform. It
+labels live server snapshots, cached copies, pending writes and local samples
+separately. New reports and review changes show a small in-app notification
+only after acknowledgement; the initial server snapshot is quiet, and repeated
+snapshots do not repeat the notification. Opening report details never moves
+the map or writes zone/report data. Updates are in-app only: closed apps do not
+receive background push notifications, and no per-device delivery receipt is
+claimed. The unread count lasts for the current app session.
+
 `npm run test:sync` uses the real Firestore SDK and deployed-rule source against
 an explicit local emulator. Three independent clients exercise pending report
-fan-out, rejected anonymous moderation, admin confirmation and zone propagation,
+fan-out in all three submission directions, once-only activity notifications,
+rejected anonymous moderation, admin confirmation and zone propagation,
 offline reconnection without duplicate documents, and rejection without zone change.
 It does not submit synthetic reports into the real community feed or prove physical
 phone behavior. `npm run test:rules` tests both the legacy and new namespace against
