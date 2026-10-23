@@ -7,6 +7,7 @@ import { activityCursor, connectionSummary, observeReports, type ReportEvent } f
 import { formatRecordTime } from '../lib/format'
 import { useReducedMotion } from '../motion/preferences'
 import '../styles/shared-activity.css'
+import { MapFeedStatus } from './DataProvenance'
 
 function subscribeNetwork(notify: () => void) {
   window.addEventListener('online', notify); window.addEventListener('offline', notify)
@@ -75,6 +76,7 @@ export function SharedReportActivity() {
   }
   return createPortal(<>
     <div className="report-sync-dock" data-map={location.pathname === '/map'}>
+      {location.pathname === '/map' && <div className="report-sync-map-source"><MapFeedStatus /></div>}
       {arrival && <div className="report-sync-arrival" key={arrival.key}>
         <span aria-hidden="true">{arrival.kind === 'received' ? 'New report' : 'Review updated'}</span>
         <span className="truncate">{zoneName(arrival.zoneId)}</span>
@@ -112,7 +114,7 @@ export function SharedReportActivity() {
           <p className="report-sync-date">Submitted {formatRecordTime(selected.submittedAt, selected.submittedAtPending)}</p>
           <p className="report-sync-id">Report ID: {selected.id}</p>
         </article> : <>
-          <div className="report-sync-list-heading"><h3>Latest reports</h3><span>{reports.length} received</span></div>
+          <div className="report-sync-list-heading"><h3>Report history</h3><span>{reports.length} received</span></div>
           {reports.length === 0 ? <p className="report-sync-empty">{connection.live ? 'No reports received yet.' : 'No reports available on this device yet.'}</p> :
             <ul className="report-sync-list">{reports.slice(0, 30).map(report => <li key={report.id}>
               <button type="button" onClick={() => setSelectedId(report.id)}>

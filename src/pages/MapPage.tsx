@@ -1,6 +1,5 @@
 import { StreetMapDialog } from '../components/StreetMapDialog'
 import { reportSuccessMessage } from '../lib/reportFeedback'
-import { MapFeedStatus } from '../components/DataProvenance'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -18,6 +17,7 @@ import { StatusKey } from '../components/StatusKey'
 import { MapLoadingOverlay } from '../components/LoadingState'
 import { Map } from '../components/Map'
 import { MapControlColumn } from '../components/MapControlColumn'
+import { ReviewedReportToggle } from '../components/ReviewedReportToggle'
 import { Notice } from '../components/Notice'
 import { ReportForm } from '../components/ReportForm'
 import { ZONE_PANEL_FALLBACK_WIDTH, ZoneDrawer } from '../components/ZoneDrawer'
@@ -75,6 +75,11 @@ export function MapPage() {
   const reduceMotion = useReducedMotion()
 
   const [streetMapOpen, setStreetMapOpen] = useState(false)
+  const [showReviewedReports, setShowReviewedReports] = useState(false)
+  const historyCount = useMemo(() => {
+    const greenZones = new Set(zones.filter(zone => zone.status === 'safe').map(zone => zone.id))
+    return reports.filter(report => report.status !== 'pending' || greenZones.has(report.zoneId)).length
+  }, [reports, zones])
   const [mobilePanel, setMobilePanel] = useState<MobilePanelState>('peek')
   const [resetToken, setResetToken] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -285,6 +290,10 @@ export function MapPage() {
         to="/admin"
         className="rounded-md border border-line bg-ink-2/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
       >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
         Admin
       </Link>
     </>
@@ -293,6 +302,8 @@ export function MapPage() {
   return (
     <div
       data-mobile-panel={mobilePanel}
+      data-zone-panel={zonePanel.state}
+      data-chrome-ready={zonesReady || zonesFeed.phase === 'error'}
       className="map-page relative h-[100dvh] overflow-hidden bg-ink"
     >
       <LiveDataStatus />
@@ -310,6 +321,7 @@ export function MapPage() {
           shippingLanesVisible={shippingMounted}
           shippingOpacity={shippingOpacity}
           reports={reports}
+          showReviewedReports={showReviewedReports}
           focusReserveRight={focusReserveRight}
           onMapReady={setLeafletMap}
           onSelectZone={(id) => {
@@ -340,17 +352,15 @@ export function MapPage() {
         eyebrow="Puerto Princesa, Palawan"
         title="Red Tide"
         right={
-          <>
-            <div className="hidden items-center gap-1.5 md:flex">
-              {headerActions}
-            </div>
             <MobileMapActions
+              showOnDesktop
               onOpen={() => setMobilePanel('peek')}
               panelOpen={mobilePanel !== 'peek'}
             >
-              {headerActions}
+              <div className="map-options-actions">{headerActions}</div>
+              <ReviewedReportToggle checked={showReviewedReports} count={historyCount}
+                ready={reportsReady} onChange={setShowReviewedReports} />
             </MobileMapActions>
-          </>
         }
       />
 
@@ -363,12 +373,6 @@ export function MapPage() {
           ready={zonesReady}
         />
       </div>
-
-      {zonePanel.state === 'collapsed' && (
-        <div className="hidden md:block absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-3 z-[var(--layer-controls)] max-w-[calc(100vw-5rem)] sm:max-w-sm">
-          <MapFeedStatus />
-        </div>
-      )}
 
       <MapControlColumn map={leafletMap}>
         <ZoneDrawer

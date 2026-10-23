@@ -28,6 +28,8 @@ export interface MapProps {
   onEmptyClick?: () => void
   /** Live report feed — grouped badges use approximate zone centroids. */
   reports: Report[]
+  /** Local presentation filter only. History and zone states stay intact. */
+  showReviewedReports?: boolean
   /** zoneId → number of pending reports, for the popup hint. */
   pendingCounts: Record<string, number>
   selectedZoneId: string | null
@@ -842,6 +844,7 @@ function ZonePolygon({
 export function Map({
   zones,
   reports,
+  showReviewedReports = false,
   pendingCounts,
   selectedZoneId,
   resetToken,
@@ -916,7 +919,7 @@ export function Map({
       <ZoneHoverGlowBridge />
       <ZonePingBridge fireRef={pingRef} />
       <MapLoopGate />
-      <ReportPins reports={reports} zones={zones} />
+      <ReportPins reports={reports} zones={zones} showReviewedReports={showReviewedReports} />
       <UserLocationDot />
 
       {/* Navigation-hazard lines sit UNDER the advisory polygons: secondary
