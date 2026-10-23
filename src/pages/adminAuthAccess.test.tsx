@@ -8,6 +8,7 @@ import type { AdminSession } from '../lib/adminAuth'
 
 const auth = vi.hoisted(() => ({ receive: null as ((session: AdminSession) => void) | null, stop: vi.fn(), login: vi.fn(), logout: vi.fn() }))
 vi.mock('../lib/adminAuth', () => ({
+  adminSignInError: (error: unknown) => (error as { code?: string })?.code === 'auth/popup-blocked' ? 'Your browser blocked the Google sign-in window (auth/popup-blocked).' : 'Sign-in did not finish.',
   watchAdminSession: (receive: (session: AdminSession) => void) => { auth.receive = receive; return auth.stop },
   signInAdmin: () => auth.login(), signOutAdmin: () => auth.logout(),
 }))
@@ -18,6 +19,14 @@ beforeEach(() => {
   auth.login.mockResolvedValue(undefined); auth.logout.mockResolvedValue(undefined)
   sessionStorage.setItem('red-tide-ppc:admin-unlocked', '1')
   useAppStore.setState({ backendKind: 'firebase', adminUnlocked: true, reports: [], zones: [], reportsReady: true, zonesReady: true })
+})
+it('shows a blocked-popup explanation while keeping moderation locked', async () => {
+  mount(); act(() => auth.receive!({ status: 'signed-out' }))
+  auth.login.mockRejectedValueOnce({ code: 'auth/popup-blocked', message: 'sensitive SDK details' })
+  fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+  await screen.findByText(/auth\/popup-blocked/)
+  expect(screen.queryByText(/sensitive SDK details/)).toBeNull()
+  expect(screen.queryByRole('tab', { name: /Pending/ })).toBeNull()
 })
 afterEach(() => { cleanup(); useAppStore.setState(original); sessionStorage.clear() })
 function mount() { return render(<MemoryRouter><Admin /></MemoryRouter>) }

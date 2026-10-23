@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { User } from 'firebase/auth'
-import { hasAdminClaims, requireFirebaseAdmin, signInAdmin, signOutAdmin, watchAdminSession, type AdminSession } from './adminAuth'
+import { adminSignInError, hasAdminClaims, requireFirebaseAdmin, signInAdmin, signOutAdmin, watchAdminSession, type AdminSession } from './adminAuth'
 
 const sdk = vi.hoisted(() => ({
   auth: { currentUser: null as User | null },
@@ -10,7 +10,8 @@ const sdk = vi.hoisted(() => ({
 }))
 vi.mock('./firebase', () => ({ firebaseApp: () => ({}) }))
 vi.mock('firebase/auth', () => ({
-  getAuth: () => sdk.auth, browserSessionPersistence: 'synthetic-session-persistence',
+  initializeAuth: (_app: unknown, options: unknown) => { sdk.persistence(options); return sdk.auth },
+  browserSessionPersistence: 'synthetic-session-persistence', browserPopupRedirectResolver: 'synthetic-resolver',
   onIdTokenChanged: (_auth: unknown, changed: typeof sdk.changed, failed: typeof sdk.failed) => { sdk.changed = changed; sdk.failed = failed; return sdk.stop },
   GoogleAuthProvider: class { setCustomParameters = sdk.params },
   setPersistence: (...args: unknown[]) => sdk.persistence(...args),
@@ -21,6 +22,15 @@ const claims = { admin: true, email_verified: true, firebase: { sign_in_provider
 const user = (getIdTokenResult = vi.fn().mockResolvedValue({ claims })) => ({ email: 'admin@example.invalid', getIdTokenResult }) as unknown as User
 beforeEach(() => { vi.clearAllMocks(); sdk.auth.currentUser = null })
 afterEach(() => { sdk.changed = null; sdk.failed = null })
+
+it('selects browser-session persistence and the popup resolver before sign-in', () => {
+  const stop = watchAdminSession(vi.fn())
+  expect(sdk.persistence).toHaveBeenCalledExactlyOnceWith({
+    persistence: 'synthetic-session-persistence', popupRedirectResolver: 'synthetic-resolver',
+  })
+  expect(sdk.login).not.toHaveBeenCalled()
+  stop()
+})
 
 it.each([
   [{}, false], [{ ...claims, admin: false }, false], [{ ...claims, admin: 'true' }, false],
@@ -66,10 +76,29 @@ it('handles denied claims, token refresh and token/network errors closed', async
   sdk.failed!(); expect(receive.mock.lastCall![0].status).toBe('error')
   stop()
 })
-it('uses session persistence and Google account selection, then signs out', async () => {
-  await signInAdmin()
-  expect(sdk.persistence).toHaveBeenCalledWith(sdk.auth, 'synthetic-session-persistence')
+it('requests the popup within the click call, with no preceding persistence await', async () => {
+  const signingIn = signInAdmin()
+  expect(sdk.login).toHaveBeenCalledOnce()
+  await signingIn
   expect(sdk.params).toHaveBeenCalledWith({ prompt: 'select_account' })
   expect(sdk.login).toHaveBeenCalledOnce()
   await signOutAdmin(); expect(sdk.logout).toHaveBeenCalledWith(sdk.auth)
+})
+it.each([
+  ['auth/popup-blocked', 'auth/popup-blocked'],
+  ['auth/popup-closed-by-user', 'closed before completion'],
+  ['auth/cancelled-popup-request', 'newest Google'],
+  ['auth/unauthorized-domain', 'authorized domains'],
+  ['auth/operation-not-allowed', 'not enabled'],
+  ['auth/network-request-failed', 'could not connect'],
+  ['auth/web-storage-unsupported', 'storage is unavailable'],
+])('explains %s without exposing SDK details', (code, expected) => {
+  const message = adminSignInError({ code, message: 'private credential', customData: { secret: 'private credential' } })
+  expect(message).toContain(expected)
+  expect(message).not.toContain('private credential')
+})
+it('never echoes arbitrary errors, codes or credentials', () => {
+  for (const error of [null, 'private credential', { code: 'private credential', message: 'private credential' }]) {
+    expect(adminSignInError(error)).toBe('Sign-in did not finish. Retry Google sign-in or try another browser.')
+  }
 })

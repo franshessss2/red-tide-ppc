@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Header } from './Header'
-import { signInAdmin, signOutAdmin, watchAdminSession, type AdminSession } from '../lib/adminAuth'
+import { adminSignInError, signInAdmin, signOutAdmin, watchAdminSession, type AdminSession } from '../lib/adminAuth'
 
 const installedApp = import.meta.env.VITE_NATIVE_APP === 'true'
 const HOSTED_ADMIN = 'https://red-tide-ppc.vercel.app/admin'
@@ -42,8 +42,8 @@ export function FirebaseAdminAccess({ children }: {
     try {
       if (signingOut) { await signOutAdmin(); setSession({ status: 'signed-out' }) }
       else await signInAdmin()
-    } catch {
-      setError(signingOut ? 'Could not sign out. Retry before leaving this device.' : 'Sign-in did not finish. Allow the Google sign-in window and try again.')
+    } catch (cause) {
+      setError(signingOut ? 'Could not sign out. Retry before leaving this device.' : adminSignInError(cause))
       if (signingOut) setSession({ status: 'error', message: 'Administrator access is locked in this view.' })
     } finally { setBusy(false) }
   }
