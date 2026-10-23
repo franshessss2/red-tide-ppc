@@ -349,10 +349,13 @@ export function MapPage() {
               {headerActions}
             </div>
             <MobileMapActions
+              showOnDesktop
               onOpen={() => setMobilePanel('peek')}
               panelOpen={mobilePanel !== 'peek'}
             >
-              {headerActions}
+              <div className="flex flex-col gap-2 md:hidden">{headerActions}</div>
+              <ReviewedReportToggle checked={showReviewedReports} count={reviewedCount}
+                ready={reportsReady} onChange={setShowReviewedReports} />
             </MobileMapActions>
           </>
         }
@@ -375,8 +378,6 @@ export function MapPage() {
       )}
 
       <MapControlColumn map={leafletMap}>
-        <ReviewedReportToggle checked={showReviewedReports} count={reviewedCount}
-          ready={reportsReady} onChange={setShowReviewedReports} />
         <ZoneDrawer
           zones={zones}
           zonesReady={zonesReady}

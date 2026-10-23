@@ -1,6 +1,28 @@
 .mobile-map-panel {
   display: none;
 }
+/* The expanded options must receive taps above the floating zoom controls. */
+.map-page header:has(.mobile-map-actions > button[aria-expanded="true"]) {
+  z-index: calc(var(--layer-controls) + 1);
+}
+.mobile-map-actions__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: min(264px, calc(100vw - 24px));
+  max-height: calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-ink-2);
+  box-shadow: 0 12px 32px #0006;
+}
 @media (max-width: 767px) {
   .map-page header > div {
     padding-bottom: 12px;
@@ -24,24 +46,6 @@
   .map-page [data-testid="map-attribution"] {
     bottom: calc(108px + env(safe-area-inset-bottom));
     max-width: calc(100vw - 24px);
-  }
-  .mobile-map-actions__menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 56px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    width: min(224px, calc(100vw - 92px));
-    max-height: calc(100dvh - 200px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 12px;
-    border: 1px solid var(--color-line);
-    border-radius: 12px;
-    background: var(--color-ink-2);
-    box-shadow: 0 12px 32px #0006;
   }
   .mobile-map-actions__menu button,
   .mobile-map-actions__menu a {

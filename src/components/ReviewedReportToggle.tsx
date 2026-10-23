@@ -5,7 +5,7 @@ export function ReviewedReportToggle({ checked, count, ready, onChange }: {
   checked: boolean; count: number; ready: boolean; onChange: (checked: boolean) => void
 }) {
   const id = useId()
-  return <div className="pointer-events-auto max-w-[calc(100vw-24px)] rounded-lg border border-line bg-ink-2/95 px-3 shadow-lg">
+  return <div className="border-t border-line pt-1">
     <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-xs text-paper">
       <input type="checkbox" checked={checked} disabled={!ready}
         onChange={event => onChange(event.target.checked)} aria-describedby={id}

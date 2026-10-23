@@ -2,7 +2,7 @@
 
 The map shows pending report badges by default. Confirmed and rejected reports
 are hidden from those badges until the visitor enables **Show reviewed reports**
-in Map controls. The toggle applies equally to mixed-status zone badges: only
+inside Map options on mobile and desktop. The toggle applies equally to mixed-status zone badges: only
 pending items and their count appear when it is off.
 
 The preference is local React state and starts off when the map is reopened.
@@ -16,6 +16,11 @@ Report review and zone status remain separate. Hiding a confirmed or rejected
 report does not clear a zone warning, establish safe conditions, change the map
 camera, or write to Firebase. Community records, not an official clearance.
 
+A green zone can still have a pending report: changing the zone alone never
+silently reviews that report. Once an administrator confirms or rejects the
+last pending report, its badge and any open popup disappear automatically while
+the report stays in history. New pending reports remain visible for review.
+
 Local acceptance on 23 October 2026 used isolated sample records, not production
 submissions. Browser checks at 360, 390, 768 and 1440 px verified one pending-only
 badge, three with history enabled, and one again after disabling it. Confirmed
@@ -23,6 +28,12 @@ and rejected records remained in Reports; an open reviewed popup closed when
 hidden. The map-pane transform stayed unchanged when toggling. Unit/integration
 tests cover live pending-to-reviewed marker removal for both review outcomes and
 verify the UI makes no store mutation calls.
+
+The follow-up menu check at 360, 688 and 1440 px verified that the checkbox
+appears only inside Map options, retains its value when the menu is closed,
+supports Space and Escape, and sits above zoom controls without overlap.
+The checkbox label retains a 44 px touch target. Desktop keeps its existing
+navigation shortcuts while exposing this preference through Map options.
 
 This work is prepared locally for PR #118. Its branch is based on the sign-in
 fix in PR #117, which was still open when development began. Before publishing

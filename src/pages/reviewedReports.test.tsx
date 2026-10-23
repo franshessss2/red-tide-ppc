@@ -30,6 +30,8 @@ function mount() { return render(<MemoryRouter initialEntries={['/map']}><MapPag
 
 it('toggles only map visibility while preserving every history record and making no store writes', () => {
   mount()
+  expect(screen.queryByRole('checkbox', { name: 'Show reviewed reports' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
   const toggle = screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement
   expect(toggle.checked).toBe(false)
   expect(map.props?.showReviewedReports).toBe(false)
@@ -39,7 +41,12 @@ it('toggles only map visibility while preserving every history record and making
   expect(toggle.checked).toBe(true)
   expect(map.props?.showReviewedReports).toBe(true)
   expect(map.props?.reports).toBe(reports)
-  fireEvent.click(toggle)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('checkbox', { name: 'Show reviewed reports' })).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Map options' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
+  expect((screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement).checked).toBe(true)
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Show reviewed reports' }))
   expect(map.props?.showReviewedReports).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: /Report activity/ }))
   expect(screen.getByText('3 received')).toBeTruthy()
@@ -52,7 +59,9 @@ it('toggles only map visibility while preserving every history record and making
 })
 it('starts hidden again when the map is reopened', () => {
   const view = mount()
+  fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
   fireEvent.click(screen.getByRole('checkbox', { name: 'Show reviewed reports' }))
   view.unmount(); mount()
+  fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
   expect((screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement).checked).toBe(false)
 })

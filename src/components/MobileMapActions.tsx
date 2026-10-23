@@ -4,10 +4,12 @@ export function MobileMapActions({
   children,
   onOpen,
   panelOpen = false,
+  showOnDesktop = false,
 }: {
   children: ReactNode
   onOpen?: () => void
   panelOpen?: boolean
+  showOnDesktop?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
@@ -34,7 +36,7 @@ export function MobileMapActions({
     }
   }, [open])
   return (
-    <div ref={root} className="mobile-map-actions relative md:hidden">
+    <div ref={root} className={`mobile-map-actions relative${showOnDesktop ? '' : ' md:hidden'}`}>
       <button
         ref={trigger}
         type="button"
