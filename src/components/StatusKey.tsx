@@ -12,7 +12,8 @@ import { ZoneStatusIcon } from './ZoneStatusIcon'
 
 /**
  * The status key: warning / review / unavailable / no-alert record counts, fixed
- * top-left over the map.
+ * top-left over the map. MapPage adds one horizontal entrance on first load;
+ * subsequent status changes leave the pills in place.
  *
  * WHAT IT IS — AND WHAT IT IS NOT
  * --------------------------------
@@ -25,11 +26,13 @@ import { ZoneStatusIcon } from './ZoneStatusIcon'
  * back apart — this file is the pills half of that split.
  *
  * The row keeps its translucent blurred chips (`bg-ink-2/88 backdrop-blur`):
- * that styling is safe here because this subtree is never transformed — the
+ * that styling is safe here because this subtree is normally not transformed — the
  * only motion value applied is `opacity` on the wrapper, and an opacity-only
  * ancestor does not disturb backdrop-filter compositing the way a translated
  * one does on mobile GPUs. (The drawer, whose card track translates, uses a
  * solid background for exactly that reason — see `AdvisoryDrawer.tsx`.)
+ * MapPage overrides the chips to solid while using a horizontal entrance,
+ * avoiding translated backdrop-filter artifacts on mobile GPUs.
  *
  * Chrome fade (optional):
  *   The row can fade with a progress value (invisible chrome also drops its

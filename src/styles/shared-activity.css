@@ -1,4 +1,10 @@
 .report-sync-dock { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: calc(36px + env(safe-area-inset-bottom)); z-index: var(--layer-controls, 400); max-width: calc(100vw - 24px); font-size: 12px; }
+.report-sync-dock[data-map=true] { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; bottom: calc(48px + env(safe-area-inset-bottom)); }
+.report-sync-dock[data-map=true] .report-sync-arrival { margin-bottom: 0; }
+.report-sync-map-source { display: none; max-width: min(380px, calc(100vw - 24px)); }
+@media (min-width: 768px) {
+  body:has(.map-page[data-zone-panel=collapsed]) .report-sync-map-source:not(:empty) { display: block; }
+}
 .report-sync-trigger { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 10px 14px; border: 1px solid var(--color-line); border-radius: 999px; color: var(--color-paper); background: #141414f2; box-shadow: 0 4px 20px #0003; cursor: pointer; }
 .report-sync-trigger:hover { border-color: var(--color-accent-dim); }
 .report-sync-trigger:focus-visible, .report-sync-dialog button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
@@ -42,5 +48,9 @@ body:has([aria-modal=true], dialog[open], .splash-overlay) .report-sync-dock { v
 @keyframes report-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes report-depart { to { opacity: 0; transform: translateY(5px); } }
 @keyframes report-backdrop { from { opacity: 0; } to { opacity: 1; } }
-@media (max-width: 767px) { .report-sync-dock { bottom: calc(16px + env(safe-area-inset-bottom)); } .report-sync-dock[data-map=true] { bottom: calc(140px + env(safe-area-inset-bottom)); } }
+@media (max-width: 767px) {
+  .report-sync-dock { bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .report-sync-dock[data-map=true] { bottom: calc(140px + env(safe-area-inset-bottom)); }
+  body:has(.map-page:not([data-mobile-panel=peek])) .report-sync-dock[data-map=true] { visibility: hidden; }
+}
 @media (prefers-reduced-motion: reduce) { .report-sync-dialog, .report-sync-dialog::backdrop, .report-sync-arrival { animation-duration: 0s !important; } }

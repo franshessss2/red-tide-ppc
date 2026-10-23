@@ -1,6 +1,34 @@
 .mobile-map-panel {
   display: none;
 }
+/* One entrance per map mount; live counts and camera moves never restart it.
+   Shared Axis X: whole-element fade, 24 px, 500 ms, cubic-bezier(.2,0,0,1). */
+.map-page[data-chrome-ready=true] .map-brand,
+.map-page[data-chrome-ready=true] .map-status-key > [role=group] {
+  animation: map-chrome-from-left 500ms cubic-bezier(.2, 0, 0, 1) backwards;
+}
+.map-page[data-chrome-ready=true] .map-status-key > [role=group] { animation-delay: 80ms; }
+.map-page[data-chrome-ready=true] .mobile-map-actions,
+.map-page[data-chrome-ready=true] .map-controls {
+  animation: map-chrome-from-right 500ms cubic-bezier(.2, 0, 0, 1) backwards;
+}
+.map-page[data-chrome-ready=true] .map-controls { animation-delay: 80ms; }
+/* Solid chips avoid translated backdrop-filter artifacts during entrance. */
+.map-page .map-status-key [data-status] { backdrop-filter: none; background: var(--color-ink-2); }
+@keyframes map-chrome-from-left {
+  from { opacity: 0; transform: translateX(-24px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes map-chrome-from-right {
+  from { opacity: 0; transform: translateX(24px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-page[data-chrome-ready=true] .map-brand,
+  .map-page[data-chrome-ready=true] .map-status-key > [role=group],
+  .map-page[data-chrome-ready=true] .mobile-map-actions,
+  .map-page[data-chrome-ready=true] .map-controls { animation: none; }
+}
 /* The expanded options must receive taps above the floating zoom controls. */
 .map-page header:has(.mobile-map-actions > button[aria-expanded="true"]) {
   z-index: calc(var(--layer-controls) + 1);

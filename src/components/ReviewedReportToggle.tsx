@@ -8,14 +8,14 @@ export function ReviewedReportToggle({ checked, count, ready, onChange }: {
   return <div className="map-options-preferences">
     <label className="map-options-review">
       <span className="map-options-review__copy">
-        <span>Show reviewed reports</span>
-        <small aria-hidden="true">Include completed reviews</small>
+        <span>Show report history</span>
+        <small aria-hidden="true">Hidden &amp; reviewed reports</small>
       </span>
       <span aria-hidden="true" className="map-options-review__count">{ready ? count : '…'}</span>
-      <input type="checkbox" checked={checked} disabled={!ready} aria-label="Show reviewed reports"
+      <input type="checkbox" checked={checked} disabled={!ready} aria-label="Show report history"
         onChange={event => onChange(event.target.checked)} aria-describedby={id}
         className="map-options-switch" />
     </label>
-    <p id={id} className="sr-only">Only changes report markers on this map. All records remain available in Reports. Reviewing a report does not establish that a zone is safe.</p>
+    <p id={id} className="sr-only">Shows reviewed reports and reports in green zones on this map. All records remain available in Reports, including any still awaiting review. This does not change report or zone status.</p>
   </div>
 }

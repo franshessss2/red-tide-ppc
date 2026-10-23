@@ -30,7 +30,7 @@ function mount() { return render(<MemoryRouter initialEntries={['/map']}><MapPag
 
 it('toggles only map visibility while preserving every history record and making no store writes', () => {
   mount()
-  expect(screen.queryByRole('checkbox', { name: 'Show reviewed reports' })).toBeNull()
+  expect(screen.queryByRole('checkbox', { name: 'Show report history' })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Reset view' })).toBeNull()
   expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
@@ -38,7 +38,7 @@ it('toggles only map visibility while preserving every history record and making
   expect(screen.getByRole('button', { name: 'Reset view' })).toBeTruthy()
   expect(screen.getByRole('button', { name: /Shipping channel overlay/ })).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Admin' })).toBeTruthy()
-  const toggle = screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement
+  const toggle = screen.getByRole('checkbox', { name: 'Show report history' }) as HTMLInputElement
   expect(toggle.checked).toBe(false)
   expect(map.props?.showReviewedReports).toBe(false)
   expect(map.props?.reports).toBe(reports)
@@ -48,11 +48,11 @@ it('toggles only map visibility while preserving every history record and making
   expect(map.props?.showReviewedReports).toBe(true)
   expect(map.props?.reports).toBe(reports)
   fireEvent.keyDown(document, { key: 'Escape' })
-  expect(screen.queryByRole('checkbox', { name: 'Show reviewed reports' })).toBeNull()
+  expect(screen.queryByRole('checkbox', { name: 'Show report history' })).toBeNull()
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Map options' }))
   fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
-  expect((screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement).checked).toBe(true)
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Show reviewed reports' }))
+  expect((screen.getByRole('checkbox', { name: 'Show report history' }) as HTMLInputElement).checked).toBe(true)
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Show report history' }))
   expect(map.props?.showReviewedReports).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: /Report activity/ }))
   expect(screen.getByText('3 received')).toBeTruthy()
@@ -66,8 +66,8 @@ it('toggles only map visibility while preserving every history record and making
 it('starts hidden again when the map is reopened', () => {
   const view = mount()
   fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Show reviewed reports' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Show report history' }))
   view.unmount(); mount()
   fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
-  expect((screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement).checked).toBe(false)
+  expect((screen.getByRole('checkbox', { name: 'Show report history' }) as HTMLInputElement).checked).toBe(false)
 })

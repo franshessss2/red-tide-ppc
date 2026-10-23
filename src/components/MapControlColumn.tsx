@@ -28,9 +28,9 @@ import { cameraFor } from '../motion/camera'
  *
  * It deliberately does NOT fade with any sheet progress: the sheet is gone,
  * and floating chrome that invisibly eats gestures was the failure mode the
- * fade existed to prevent. Static layers only here, so the zoom cluster and
+ * fade existed to prevent. After the map's one-shot entrance, the zoom cluster and
  * the tabs keep their translucent blurred chips — nothing in this subtree is
- * ever translated by a motion value (the drawer tracks live inside their
+ * translated by a sheet progress value (the drawer tracks live inside their
  * clip windows, and their panels are solid).
  */
 export function MapControlColumn({

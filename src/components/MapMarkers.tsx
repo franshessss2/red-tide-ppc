@@ -49,6 +49,9 @@ export function ReportPins({ reports, zones, showReviewedReports = false }: {
       byZone.set(report.zoneId, group)
     }
     return zones.flatMap(zone => {
+      // A green coast stays visually clear. This is a display rule only:
+      // pending reports in that zone remain pending and visible in history.
+      if (!showReviewedReports && zone.status === 'safe') return []
       const records = byZone.get(zone.id)
       if (!records?.length) return []
       return [{ zone, records: records.sort((a, b) =>

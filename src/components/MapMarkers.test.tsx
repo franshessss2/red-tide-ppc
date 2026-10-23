@@ -13,16 +13,33 @@ vi.mock('../motion/preferences', async importOriginal => ({
   useReducedMotion: () => preferences.reduce,
 }))
 vi.mock('../motion/LandingMotionPolicy', () => ({ useSaveData: () => preferences.saveData }))
-const zones: Zone[] = SEED_ZONES.map(zone => ({ ...zone, polygon: [...zone.polygon], lastUpdated: 1 }))
+const zones: Zone[] = SEED_ZONES.map(zone => ({ ...zone, status: 'unconfirmed', polygon: [...zone.polygon], lastUpdated: 1 }))
 const report = (id: string, status: Report['status'] = 'pending', zoneId = zones[0].id): Report => ({
   id, status, zoneId, description: `Observation ${id}`, photoUrl: null, submittedAt: 100,
 })
-function scene(reports: Report[], showReviewedReports = false) {
-  return <MapContainer center={[9.8, 118.7]} zoom={10}><ReportPins reports={reports} zones={zones} showReviewedReports={showReviewedReports} /></MapContainer>
+function scene(reports: Report[], showReviewedReports = false, currentZones = zones) {
+  return <MapContainer center={[9.8, 118.7]} zoom={10}><ReportPins reports={reports} zones={currentZones} showReviewedReports={showReviewedReports} /></MapContainer>
 }
 afterEach(() => { cleanup(); preferences.reduce = false; preferences.saveData = false })
 
 describe('zone report badges', () => {
+  it('hides a green zone badge and open popup without silently reviewing its pending report', async () => {
+    const records = [report('still-pending')]
+    const { container, rerender } = render(scene(records))
+    fireEvent.click(await screen.findByRole('button', { name: /1 community report, 1 awaiting review/ }))
+    expect(await screen.findByText('Observation still-pending')).toBeTruthy()
+    const greenZones = zones.map(zone => ({ ...zone, status: 'safe' as const }))
+    rerender(scene(records, false, greenZones))
+    expect(container.querySelector('.report-badge-wrap')).toBeNull()
+    expect(screen.queryByText('Observation still-pending')).toBeNull()
+    expect(records[0].status).toBe('pending')
+    rerender(scene(records, true, greenZones))
+    expect(await screen.findByRole('button', { name: /1 community report, 1 awaiting review/ })).toBeTruthy()
+    expect(container.querySelector('.report-badge--fresh')).toBeNull()
+    expect(greenZones[0].status).toBe('safe')
+    rerender(scene(records, false, greenZones))
+    expect(container.querySelector('.report-badge-wrap')).toBeNull()
+  })
   it('groups overlapping reports by zone and opens read-only details with explicit location and status labels', async () => {
     const before = useAppStore.getState()
     const reports = [report('pending'), report('confirmed', 'confirmed'), report('rejected', 'rejected'), report('other', 'pending', zones[1].id)]

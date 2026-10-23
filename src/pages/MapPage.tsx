@@ -1,6 +1,5 @@
 import { StreetMapDialog } from '../components/StreetMapDialog'
 import { reportSuccessMessage } from '../lib/reportFeedback'
-import { MapFeedStatus } from '../components/DataProvenance'
 import { LiveDataStatus } from '../components/LiveDataStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -77,7 +76,10 @@ export function MapPage() {
 
   const [streetMapOpen, setStreetMapOpen] = useState(false)
   const [showReviewedReports, setShowReviewedReports] = useState(false)
-  const reviewedCount = useMemo(() => reports.filter(report => report.status !== 'pending').length, [reports])
+  const historyCount = useMemo(() => {
+    const greenZones = new Set(zones.filter(zone => zone.status === 'safe').map(zone => zone.id))
+    return reports.filter(report => report.status !== 'pending' || greenZones.has(report.zoneId)).length
+  }, [reports, zones])
   const [mobilePanel, setMobilePanel] = useState<MobilePanelState>('peek')
   const [resetToken, setResetToken] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -300,6 +302,8 @@ export function MapPage() {
   return (
     <div
       data-mobile-panel={mobilePanel}
+      data-zone-panel={zonePanel.state}
+      data-chrome-ready={zonesReady || zonesFeed.phase === 'error'}
       className="map-page relative h-[100dvh] overflow-hidden bg-ink"
     >
       <LiveDataStatus />
@@ -354,7 +358,7 @@ export function MapPage() {
               panelOpen={mobilePanel !== 'peek'}
             >
               <div className="map-options-actions">{headerActions}</div>
-              <ReviewedReportToggle checked={showReviewedReports} count={reviewedCount}
+              <ReviewedReportToggle checked={showReviewedReports} count={historyCount}
                 ready={reportsReady} onChange={setShowReviewedReports} />
             </MobileMapActions>
         }
@@ -369,12 +373,6 @@ export function MapPage() {
           ready={zonesReady}
         />
       </div>
-
-      {zonePanel.state === 'collapsed' && (
-        <div className="hidden md:block absolute bottom-[max(3.25rem,calc(env(safe-area-inset-bottom)+2.5rem))] left-3 z-[var(--layer-controls)] max-w-[calc(100vw-5rem)] sm:max-w-sm">
-          <MapFeedStatus />
-        </div>
-      )}
 
       <MapControlColumn map={leafletMap}>
         <ZoneDrawer
