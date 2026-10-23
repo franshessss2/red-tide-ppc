@@ -311,7 +311,7 @@ describe('AdvisoryDrawer on the map page', () => {
     const user = userEvent.setup()
     render(<App />)
     await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
+    await screen.findByRole('button', { name: 'Map options' }, { timeout: 3000 })
     const column = screen.getByTestId('map-control-column')
     const drawer = screen.getByTestId('zone-drawer')
     expect(column.contains(drawer)).toBe(true)

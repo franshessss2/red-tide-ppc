@@ -94,7 +94,7 @@ export function Header({
           <div className="relative flex items-center gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <Link
               to="/"
-              className="pointer-events-auto flex min-w-0 items-center gap-2.5"
+              className="map-brand pointer-events-auto flex min-w-0 items-center gap-2.5"
             >
               {brand}
             </Link>

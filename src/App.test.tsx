@@ -30,7 +30,7 @@ const PASSCODE = 'test-passcode'
 async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('link', { name: /open the map/i }))
   // The map page is lazy; wait for it to mount.
-  await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
+  await screen.findByRole('button', { name: 'Map options' }, { timeout: 3000 })
   const tab = screen.getByTestId('zone-drawer-tab')
   if (tab.getAttribute('aria-expanded') === 'false') await user.click(tab)
 }
@@ -112,6 +112,7 @@ describe('backend indicators', () => {
     expectNoIndicator()
     await openMap(user)
     expectNoIndicator()
+    await user.click(screen.getByRole('button', { name: 'Map options' }))
     await user.click(screen.getByRole('link', { name: 'Admin' }))
     await screen.findByLabelText('Passcode')
     expect(screen.getByText(/Local sample-data demonstration only/)).toBeTruthy()
@@ -214,6 +215,7 @@ describe('the full report → approve loop', () => {
     expect(await screen.findByText('1 pending report')).toBeTruthy()
 
     // --- 2. admin unlocks and approves --------------------------------
+    await user.click(screen.getByRole('button', { name: 'Map options' }))
     await user.click(screen.getByRole('link', { name: 'Admin' }))
 
     const passcodeInput = await screen.findByLabelText('Passcode')
@@ -320,6 +322,7 @@ describe('live data announcement routing', () => {
     await waitFor(() => expect(channel().textContent).toContain('7 zone records'))
     expect(screen.getAllByRole('status', { name: 'Live coastal data' })).toHaveLength(1)
 
+    await user.click(screen.getByRole('button', { name: 'Map options' }))
     await user.click(screen.getByRole('link', { name: 'Admin' }))
     await screen.findByLabelText('Passcode')
     expect(screen.queryByRole('status', { name: 'Live coastal data' })).toBeNull()

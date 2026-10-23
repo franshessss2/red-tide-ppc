@@ -46,7 +46,7 @@ function zoneCard(name: string): HTMLElement {
 
 async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole('link', { name: /open the map/i }))
-  await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
+  await screen.findByRole('button', { name: 'Map options' }, { timeout: 3000 })
 }
 
 function drawer(): HTMLElement {
@@ -279,6 +279,7 @@ describe('six-item pass on /map (jsdom side)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 3500 })
 
     // Admin unlocks and approves.
+    await user.click(screen.getByRole('button', { name: 'Map options' }))
     await user.click(screen.getByRole('link', { name: 'Admin' }))
     const passcodeInput = await screen.findByLabelText('Passcode')
     await user.type(passcodeInput, PASSCODE)

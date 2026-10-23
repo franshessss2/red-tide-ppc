@@ -367,7 +367,7 @@ describe('ZoneDrawer on the map page', () => {
   async function openMap(user: ReturnType<typeof userEvent.setup>): Promise<void> {
     render(<App />)
     await user.click(screen.getByRole('link', { name: /open the map/i }))
-    await screen.findByRole('button', { name: 'Reset view' }, { timeout: 3000 })
+    await screen.findByRole('button', { name: 'Map options' }, { timeout: 3000 })
   }
 
   it('replaces the bottom strip entirely: no sheet anchors, no 01/03 readout', async () => {
