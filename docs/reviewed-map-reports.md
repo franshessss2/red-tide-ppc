@@ -32,8 +32,13 @@ verify the UI makes no store mutation calls.
 The follow-up menu check at 360, 688 and 1440 px verified that the checkbox
 appears only inside Map options, retains its value when the menu is closed,
 supports Space and Escape, and sits above zoom controls without overlap.
-The checkbox label retains a 44 px touch target. Desktop keeps its existing
-navigation shortcuts while exposing this preference through Map options.
+The checkbox label retains at least a 44 px touch target. Street map, Shipping
+lanes, Reset view and Admin are grouped inside Map options at every width.
+The native checkbox is styled as a dark/amber toggle while retaining checkbox
+keyboard behavior, a visible focus indicator and reduced-motion support.
+The consolidated menu was checked in-browser at 360 and 1800 px, including
+opening Street map, enabling/disabling Shipping lanes and toggling reviewed
+markers by keyboard. All 22 relevant app/menu tests and the build passed.
 
 This work is prepared locally for PR #118. Its branch is based on the sign-in
 fix in PR #117, which was still open when development began. Before publishing

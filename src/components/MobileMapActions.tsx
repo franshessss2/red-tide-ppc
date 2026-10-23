@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 export function MobileMapActions({
   children,
@@ -12,6 +12,7 @@ export function MobileMapActions({
   showOnDesktop?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const id = useId()
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   useEffect(() => {
@@ -40,9 +41,10 @@ export function MobileMapActions({
       <button
         ref={trigger}
         type="button"
-        className="grid h-11 w-11 place-items-center rounded-md border border-line bg-ink-2 text-paper"
+        className="map-options-trigger grid h-11 w-11 place-items-center rounded-lg border border-line bg-ink-2 text-paper"
         aria-label="Map options"
         aria-expanded={open}
+        aria-controls={open ? id : undefined}
         onClick={() => {
           if (!open) onOpen?.()
           setOpen((value) => !value)
@@ -61,6 +63,7 @@ export function MobileMapActions({
       </button>
       {open && (
         <div
+          id={id}
           className="mobile-map-actions__menu"
           aria-label="Map options"
           onClick={(event) => {
@@ -71,9 +74,10 @@ export function MobileMapActions({
             }
           }}
         >
-          <p className="w-full text-xs text-muted">
-            Map options
-          </p>
+          <div className="map-options-heading">
+            <p>Map options</p>
+            <span>Navigation &amp; display</span>
+          </div>
           {children}
         </div>
       )}

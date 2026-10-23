@@ -5,13 +5,16 @@ export function ReviewedReportToggle({ checked, count, ready, onChange }: {
   checked: boolean; count: number; ready: boolean; onChange: (checked: boolean) => void
 }) {
   const id = useId()
-  return <div className="border-t border-line pt-1">
-    <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-xs text-paper">
-      <input type="checkbox" checked={checked} disabled={!ready}
+  return <div className="map-options-preferences">
+    <label className="map-options-review">
+      <span className="map-options-review__copy">
+        <span>Show reviewed reports</span>
+        <small aria-hidden="true">Include completed reviews</small>
+      </span>
+      <span aria-hidden="true" className="map-options-review__count">{ready ? count : '…'}</span>
+      <input type="checkbox" checked={checked} disabled={!ready} aria-label="Show reviewed reports"
         onChange={event => onChange(event.target.checked)} aria-describedby={id}
-        className="h-4 w-4 shrink-0 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
-      <span>Show reviewed reports</span>
-      <span aria-hidden="true" className="rounded bg-paper/5 px-1.5 py-0.5 font-mono text-[10px] text-muted">{ready ? count : '…'}</span>
+        className="map-options-switch" />
     </label>
     <p id={id} className="sr-only">Only changes report markers on this map. All records remain available in Reports. Reviewing a report does not establish that a zone is safe.</p>
   </div>

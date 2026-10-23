@@ -31,7 +31,13 @@ function mount() { return render(<MemoryRouter initialEntries={['/map']}><MapPag
 it('toggles only map visibility while preserving every history record and making no store writes', () => {
   mount()
   expect(screen.queryByRole('checkbox', { name: 'Show reviewed reports' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reset view' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Map options' }))
+  expect(screen.getByRole('button', { name: 'Open street map' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Reset view' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Shipping channel overlay/ })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Admin' })).toBeTruthy()
   const toggle = screen.getByRole('checkbox', { name: 'Show reviewed reports' }) as HTMLInputElement
   expect(toggle.checked).toBe(false)
   expect(map.props?.showReviewedReports).toBe(false)

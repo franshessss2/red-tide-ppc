@@ -288,6 +288,10 @@ export function MapPage() {
         to="/admin"
         className="rounded-md border border-line bg-ink-2/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-paper/75 backdrop-blur-md transition-colors hover:border-accent/40 hover:text-accent"
       >
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
         Admin
       </Link>
     </>
@@ -344,20 +348,15 @@ export function MapPage() {
         eyebrow="Puerto Princesa, Palawan"
         title="Red Tide"
         right={
-          <>
-            <div className="hidden items-center gap-1.5 md:flex">
-              {headerActions}
-            </div>
             <MobileMapActions
               showOnDesktop
               onOpen={() => setMobilePanel('peek')}
               panelOpen={mobilePanel !== 'peek'}
             >
-              <div className="flex flex-col gap-2 md:hidden">{headerActions}</div>
+              <div className="map-options-actions">{headerActions}</div>
               <ReviewedReportToggle checked={showReviewedReports} count={reviewedCount}
                 ready={reportsReady} onChange={setShowReviewedReports} />
             </MobileMapActions>
-          </>
         }
       />
 
