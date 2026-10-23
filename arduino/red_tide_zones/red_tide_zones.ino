@@ -1,30 +1,32 @@
 #include <ZoneProtocol.h>
 
-// Owner-photo mapping: UNVERIFIED until the pin sweep passes. Change pins here only.
+// Owner confirmed all ten LEDs in the bench sweep on 23 October 2026.
+// Physical behavior is REPORTED, not measured GPIO/light feedback. No buzzer.
 constexpr rt::PinRole PINS[] = {
-  {3,"pp-bay"}, {4,"sta-lourdes"}, {5,"honda-inner"}, {6,"honda-outer"},
-  {7,"binuatan"}, {9,"sabang"}, {10,"irawan"}, {11,"any-advisory"},
-  {12,"heartbeat"}, {13,"stale"}, {8,"buzzer"}, {2,"spare"}
+  {13,"pp-bay"}, {12,"sta-lourdes"}, {11,"honda-inner"}, {10,"honda-outer"},
+  {9,"binuatan"}, {7,"sabang"}, {6,"irawan"}, {5,"any-advisory"},
+  {4,"heartbeat"}, {3,"stale"}
 };
 static_assert(rt::validPins(PINS), "Pins must be unique UNO pins; D0/D1 are reserved");
-const bool BUZZER_ACTIVE_LOW = true;
-const uint8_t ANY = 7, HEARTBEAT = 8, STALE = 9, BUZZER = 10;
-const uint32_t WATCHDOG_MS = 15000UL, BEEP_MS = 120UL;
+const uint8_t ANY = 7, HEARTBEAT = 8, STALE = 9;
+const uint32_t WATCHDOG_MS = 15000UL;
 rt::Frame current = {{'X','X','X','X','X','X','X'},false,false,true};
-uint32_t lastFrame = 0, patternStart = 0, beepStart = 0;
-bool received = false, beeping = false, everBeeped = false, crcOkay = false;
+uint32_t lastFrame = 0, patternStart = 0;
+bool received = false, crcOkay = false;
 char line[32]; uint8_t used = 0; bool overflow = false;
 
-void buzzer(bool on) { digitalWrite(PINS[BUZZER].pin, on == BUZZER_ACTIVE_LOW ? LOW : HIGH); }
 bool isStale(uint32_t now) { return !received || !current.usable || now - lastFrame >= WATCHDOG_MS; }
 void processLine(uint32_t now) {
   line[used] = 0;
   if(overflow) { Serial.println(F("RT1 ERROR LENGTH")); return; }
   if(!strcmp(line,"HELLO")) { Serial.println(F("RT1 ZONES READY")); return; }
+  if(!strcmp(line,"STATUS")) {
+    Serial.println(isStale(now) || !crcOkay ? F("RT1 STATUS STALE") : F("RT1 STATUS LIVE"));
+    return; // Read-only diagnostics never renew the watchdog.
+  }
   if(!crcOkay) { Serial.println(F("RT1 ERROR CRC SELFTEST")); return; }
   if(used == 7 && !strncmp(line,"BEEP*",5) && rt::checkedPayload(line,used)) {
-    // Repeated requests cannot extend a beep; stale always wins.
-    if(!beeping && !isStale(now) && (!everBeeped || now-beepStart>=3000UL)) { beeping = true; everBeeped = true; beepStart = now; buzzer(true); }
+    Serial.println(F("RT1 ERROR NO BUZZER"));
     return;
   }
   rt::Frame next;
@@ -34,11 +36,9 @@ void processLine(uint32_t now) {
   Serial.print(F("RT1 ACK ")); Serial.println(line);
 }
 void setup() {
-  // 3-pin active-LOW module: VCC=5V, GND=common, signal pull-up=10k to 5V.
-  buzzer(false); // HIGH before OUTPUT, no tone(), no startup sound.
-  pinMode(PINS[BUZZER].pin,OUTPUT);
+  // No buzzer/servo/HC-SR04. D2, D8 and analog pins remain untouched.
   for(uint8_t i=0;i<10;++i) { digitalWrite(PINS[i].pin,LOW); pinMode(PINS[i].pin,OUTPUT); }
-  digitalWrite(PINS[STALE].pin,HIGH); // D13 also mirrors to the onboard L LED.
+  digitalWrite(PINS[STALE].pin,HIGH); // D3 stale; onboard L follows pp-bay on D13.
   Serial.begin(9600);
   crcOkay = rt::goldenCrcPasses();
   Serial.println(crcOkay ? F("RT1 CRC PASS") : F("RT1 ERROR CRC SELFTEST"));
@@ -55,7 +55,6 @@ void loop() {
   }
   const uint32_t now=millis();
   const bool stale=isStale(now) || !crcOkay;
-  if(beeping && (now-beepStart>=BEEP_MS || stale)) { beeping=false; buzzer(false); }
   for(uint8_t i=0;i<7;++i) digitalWrite(PINS[i].pin,rt::zoneOn(stale?'X':current.states[i],now-patternStart)?HIGH:LOW);
   digitalWrite(PINS[ANY].pin,!stale && current.any?HIGH:LOW);
   digitalWrite(PINS[HEARTBEAT].pin,!stale && rt::heartbeatOn(current.demo,now-patternStart)?HIGH:LOW);

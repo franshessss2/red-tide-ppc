@@ -48,6 +48,15 @@ uploaded successfully with `--verify`. Its startup greeting was clean.
 `PIN 8` returned ERROR COMMAND and `PIN 13` returned `RT1 LED 1 D13`.
 The serial monitor was closed and its port released after selecting D13.
 
-UNVERIFIED: physical light, order, resistance and current. Currently awaiting
-owner confirmation of the D13 external LED before advancing to D12. No zones
-firmware was changed or uploaded, and no website/store/backend files changed.
+Historical checkpoint: at this initial upload, physical light/order were awaiting
+owner confirmation and no zone firmware or website files had changed.
+
+## Subsequent owner acceptance
+
+REPORTED: the owner subsequently confirmed all ten external LEDs working in the
+D13-D9, D7-D3 sweep. That physical gate passed; resistance/current remain
+unmeasured. The zone firmware and display page were then updated to this mapping,
+uploaded with verification, and tested over USB. The owner confirmed its stale
+pattern and later reported the live-feed lights responding. See
+`docs/arduino-zones.md` for the current acceptance evidence and remaining checks.
+This manual sketch remains a standalone bench/rollback tool. No buzzer is driven.
