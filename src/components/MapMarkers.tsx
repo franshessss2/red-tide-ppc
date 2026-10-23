@@ -34,13 +34,16 @@ const REPORT_LABELS: Record<Report['status'], string> = {
  * Report review and zone advisory status remain separate, read-only concepts.
  * Only new arrivals animate; cached icons prevent replay on unrelated updates.
  */
-export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[] }) {
+export function ReportPins({ reports, zones, showReviewedReports = false }: {
+  reports: Report[]; zones: Zone[]; showReviewedReports?: boolean
+}) {
   const reduce = useReducedMotion()
   const saveData = useSaveData()
   const staticMotion = reduce || saveData
   const groups = useMemo(() => {
     const byZone = new Map<string, Report[]>()
     for (const report of reports) {
+      if (!showReviewedReports && report.status !== 'pending') continue
       const group = byZone.get(report.zoneId) ?? []
       group.push(report)
       byZone.set(report.zoneId, group)
@@ -54,7 +57,7 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
         pending: records.filter(report => report.status === 'pending').length,
         at: polygonCentroid(zone.polygon) }]
     })
-  }, [reports, zones])
+  }, [reports, zones, showReviewedReports])
 
   // The id set as of first mount — everything in it is "pre-existing".
   const knownAtMount = useRef<Set<string> | null>(null)
@@ -71,7 +74,7 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
       const signature = JSON.stringify([records.map(record => record.id), pending, staticMotion])
       const cached = iconCache.current.get(zone.id)
       if (cached?.signature === signature) continue
-      const fresh = !staticMotion && records.some(record => !knownAtMount.current?.has(record.id))
+      const fresh = !staticMotion && records.some(record => record.status === 'pending' && !knownAtMount.current?.has(record.id))
       records.forEach(record => knownAtMount.current?.add(record.id))
       iconCache.current.set(
         zone.id,
@@ -88,8 +91,11 @@ export function ReportPins({ reports, zones }: { reports: Report[]; zones: Zone[
         }) },
       )
     }
+    // Revealing history is not a new arrival, including records received
+    // while the reviewed layer was hidden.
+    reports.forEach(record => knownAtMount.current?.add(record.id))
     return iconCache.current
-  }, [groups, staticMotion])
+  }, [groups, staticMotion, reports])
 
   return (
     <>

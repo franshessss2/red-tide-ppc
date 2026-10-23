@@ -17,8 +17,8 @@ const zones: Zone[] = SEED_ZONES.map(zone => ({ ...zone, polygon: [...zone.polyg
 const report = (id: string, status: Report['status'] = 'pending', zoneId = zones[0].id): Report => ({
   id, status, zoneId, description: `Observation ${id}`, photoUrl: null, submittedAt: 100,
 })
-function scene(reports: Report[]) {
-  return <MapContainer center={[9.8, 118.7]} zoom={10}><ReportPins reports={reports} zones={zones} /></MapContainer>
+function scene(reports: Report[], showReviewedReports = false) {
+  return <MapContainer center={[9.8, 118.7]} zoom={10}><ReportPins reports={reports} zones={zones} showReviewedReports={showReviewedReports} /></MapContainer>
 }
 afterEach(() => { cleanup(); preferences.reduce = false; preferences.saveData = false })
 
@@ -26,7 +26,7 @@ describe('zone report badges', () => {
   it('groups overlapping reports by zone and opens read-only details with explicit location and status labels', async () => {
     const before = useAppStore.getState()
     const reports = [report('pending'), report('confirmed', 'confirmed'), report('rejected', 'rejected'), report('other', 'pending', zones[1].id)]
-    const { container } = render(scene(reports))
+    const { container } = render(scene(reports, true))
     await waitFor(() => expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(2))
     const marker = screen.getByRole('button', { name: `${zones[0].name}: 3 community reports, 1 awaiting review. Zone-level location.` })
     expect(marker.getAttribute('tabindex')).toBe('0')
@@ -62,7 +62,7 @@ describe('zone report badges', () => {
     expect(await screen.findByRole('button', { name: /2 community reports, 2 awaiting review/ })).toBeTruthy()
     expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(1)
     expect(container.querySelector('.report-badge--fresh')).toBeTruthy()
-    rerender(scene([{ ...first, status: 'confirmed' }, { ...report('new'), status: 'rejected' }]))
+    rerender(scene([{ ...first, status: 'confirmed' }, { ...report('new'), status: 'rejected' }], true))
     expect(await screen.findByRole('button', { name: /2 community reports, 0 awaiting review/ })).toBeTruthy()
     expect(container.querySelector('.report-badge--pending')).toBeNull()
     expect(container.querySelector('.report-badge--fresh')).toBeNull()
@@ -74,6 +74,45 @@ describe('zone report badges', () => {
     const { container, rerender } = render(scene([]))
     rerender(scene([report('new'), report('orphan', 'pending', 'missing-zone')]))
     expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(1)
+    expect(container.querySelector('.report-badge--fresh')).toBeNull()
+  })
+  it('shows only pending records by default and reveals both reviewed statuses on demand', async () => {
+    const records = [report('pending'), report('done', 'confirmed'), report('rejected', 'rejected', zones[1].id)]
+    const { container, rerender } = render(scene(records))
+    expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(1)
+    fireEvent.click(await screen.findByRole('button', { name: /1 community report, 1 awaiting review/ }))
+    expect(screen.queryByText('Observation done')).toBeNull()
+    expect(screen.queryByText('Observation rejected')).toBeNull()
+    rerender(scene(records, true))
+    expect(await screen.findByRole('button', { name: /2 community reports, 1 awaiting review/ })).toBeTruthy()
+    expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(2)
+    expect(container.querySelector('.report-badge--fresh')).toBeNull()
+    rerender(scene(records))
+    expect(container.querySelectorAll('.report-badge-wrap')).toHaveLength(1)
+    expect(records).toHaveLength(3)
+  })
+  it.each(['confirmed', 'rejected'] as const)('removes the open marker when the last pending report becomes %s', async status => {
+    const before = useAppStore.getState()
+    const record = report('last')
+    const { container, rerender } = render(scene([record]))
+    fireEvent.click(await screen.findByRole('button', { name: /1 community report, 1 awaiting review/ }))
+    expect(await screen.findByText('Observation last')).toBeTruthy()
+    const reviewed = { ...record, status }
+    rerender(scene([reviewed]))
+    expect(container.querySelector('.report-badge-wrap')).toBeNull()
+    expect(screen.queryByText('Observation last')).toBeNull()
+    expect(useAppStore.getState().zones).toBe(before.zones)
+    expect(useAppStore.getState().reports).toBe(before.reports)
+    rerender(scene([reviewed], true))
+    expect(await screen.findByRole('button', { name: /1 community report, 0 awaiting review/ })).toBeTruthy()
+  })
+  it('does not animate hidden reviewed arrivals when history is revealed', () => {
+    const { container, rerender } = render(scene([]))
+    const records = [report('old-history', 'confirmed')]
+    rerender(scene(records))
+    expect(container.querySelector('.report-badge-wrap')).toBeNull()
+    rerender(scene(records, true))
+    expect(container.querySelector('.report-badge-wrap')).toBeTruthy()
     expect(container.querySelector('.report-badge--fresh')).toBeNull()
   })
 })

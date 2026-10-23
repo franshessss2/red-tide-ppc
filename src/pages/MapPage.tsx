@@ -18,6 +18,7 @@ import { StatusKey } from '../components/StatusKey'
 import { MapLoadingOverlay } from '../components/LoadingState'
 import { Map } from '../components/Map'
 import { MapControlColumn } from '../components/MapControlColumn'
+import { ReviewedReportToggle } from '../components/ReviewedReportToggle'
 import { Notice } from '../components/Notice'
 import { ReportForm } from '../components/ReportForm'
 import { ZONE_PANEL_FALLBACK_WIDTH, ZoneDrawer } from '../components/ZoneDrawer'
@@ -75,6 +76,8 @@ export function MapPage() {
   const reduceMotion = useReducedMotion()
 
   const [streetMapOpen, setStreetMapOpen] = useState(false)
+  const [showReviewedReports, setShowReviewedReports] = useState(false)
+  const reviewedCount = useMemo(() => reports.filter(report => report.status !== 'pending').length, [reports])
   const [mobilePanel, setMobilePanel] = useState<MobilePanelState>('peek')
   const [resetToken, setResetToken] = useState(0)
   const [focusToken, setFocusToken] = useState(0)
@@ -310,6 +313,7 @@ export function MapPage() {
           shippingLanesVisible={shippingMounted}
           shippingOpacity={shippingOpacity}
           reports={reports}
+          showReviewedReports={showReviewedReports}
           focusReserveRight={focusReserveRight}
           onMapReady={setLeafletMap}
           onSelectZone={(id) => {
@@ -371,6 +375,8 @@ export function MapPage() {
       )}
 
       <MapControlColumn map={leafletMap}>
+        <ReviewedReportToggle checked={showReviewedReports} count={reviewedCount}
+          ready={reportsReady} onChange={setShowReviewedReports} />
         <ZoneDrawer
           zones={zones}
           zonesReady={zonesReady}
