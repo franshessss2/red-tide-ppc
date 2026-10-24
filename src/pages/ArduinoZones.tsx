@@ -40,7 +40,7 @@ export default function ArduinoZones() {
   const active = ['identifying', 'waiting', 'acknowledged'].includes(link.phase)
   const button = 'min-h-11 rounded-lg border border-line px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-40'
   return <main className="mx-auto max-w-3xl px-5 py-10 text-paper">
-    <nav className="mb-8 flex flex-wrap gap-6 text-sm text-accent" aria-label="Display navigation"><Link to="/map">Public map</Link><a href="/arduino.html">Arduino diagnostics</a></nav>
+    <nav className="mb-8 flex flex-wrap gap-6 text-sm text-accent" aria-label="Display navigation"><Link to="/map">Public map</Link><a href="/arduino.html">Arduino setup</a></nav>
     <h1 className="font-display text-4xl">{frame.demo ? 'Demo zone-status display' : 'Zone-status display'}</h1>
     <p className="mt-3 font-semibold">Community records, not an official clearance.</p>
     <p className="mt-3 text-sm text-muted">Off alone does not mean safe. Interpret an off zone LED only with a working heartbeat, no stale warning and a checked LED map. Power loss or a failed LED can also look dark.</p>

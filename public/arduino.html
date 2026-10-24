@@ -1,19 +1,23 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Red Tide · Arduino</title>
-<link rel="stylesheet" href="/text-motion.css">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101414"><title>RTP · Ten-LED Arduino display</title>
 <style>
-body{margin:0;background:#101414;color:#edf2ee;font:16px system-ui}main{max-width:760px;margin:auto;padding:32px 20px}a{color:#efbc47}h1{font-size:32px}button,select{font:inherit;padding:12px;margin:4px;border:1px solid #62716a;border-radius:8px;background:#202b26;color:inherit}button:disabled{opacity:.4}button:focus-visible,select:focus-visible{outline:3px solid #efbc47}section{padding:20px 0;border-top:1px solid #39453e}output{display:block;font-size:24px;padding:16px 0}#log{white-space:pre-wrap;overflow-wrap:anywhere;color:#b8c9bf}p{line-height:1.6}
-</style>
-<main><a href="/">← Red Tide</a><h1>Arduino</h1>
-<p><a href="/arduino-zones">Open the separate zone-status display</a> — requires red_tide_zones firmware and its own checked LED wiring. Keep the diagnostic modes below on their original wiring; the combined sketch conflicts with the zone display's D10–D12 LEDs.</p>
-<p>School prototype. Ultrasonic readings measure object distance. LED position and the buzzer are demonstration outputs, not red-tide measurements or official warnings. Data stays in this browser.</p>
-<p>Use desktop Chrome or Edge on HTTPS or localhost. Close Arduino Serial Monitor before connecting. For the combined build, upload red_tide_combined.ino and select Combined UNO.</p>
-<p><a href="/red_tide_combined.ino" download="red_tide_combined.ino">Download combined UNO sketch</a> · <a href="https://github.com/franshessss2/red-tide-ppc/blob/main/docs/arduino-combined.md">Wiring guide</a></p>
-<label>Board <select id="kind"><option value="COMBINED">Combined UNO</option><option value="LED">10-LED board</option><option value="SCANNER">Ultrasonic scanner</option></select></label>
-<button id="connect">Connect USB</button><button id="disconnect" disabled>Disconnect</button>
-<p id="status" role="status">Disconnected</p>
-<section><h2>LED test</h2><p>Choose a position; only that LED lights. It turns off after five seconds.</p><div id="leds"></div><button id="off" disabled>All off</button></section>
-<section><h2>Distance scanner</h2><button id="start" disabled>Start scan</button><button id="stop" disabled>Stop scan</button><button id="beep" disabled>Test buzzer</button><output id="reading">No readings</output></section>
-<section><h2>Last device message</h2><div id="log">—</div></section></main>
-<script type="module" src="/arduino-demo.js"></script></html>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#101414;color:#edf2ee}*{box-sizing:border-box}body{margin:0}main{max-width:880px;margin:auto;padding:32px 24px 64px}nav{display:flex;justify-content:space-between;gap:20px;font-size:14px}a{color:#efbc47;text-underline-offset:4px}a:focus-visible{outline:3px solid #efbc47;outline-offset:5px}header{padding:56px 0 32px}.eyebrow{font:12px monospace;letter-spacing:2px;color:#efbc47;text-transform:uppercase}h1{font-size:clamp(32px,6vw,52px);line-height:1.08;letter-spacing:-1.5px;margin:16px 0}h2{font-size:21px;margin:0 0 14px}p,li{line-height:1.65}p{color:#b8c9bf}.intro{max-width:640px;font-size:18px}.notice{border-left:3px solid #efbc47;padding-left:16px}.primary{display:inline-flex;align-items:center;min-height:48px;padding:12px 20px;background:#efbc47;color:#101414;border-radius:9px;font-weight:700;text-decoration:none}.actions{display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin-top:24px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}section{border:1px solid #39453e;border-radius:14px;padding:24px;background:#151c19}ol{padding-left:22px;margin-bottom:0}li+li{margin-top:12px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 0;border-bottom:1px solid #2c3731}th{color:#b8c9bf;font-weight:500}code{font-size:13px;color:#efbc47}.wide{margin-top:16px}details{margin-top:32px;border-top:1px solid #39453e;padding-top:20px}summary{cursor:pointer;min-height:44px;font-weight:600}footer{margin-top:32px;color:#9aafa2;font-size:13px}@media(max-width:620px){.grid{grid-template-columns:1fr}main{padding:24px 18px 40px}header{padding-top:40px}section{padding:20px}}
+</style></head><body><main>
+<nav aria-label="Arduino navigation"><a href="/">← Red Tide PPC</a><a href="/map">Public map</a></nav>
+<header><span class="eyebrow">RTP / USB hardware display</span><h1>One live feed.<br>Ten lights on your board.</h1>
+<p class="intro">Connect the tested ten-LED UNO setup to RTP’s zone records. The browser sends zone statuses over USB; the board shows them with lights.</p>
+<p class="notice"><strong>Community records, not an official clearance.</strong><br>This display does not detect red tide. A dark LED alone does not mean the water or shellfish are safe.</p>
+<div class="actions"><a class="primary" href="/arduino-zones">Open zone-status display →</a><a href="https://github.com/franshessss2/red-tide-ppc/blob/main/docs/arduino-zones.md">Firmware &amp; wiring guide</a></div></header>
+<div class="grid"><section><h2>Connect your UNO</h2><ol>
+<li>Use the <code>red_tide_zones</code> sketch and its repository-owned <code>RedTideZones</code> library. The firmware guide includes setup instructions.</li>
+<li>Keep the ten LEDs on <code>D13–D9, D7–D3</code>, each with its own resistor and common GND. <strong>D8 is unused.</strong> Leave the buzzer, servo and ultrasonic sensor disconnected.</li>
+<li>Plug the board into your laptop. Close Arduino Serial Monitor and Plotter.</li>
+<li>Open the zone-status display in desktop Chrome or Edge, choose <strong>Connect zone UNO</strong>, then select your board.</li>
+</ol><p>Keep that display tab visible and your computer awake. Check both the source status and USB acknowledgment.</p></section>
+<section><h2>Read the lights</h2><table><thead><tr><th scope="col">Indicator</th><th scope="col">Meaning</th></tr></thead><tbody>
+<tr><td>Zone LED steady</td><td>Community warning</td></tr><tr><td>Zone LED slow blink</td><td>Under review</td></tr><tr><td>Zone LED fast blink</td><td>Unknown</td></tr><tr><td>Zone LED off</td><td>No warning recorded*</td></tr><tr><td>D5</td><td>Any zone warning</td></tr><tr><td>D4 heartbeat</td><td>Single pulse: synced feed<br>Double pulse: demo data</td></tr><tr><td>D3 steady</td><td>Stale / no usable feed</td></tr>
+</tbody></table><p>*Interpret an off zone LED only with a working heartbeat, D3 off and checked wiring.</p></section></div>
+<section class="wide"><h2>Fast blinking after plugging in?</h2><p>Seven fast-blinking zone LEDs, D3 steadily on, and D5/D4 off is the stale pattern. It means the board needs fresh status frames. It is not a red-tide warning. Connect on the zone-status page; without valid frames, the powered board returns to this pattern after 15 seconds.</p></section>
+<details><summary>Older combined-hardware diagnostics</summary><p>The separate LED/scanner/combined tools use different firmware and wiring. The combined sketch’s servo and sensor pins conflict with this ten-LED setup. Disconnect power before rewiring.</p><a href="/arduino-diagnostics.html">Open legacy diagnostics →</a></details>
+<footer>Seven zone LEDs · Any warning · Heartbeat · Stale indicator<br>USB display only. No buzzer support in this version.</footer>
+</main></body></html>
