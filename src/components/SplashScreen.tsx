@@ -8,6 +8,7 @@ import { OpeningFilm } from './intro/OpeningFilm'
 import { isWorkflowScene, ReelStage, WorkflowStage } from './intro/ReelStage'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 import '../styles/showroom.css'
+import '../styles/connected-coast.css'
 
 export const INTRO_EXIT_MS = 650
 export const INTRO_SCENE_MS = REEL_SCENES[0].duration
@@ -16,9 +17,9 @@ export const INTRO_SCENE_COUNT = REEL_SCENES.length
 type Phase = 'opening' | 'playing' | 'leaving' | 'done'
 
 /** Looping showroom sequence. Every activation exits; timers never navigate. */
-export function SplashScreen() {
+export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
   const reduce = useReducedMotion()
-  const [phase, setPhase] = useState<Phase>(() => shouldShowIntro() ? 'opening' : 'done')
+  const [phase, setPhase] = useState<Phase>(() => introOnly ? 'playing' : shouldShowIntro() ? 'opening' : 'done')
   const [scene, setScene] = useState(0)
   const [transitioning, setTransitioning] = useState(false)
   const [run, setRun] = useState(0)
@@ -41,9 +42,9 @@ export function SplashScreen() {
   const dismiss = useCallback(() => {
     if (phaseRef.current !== 'playing') return
     phaseRef.current = 'leaving'
-    markIntroSeen()
+    if (!introOnly) markIntroSeen()
     setPhase('leaving')
-  }, [])
+  }, [introOnly])
 
   useEffect(() => {
     if (!active) return
@@ -125,15 +126,15 @@ export function SplashScreen() {
   const wasActive = useRef(active)
   useEffect(() => {
     if (!active && wasActive.current) {
-      pageRef.current?.querySelector<HTMLElement>(replaying.current ? '[data-intro-replay]' : '.landing-map-cta')?.focus({ preventScroll: true })
+      pageRef.current?.querySelector<HTMLElement>(replaying.current || introOnly ? '[data-intro-replay]' : '.landing-map-cta')?.focus({ preventScroll: true })
       replaying.current = false
     }
     wasActive.current = active
-  }, [active])
+  }, [active, introOnly])
 
   const replay = () => {
     replaying.current = true
-    const nextPhase = reduce ? 'playing' : 'opening'
+    const nextPhase = reduce || introOnly ? 'playing' : 'opening'
     phaseRef.current = nextPhase
     setScene(0)
     setTransitioning(false)
@@ -149,10 +150,10 @@ export function SplashScreen() {
 
   return <div className={`showroom-experience showroom-experience--${phase}`}>
     <div ref={pageRef} className="showroom-landing" inert={active} aria-hidden={active ? true : undefined}>
-      <Landing onReplay={replay} covered={active} />
+      {introOnly ? <main className="coast-preview-complete"><p>LOCAL INTRO PREVIEW</p><h1>Thanks for exploring.</h1><button type="button" data-intro-replay onClick={replay}>Replay the introduction</button><small>Your first-visit preference has not changed.</small></main> : <Landing onReplay={replay} covered={active} />}
     </div>
     {active && createPortal(<motion.div key={run} role="dialog" aria-modal="true" aria-label="Introduction"
-      className={`showroom showroom--${phase}${reduce ? ' showroom--reduced' : ''}${hidden ? ' showroom--paused' : ''}`} data-scene={scene}
+      className={`showroom showroom--${phase}${phase !== 'opening' ? ' coast-exhibit' : ''}${reduce ? ' showroom--reduced' : ''}${hidden ? ' showroom--paused' : ''}`} data-scene={scene}
       initial={false} animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
       transition={{ duration: reduce ? 0.12 : 0.65 }}
       onKeyDown={event => {
@@ -165,7 +166,7 @@ export function SplashScreen() {
       }}>
       {phase === 'opening' && !reduce && <OpeningFilm onComplete={completeOpening} />}
       {phase !== 'opening' && <div key="showroom">
-      <div className="showroom-top">PUERTO PRINCESA <span>/</span> PALAWAN <span className="showroom-prototype">SCHOOL PROTOTYPE</span></div>
+      <div className="showroom-top"><span className="coast-brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="10" r="3" /><path d="M8 20c4-5 8 5 12 0s8 5 12 0M8 27c4-5 8 5 12 0s8 5 12 0" /></svg><span>RED TIDE<small>PUERTO PRINCESA / PALAWAN</small></span></span><span className="showroom-prototype"><i />COMMUNITY · SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
       {workflowScenes.length > 0 && <div key="workflow" className={`showroom-stage${workflowEntering ? ' showroom-stage--incoming' : workflowLeaving ? ' showroom-stage--out' : ''}`}
         aria-hidden={workflowEntering ? true : undefined}>
@@ -178,8 +179,9 @@ export function SplashScreen() {
       </div>)}
       <div className="showroom-footer" aria-hidden="true">
         <div className="showroom-progress-group"><span className="showroom-chapter">{String((reduce ? REEL_CLOSING_SCENE : scene) + 1).padStart(2, '0')} / {String(INTRO_SCENE_COUNT).padStart(2, '0')} · {REEL_SCENES[reduce ? REEL_CLOSING_SCENE : scene].chapter}</span><div className="showroom-progress">{Array.from({ length: INTRO_SCENE_COUNT }, (_, index) => <span key={index} className={reduce || index < scene || (index === scene && transitioning) ? 'is-complete' : index === scene ? 'is-active' : ''}><i ref={index === scene ? progressRef : undefined} /></span>)}</div></div>
-        <span><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
+        <span className="coast-explore"><span className="showroom-hint-mouse">Click anywhere to explore</span><span className="showroom-hint-touch">Tap to explore</span> <span className="showroom-enter">↵</span></span>
       </div>
+      <p className="coast-official-note">Community records, not an official clearance.</p>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase !== 'playing'} />
       </div>}
     </motion.div>, document.body)}
