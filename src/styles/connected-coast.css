@@ -1,0 +1,334 @@
+/* Connected Coast is scoped to the illustrated intro; the opening film is unchanged. */
+.coast-exhibit {
+  --coast-teal: #88c7b9;
+  --coast-amber: #e9b956;
+  color: #e9efeb;
+  background: radial-gradient(ellipse at 13% 43%, #183c373b, transparent 53%), radial-gradient(ellipse at 92% 6%, #69502b16, transparent 40%), #080e0f;
+}
+.coast-exhibit::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .15; background-image: linear-gradient(#9ec5b509 1px, transparent 1px), linear-gradient(90deg, #9ec5b509 1px, transparent 1px); background-size: 64px 64px; mask-image: linear-gradient(90deg, #000, transparent 75%); }
+.coast-exhibit::after { content: ''; position: absolute; width: 75vw; height: 75vw; border: 1px solid #82b4a20b; border-radius: 50%; left: -30vw; top: -30vw; box-shadow: 0 0 0 70px #82b4a205, 0 0 0 140px #82b4a204; pointer-events: none; }
+.coast-exhibit .showroom-top { top: max(28px, env(safe-area-inset-top)); left: 5.2%; right: 5.2%; letter-spacing: .12em; align-items: center; }
+.coast-brand { display: flex; align-items: center; gap: 12px; }
+.coast-brand > svg { width: 41px; height: 41px; border: 1px solid #d4aa453b; border-radius: 12px; padding: 5px; color: var(--coast-amber); stroke: currentColor; stroke-width: 1.8; }
+.coast-brand svg circle { fill: currentColor; stroke: none; }
+.coast-brand > span { font: 23px/1 'Bebas Neue', sans-serif; letter-spacing: .025em; color: #ecf0e9; }
+.coast-brand small { display: block; font: 8px/1.5 var(--font-mono, monospace); letter-spacing: .15em; color: #91aaa3; margin-top: 5px; }
+.coast-exhibit .showroom-prototype { font-size: 9px; color: #819790; display: flex; align-items: center; gap: 8px; }
+.coast-exhibit .showroom-prototype i { width: 5px; height: 5px; border-radius: 50%; background: #b8a164; }
+.coast-exhibit .reel-ambient { opacity: .3; }
+.coast-exhibit .showroom-stage { inset: 17% 7% 18%; max-width: 1280px; }
+.coast-exhibit .coast-scene { display: grid; grid-template-columns: 1.06fr 1fr; gap: clamp(34px, 6vw, 92px); height: 100%; align-items: center; text-align: left; animation: coast-axis-in 500ms cubic-bezier(.2, 0, 0, 1); }
+.coast-exhibit .reel-workflow-scene { animation: none; }
+.coast-exhibit .reel-scene__visual { width: 100%; min-height: 0; min-width: 0; }
+.coast-exhibit .reel-scene__copy { width: 100%; max-width: 540px; min-width: 0; }
+.coast-exhibit .reel-workflow-copy { min-height: 0; align-content: center; }
+.coast-exhibit .showroom-eyebrow { color: var(--coast-amber); font: 10px/1.6 var(--font-mono, monospace); letter-spacing: .16em; margin: 0 0 23px; animation: none; }
+.coast-exhibit .reel-scene h1 { font: 500 clamp(34px, 4.5vw, 66px)/1.06 'Space Grotesk', sans-serif; letter-spacing: -.052em; margin: 0; text-wrap: balance; }
+.coast-exhibit .showroom-description { font: 400 clamp(14px, 1.35vw, 18px)/1.65 'Space Grotesk', sans-serif; color: #b1c0ba; margin: 24px 0 0; max-width: 470px; text-wrap: pretty; animation: none; }
+.coast-exhibit .reel-scene__detail { border-left: 2px solid #c5a35465; padding-left: 14px; margin: 22px 0 0; font: 400 12px/1.65 'Space Grotesk', sans-serif; color: #8eaaa0; max-width: 460px; text-wrap: pretty; animation: none; }
+.coast-exhibit .coast-panel, .coast-exhibit .reel-report { width: 100%; border: 1px solid #8db3a629; border-radius: 22px; background: linear-gradient(140deg, #16231ff2, #0d1715f2); box-shadow: 0 28px 90px #0003; overflow: hidden; padding: 0; min-height: 0; }
+.coast-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 20px 22px; border-bottom: 1px solid #97b8a919; font: 8px/1.4 var(--font-mono, monospace); letter-spacing: .08em; color: #acbeb6; }
+.coast-panel-head > span { display: flex; align-items: center; gap: 8px; }
+.coast-panel-head i { width: 5px; height: 5px; background: #7fb7a3; border-radius: 50%; }
+.coast-panel-head small { color: #718c80; font-size: 7px; letter-spacing: .08em; }
+.coast-panel-foot { margin: 0; padding: 14px 22px; border-top: 1px solid #97b8a919; font: 9px/1.5 var(--font-mono, monospace); color: #809b8e; }
+.coast-exhibit .reel-map { aspect-ratio: auto; max-width: none; height: auto; border-radius: 22px; transform: none; }
+.coast-map__canvas { height: clamp(240px, 34vh, 420px); position: relative; overflow: hidden; background: #14292b; }
+.coast-map__canvas > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.coast-map__grid { position: absolute; inset: 0; background-image: linear-gradient(#8bb5a908 1px, transparent 1px), linear-gradient(90deg, #8bb5a908 1px, transparent 1px); background-size: 32px 32px; }
+.coast-map__land { fill: #172822; stroke: none; }
+.coast-map__contour { stroke: #73af9f; stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 5px #79bca335); }
+.coast-map__route { stroke: #b69d5e6b; stroke-width: 1; stroke-dasharray: 3 6; }
+.coast-map__pin { fill: #e6c16e; animation: coast-pin-in 700ms ease both; }
+.coast-map__pin .coast-map__halo { fill: #c9ae5f13; stroke: #e9c56c45; stroke-width: .7; }
+.coast-map__pin text { fill: #b6c7bd; font: 8px var(--font-mono, monospace); }
+.coast-map__caption { position: absolute; bottom: 22px; left: 24px; display: flex; align-items: center; gap: 10px; }
+.coast-map__caption strong { font: 46px/.9 'Bebas Neue', sans-serif; color: #e1c176; }
+.coast-map__caption span { font-size: 12px; color: #c2d3c8; }
+.coast-map__caption small { display: block; font-size: 9px; color: #8da99e; margin-top: 3px; }
+.coast-map__compass { position: absolute; right: 22px; top: 18px; font: 10px var(--font-mono, monospace); color: #9bb7aa; }
+.coast-workflow { width: 100%; }
+.coast-exhibit .reel-report { position: relative; }
+.coast-observation-location { display: flex; align-items: center; gap: 7px; margin: 24px 24px 18px; color: #b2c9bc; font: 9px/1.5 var(--font-mono, monospace); letter-spacing: .04em; }
+.coast-observation-location > span { color: #cfb66f; font-size: 16px; }
+.coast-observation-location small { margin-left: auto; color: #748c80; font-size: 7px; }
+.coast-exhibit .reel-report__field { display: block; background: transparent; border: 0; border-radius: 0; margin: 0 24px; padding: 0; min-height: 0; }
+.coast-exhibit .reel-report__typed { display: block; width: auto; border: 0; white-space: normal; animation: none; font: 500 clamp(19px, 2vw, 28px)/1.25 'Space Grotesk', sans-serif; letter-spacing: -.035em; color: #e8efe8; }
+.coast-observation-note { margin: 10px 24px 22px; font-size: 12px; line-height: 1.6; color: #99b0a4; }
+.coast-exhibit .reel-report__receipt { margin: 0 24px 22px; padding: 14px 12px; min-height: 64px; background: #bd9c4920; border: 1px solid #ba9d5033; gap: 10px; font-size: 12px; animation: none; }
+.coast-exhibit .reel-report__receipt[data-status='shared'] { background: #6eaf9220; border-color: #7ab59a45; }
+.coast-exhibit .reel-report__check { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; color: #e0c076; font: 11px var(--font-mono, monospace); background: #c8a45115; border-radius: 8px; }
+.coast-exhibit .reel-report__status-copy { color: #dfdfce; }
+.coast-exhibit .reel-report__status-copy small { display: block; color: #a0af9c; font-size: 10px; margin-top: 4px; }
+.coast-exhibit .reel-report__pending { margin-left: auto; font: 8px var(--font-mono, monospace); letter-spacing: .05em; color: #d5be7c; }
+.coast-record-footer { display: flex; align-items: center; gap: 10px; padding: 17px 24px; border-top: 1px solid #a0c0ad1a; font-size: 10px; color: #b1c2b6; }
+.coast-record-avatar { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #99b39d3b; border-radius: 50%; font: 10px var(--font-mono, monospace); color: #b6cda9; }
+.coast-record-footer small { display: block; margin-top: 4px; font-size: 9px; color: #7e9989; }
+.coast-record-journey { display: flex; align-items: center; gap: 10px; padding: 22px 4px; font: 9px var(--font-mono, monospace); color: #60796c; }
+.coast-record-journey span { white-space: nowrap; transition: color .4s ease; }
+.coast-record-journey .is-reached { color: #d4c58c; }
+.coast-record-journey i { flex: 1; height: 1px; background: #93b8a82b; }
+.coast-shared-destination { height: 93px; opacity: 0; transform: translateY(8px); visibility: hidden; transition: opacity 500ms ease, transform 500ms ease, visibility 500ms; }
+.coast-workflow--shared .coast-shared-destination { opacity: 1; transform: none; visibility: visible; }
+.coast-devices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; }
+.coast-device { display: flex; flex-direction: column; align-items: center; text-align: center; border: 1px solid #9ab2a426; background: #111f1bbb; padding: 14px 8px; border-radius: 12px; }
+.coast-device > svg { width: 43px; height: 34px; stroke: #a9c3b3; stroke-width: 1.1; margin-bottom: 10px; }
+.coast-device > strong { font-size: 11px; font-weight: 500; color: #c4d0c3; }
+.coast-device > span { display: flex; align-items: center; gap: 5px; margin-top: 6px; font: 7px var(--font-mono, monospace); color: #789b87; }
+.coast-device > span i { width: 3px; height: 3px; border-radius: 50%; background: #8eae8c; }
+.coast-devices--compact .coast-device { padding: 10px 8px; }
+.coast-devices--compact .coast-device > svg { width: 29px; height: 23px; margin-bottom: 6px; }
+.coast-devices--compact .coast-device > strong { font-size: 10px; }
+.coast-devices--compact .coast-device > span { font-size: 6px; }
+.coast-hardware-connection { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px 35px 16px; font: 8px var(--font-mono, monospace); color: #c3bf91; }
+.coast-hardware-connection i { width: 28px; height: 1px; background: #b3a46b44; }
+.coast-uno { width: 182px; margin: 0 auto 18px; padding: 12px; border-radius: 12px; border: 1px solid #84c1b369; background: linear-gradient(140deg, #1d514a, #123832); box-shadow: 0 10px 28px #0002; }
+.coast-uno__ports { display: flex; gap: 9px; justify-content: center; }
+.coast-uno__ports i { width: 5px; height: 6px; background: #89ad9a; }
+.coast-uno__body { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; }
+.coast-uno__body > div { text-align: center; }
+.coast-uno__body small { display: block; font: 7px var(--font-mono, monospace); color: #aacac0; letter-spacing: .15em; }
+.coast-uno__body strong { display: block; font: 29px var(--font-mono, monospace); color: #d4e8dc; letter-spacing: .04em; }
+.coast-uno__usb { width: 23px; height: 28px; border: 2px solid #9eb3a5; background: #8ba39745; border-radius: 2px; margin-left: -16px; }
+.coast-uno__chip { height: 33px; width: 21px; background: #081e19; border: 2px dotted #789d8c; border-radius: 3px; }
+.coast-led-group { margin: 0 24px; padding: 16px 0; border-top: 1px solid #97b8a91a; }
+.coast-led-group > span { display: block; text-align: center; font: 8px var(--font-mono, monospace); letter-spacing: .15em; color: #8aa793; }
+.coast-zone-leds { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 16px; }
+.coast-zone-leds > div { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.coast-exhibit [data-led-role] { display: block; width: 11px; height: 14px; border: 1px solid #b3534c69; border-radius: 7px 7px 4px 4px; background: #542825; box-shadow: inset 2px 2px 3px #a8503e24; }
+.coast-exhibit [data-led-role].is-lit, .coast-exhibit .coast-heartbeat { background: #ff6d57; border-color: #f9957c; box-shadow: 0 0 12px #f45e4c65, inset 2px 2px 2px #ffc5a3; }
+.coast-zone-leds small { font: 7px var(--font-mono, monospace); color: #9bb19e; }
+.coast-system-leds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px 24px 20px; }
+.coast-system-leds > div { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 9px; color: #a9baaa; }
+.coast-exhibit .coast-heartbeat { animation: coast-heartbeat 2s ease infinite; }
+.coast-closing { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; }
+.coast-closing__rings { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
+.coast-closing__rings i { position: absolute; width: 250px; height: 250px; border: 1px solid #99bea816; border-radius: 50%; top: 0; }
+.coast-closing__rings i:nth-child(2) { width: 330px; height: 330px; top: -40px; }
+.coast-closing__rings i:nth-child(3) { width: 410px; height: 410px; top: -80px; border-color: #99bea809; }
+.coast-closing .reel-mark { width: 124px; height: 124px; margin: 20px 0 26px; }
+.coast-closing__coordinate, .coast-closing__line { font: 8px/1.5 var(--font-mono, monospace); letter-spacing: .16em; color: #8ba898; position: relative; }
+.coast-closing .coast-devices { margin: 38px 0 22px; max-width: 380px; position: relative; }
+.coast-exhibit .coast-scene--closing h1 { font: 400 clamp(68px, 8.5vw, 126px)/.95 'Bebas Neue', sans-serif; letter-spacing: -.015em; color: #eef0e5; }
+.coast-exhibit .showroom-footer { left: 7%; right: 7%; bottom: max(64px, calc(env(safe-area-inset-bottom) + 44px)); color: #94a99e; align-items: center; }
+.coast-exhibit .showroom-chapter { color: #c3cdbd; font-size: 10px; letter-spacing: .03em; }
+.coast-exhibit .showroom-progress { margin-top: 14px; gap: 7px; }
+.coast-exhibit .showroom-progress > span { width: 36px; height: 2px; background: #bed1b71b; }
+.coast-exhibit .showroom-progress > span i { background: var(--coast-amber); }
+.coast-explore { display: flex; align-items: center; gap: 32px; padding: 15px 20px; border: 1px solid #c6ac6273; border-radius: 12px; color: #d5d6bb; font: 10px var(--font-mono, monospace); }
+.coast-exhibit .showroom-enter { color: #e8c370; margin: 0; }
+.coast-official-note { position: absolute; bottom: max(23px, env(safe-area-inset-bottom)); left: 7%; margin: 0; color: #688578; font: 9px/1.5 'Space Grotesk', sans-serif; }
+.coast-exhibit .showroom-disclaimer { margin: 18px 0 0; max-width: 480px; font-size: 12px; line-height: 1.65; color: #9daf9e; animation: none; }
+.coast-exhibit.showroom--paused *, .coast-exhibit.showroom--paused *::before, .coast-exhibit.showroom--paused *::after { animation-play-state: paused !important; transition-duration: 0s !important; }
+.coast-preview-complete { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #080e0f; color: #c5d2c8; text-align: center; padding: 24px; }
+.coast-preview-complete p { font: 10px var(--font-mono, monospace); letter-spacing: .16em; color: #b7a86f; }
+.coast-preview-complete h1 { font: 500 36px 'Space Grotesk', sans-serif; }
+.coast-preview-complete button { border: 1px solid #b29c5d; border-radius: 12px; padding: 14px 20px; cursor: pointer; }
+.coast-preview-complete small { color: #779383; font-size: 11px; }
+@keyframes coast-axis-in { from { opacity: 0; transform: translateX(24px) scale(.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes coast-pin-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes coast-heartbeat { 0%, 12%, 100% { opacity: 1; } 22%, 90% { opacity: .22; } }
+@media (max-width: 720px) {
+  .coast-exhibit .showroom-top { top: max(22px, env(safe-area-inset-top)); left: 6%; right: 6%; }
+  .coast-brand > svg { width: 34px; height: 34px; border-radius: 10px; }
+  .coast-brand > span { font-size: 20px; }
+  .coast-brand small { font-size: 6px; letter-spacing: .09em; }
+  .coast-exhibit .showroom-prototype { max-width: 95px; font-size: 6px; line-height: 1.7; letter-spacing: .06em; }
+  .coast-exhibit .showroom-stage { inset: 14% 7% 18%; max-width: 480px; }
+  .coast-exhibit .coast-scene { grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 26px; align-content: center; }
+  .coast-exhibit .reel-scene__copy { max-width: none; }
+  .coast-exhibit .reel-scene h1 { font-size: clamp(28px, 7.7vw, 42px); line-height: 1.08; }
+  .coast-exhibit .showroom-eyebrow { font-size: 8px; margin-bottom: 12px; }
+  .coast-exhibit .showroom-description { font-size: 12px; line-height: 1.6; margin-top: 13px; }
+  .coast-exhibit .reel-scene__detail { font-size: 10px; line-height: 1.5; margin-top: 12px; padding-left: 10px; }
+  .coast-panel-head { padding: 14px 16px; font-size: 6px; }
+  .coast-panel-head small { font-size: 6px; }
+  .coast-panel-foot { font-size: 7px; padding: 10px 16px; }
+  .coast-map__canvas { height: 210px; }
+  .coast-map__caption { left: 16px; bottom: 16px; }
+  .coast-map__caption strong { font-size: 36px; }
+  .coast-map__caption span { font-size: 10px; }
+  .coast-map__caption small { font-size: 7px; }
+  .coast-observation-location { margin: 15px 16px 12px; font-size: 7px; }
+  .coast-observation-location small { font-size: 5px; }
+  .coast-exhibit .reel-report__field { margin: 0 16px; }
+  .coast-exhibit .reel-report__typed { font-size: 21px; }
+  .coast-observation-note { margin: 7px 16px 14px; font-size: 10px; }
+  .coast-exhibit .reel-report__receipt { margin: 0 16px 14px; padding: 10px; min-height: 54px; font-size: 10px; gap: 8px; }
+  .coast-exhibit .reel-report__status-copy small { font-size: 8px; }
+  .coast-exhibit .reel-report__pending { font-size: 6px; }
+  .coast-exhibit .reel-report__check { width: 25px; height: 25px; }
+  .coast-record-footer { padding: 12px 16px; font-size: 8px; gap: 8px; }
+  .coast-record-footer small { font-size: 7px; max-width: 230px; }
+  .coast-record-journey { padding: 15px 3px; font-size: 7px; }
+  .coast-shared-destination { height: 69px; }
+  .coast-devices--compact .coast-device { padding: 7px; border-radius: 9px; }
+  .coast-devices--compact .coast-device svg { width: 22px; height: 18px; margin-bottom: 4px; }
+  .coast-devices--compact .coast-device strong { font-size: 8px; }
+  .coast-devices--compact .coast-device span { font-size: 5px; margin-top: 4px; }
+  .coast-hardware-connection { padding: 12px 20px; font-size: 7px; }
+  .coast-uno { width: 142px; padding: 9px; margin-bottom: 12px; }
+  .coast-uno__body { padding: 9px 0; gap: 10px; }
+  .coast-uno__body strong { font-size: 23px; }
+  .coast-uno__body small { font-size: 6px; }
+  .coast-uno__ports { gap: 7px; }
+  .coast-uno__ports i { width: 4px; height: 4px; }
+  .coast-uno__usb { height: 23px; }
+  .coast-uno__chip { height: 26px; width: 17px; }
+  .coast-led-group { margin: 0 16px; padding: 12px 0; }
+  .coast-led-group > span { font-size: 7px; }
+  .coast-zone-leds { margin-top: 11px; }
+  .coast-zone-leds small { font-size: 6px; }
+  .coast-exhibit [data-led-role] { width: 9px; height: 11px; }
+  .coast-system-leds { padding: 8px 16px 14px; }
+  .coast-system-leds > div { font-size: 8px; gap: 6px; }
+  .coast-closing { min-height: 290px; }
+  .coast-closing .reel-mark { width: 88px; height: 88px; margin: 8px 0 20px; }
+  .coast-closing__rings i { width: 170px; height: 170px; }
+  .coast-closing__rings i:nth-child(2) { width: 230px; height: 230px; top: -30px; }
+  .coast-closing__rings i:nth-child(3) { width: 290px; height: 290px; top: -60px; }
+  .coast-closing .coast-devices { margin: 24px 0 16px; }
+  .coast-closing .coast-device { padding: 10px 6px; }
+  .coast-closing .coast-device svg { width: 32px; height: 25px; margin-bottom: 7px; }
+  .coast-closing .coast-device strong { font-size: 9px; }
+  .coast-closing .coast-device span { font-size: 6px; }
+  .coast-exhibit .coast-scene--closing h1 { font-size: 68px; }
+  .coast-exhibit .showroom-footer { left: 7%; right: 7%; bottom: max(53px, calc(env(safe-area-inset-bottom) + 35px)); gap: 12px; }
+  .coast-exhibit .showroom-chapter { font-size: 7px; }
+  .coast-exhibit .showroom-progress { gap: 5px; margin-top: 10px; }
+  .coast-exhibit .showroom-progress > span { width: 19px; }
+  .coast-explore { font-size: 8px; padding: 12px; gap: 12px; }
+  .coast-official-note { font-size: 8px; bottom: max(20px, env(safe-area-inset-bottom)); }
+  .coast-exhibit .showroom-disclaimer { font-size: 10px; margin-top: 12px; }
+}
+@media (max-height: 700px) and (max-width: 720px) {
+  .coast-exhibit .showroom-stage { inset: 15% 7% 19%; }
+  .coast-exhibit .coast-scene { gap: 15px; }
+  .coast-map__canvas { height: 160px; }
+  .coast-exhibit .reel-scene h1 { font-size: 27px; }
+  .coast-exhibit .showroom-description { font-size: 11px; margin-top: 9px; }
+  .coast-exhibit .reel-scene__detail { font-size: 9px; margin-top: 9px; }
+  .coast-observation-location { margin-top: 10px; margin-bottom: 8px; }
+  .coast-record-footer { padding: 8px 16px; }
+  .coast-shared-destination { height: 59px; }
+  .coast-devices--compact .coast-device > span { display: none; }
+  .coast-closing { min-height: 240px; }
+  .coast-exhibit .showroom-eyebrow { margin-bottom: 8px; }
+  .coast-exhibit .showroom-disclaimer { font-size: 9px; }
+}
+@media (max-height: 600px) and (min-width: 721px) {
+  .coast-exhibit .showroom-top { top: 16px; }
+  .coast-exhibit .showroom-stage { inset: 17% 7% 23%; }
+  .coast-exhibit .coast-scene { gap: 35px; }
+  .coast-exhibit .reel-scene h1 { font-size: 32px; }
+  .coast-exhibit .showroom-description { font-size: 12px; margin-top: 14px; }
+  .coast-exhibit .showroom-eyebrow { margin-bottom: 12px; }
+  .coast-exhibit .reel-scene__detail { font-size: 10px; margin-top: 14px; }
+  .coast-map__canvas { height: 170px; }
+  .coast-panel-head { padding: 10px 16px; }
+  .coast-panel-foot { padding: 9px 16px; font-size: 7px; }
+  .coast-observation-location { margin: 12px 16px; font-size: 7px; }
+  .coast-exhibit .reel-report__field { margin: 0 16px; }
+  .coast-exhibit .reel-report__typed { font-size: 20px; }
+  .coast-observation-note { margin: 6px 16px 12px; font-size: 10px; }
+  .coast-exhibit .reel-report__receipt { margin: 0 16px 12px; padding: 9px; min-height: 45px; font-size: 10px; }
+  .coast-record-footer { padding: 10px 16px; }
+  .coast-record-journey { padding: 12px 4px; }
+  .coast-shared-destination { height: 58px; }
+  .coast-devices--compact .coast-device { padding: 5px; }
+  .coast-devices--compact .coast-device > span { display: none; }
+  .coast-devices--compact .coast-device > svg { width: 24px; height: 19px; }
+  .coast-hardware-connection { padding: 10px; }
+  .coast-uno { width: 130px; padding: 7px; margin-bottom: 10px; }
+  .coast-uno__body { padding: 6px 0; gap: 7px; }
+  .coast-uno__body strong { font-size: 20px; }
+  .coast-uno__ports { gap: 6px; }
+  .coast-uno__ports i { width: 4px; height: 4px; }
+  .coast-led-group { padding: 10px 0; }
+  .coast-zone-leds { margin-top: 10px; }
+  .coast-system-leds { padding: 6px 16px 12px; }
+  .coast-closing { min-height: 250px; }
+  .coast-closing .reel-mark { width: 74px; height: 74px; margin: 0 0 14px; }
+  .coast-closing .coast-devices { margin: 18px 0 14px; }
+  .coast-device { padding: 8px; }
+  .coast-device > svg { width: 30px; height: 24px; margin-bottom: 6px; }
+  .coast-closing__rings i { display: none; }
+  .coast-exhibit .coast-scene--closing h1 { font-size: 74px; }
+}
+.coast-exhibit.showroom--reduced *, .coast-exhibit.showroom--reduced *::before, .coast-exhibit.showroom--reduced *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .coast-exhibit *, .coast-exhibit *::before, .coast-exhibit *::after { animation: none !important; transition: none !important; }
+}
+.coast-exhibit .reel-report__field { box-shadow: none; }
+.coast-exhibit:has(.showroom-enter-surface:focus-visible) .showroom-footer > .coast-explore { outline: 2px solid #dbbc6755; outline-offset: 4px; }
+.coast-exhibit::before, .coast-exhibit::after { z-index: -1; }
+/* Short landscape screens keep the story readable without colliding with chrome. */
+@media (max-height: 460px) and (min-width: 550px) {
+  .coast-exhibit .showroom-stage { inset: 19% 7% 24%; max-width: 1000px; }
+  .coast-exhibit .coast-scene { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; gap: 30px; }
+  .coast-exhibit .showroom-top { top: 13px; }
+  .coast-brand > svg { width: 30px; height: 30px; }
+  .coast-brand > span { font-size: 18px; }
+  .coast-brand small { font-size: 6px; }
+  .coast-exhibit .showroom-prototype { font-size: 7px; max-width: none; }
+  .coast-exhibit .reel-scene h1 { font-size: clamp(22px, 3.6vw, 31px); }
+  .coast-exhibit .showroom-eyebrow { font-size: 7px; margin-bottom: 9px; }
+  .coast-exhibit .showroom-description { font-size: 10px; line-height: 1.5; margin-top: 11px; }
+  .coast-exhibit .reel-scene__detail { font-size: 8px; line-height: 1.5; margin-top: 10px; }
+  .coast-panel-head { padding: 9px 13px; font-size: 6px; }
+  .coast-panel-head small { font-size: 5px; }
+  .coast-panel-foot { padding: 8px 13px; font-size: 6px; }
+  .coast-map__canvas { height: 142px; }
+  .coast-map__caption strong { font-size: 29px; }
+  .coast-map__caption span { font-size: 9px; }
+  .coast-map__caption small { font-size: 6px; }
+  .coast-observation-location { margin: 9px 13px; font-size: 6px; }
+  .coast-observation-location small { display: none; }
+  .coast-exhibit .reel-report__field { margin: 0 13px; }
+  .coast-exhibit .reel-report__typed { font-size: 18px; }
+  .coast-observation-note, .coast-record-footer { display: none; }
+  .coast-exhibit .reel-report__receipt { margin: 12px 13px 13px; padding: 9px; min-height: 43px; font-size: 9px; }
+  .coast-exhibit .reel-report__status-copy small { font-size: 7px; }
+  .coast-exhibit .reel-report__pending { font-size: 6px; }
+  .coast-exhibit .reel-report__check { width: 22px; height: 22px; }
+  .coast-record-journey { padding: 10px 3px; font-size: 6px; }
+  .coast-shared-destination { height: 46px; }
+  .coast-devices--compact .coast-device { padding: 5px; border-radius: 8px; }
+  .coast-devices--compact .coast-device > svg { width: 20px; height: 16px; margin-bottom: 3px; }
+  .coast-devices--compact .coast-device > strong { font-size: 7px; }
+  .coast-devices--compact .coast-device > span { display: none; }
+  .coast-hardware-connection { display: none; }
+  .coast-uno { width: 110px; padding: 7px; margin: 10px auto; }
+  .coast-uno__ports { gap: 5px; }
+  .coast-uno__ports i { width: 3px; height: 3px; }
+  .coast-uno__body { padding: 4px 0; gap: 6px; }
+  .coast-uno__body strong { font-size: 18px; }
+  .coast-uno__body small { font-size: 5px; }
+  .coast-uno__usb { width: 17px; height: 19px; }
+  .coast-uno__chip { width: 13px; height: 20px; }
+  .coast-led-group { padding: 8px 0; margin: 0 14px; }
+  .coast-led-group > span { font-size: 6px; }
+  .coast-zone-leds { margin-top: 9px; }
+  .coast-zone-leds > div { gap: 6px; }
+  .coast-zone-leds small { font-size: 5px; }
+  .coast-exhibit [data-led-role] { width: 8px; height: 10px; }
+  .coast-system-leds { padding: 6px 14px 10px; }
+  .coast-system-leds > div { font-size: 7px; gap: 5px; }
+  .coast-closing { min-height: 205px; }
+  .coast-closing .reel-mark { width: 61px; height: 61px; margin: 0 0 10px; }
+  .coast-closing__rings { display: none; }
+  .coast-closing .coast-devices { margin: 15px 0 11px; gap: 8px; }
+  .coast-device { padding: 7px; }
+  .coast-device > svg { width: 24px; height: 20px; margin-bottom: 5px; }
+  .coast-device > strong { font-size: 8px; }
+  .coast-device > span { font-size: 5px; }
+  .coast-closing__coordinate, .coast-closing__line { font-size: 6px; }
+  .coast-exhibit .coast-scene--closing h1 { font-size: 60px; }
+  .coast-exhibit .showroom-footer { bottom: 42px; }
+  .coast-exhibit .showroom-chapter { font-size: 8px; }
+  .coast-exhibit .showroom-progress { margin-top: 8px; }
+  .coast-exhibit .showroom-progress > span { width: 24px; }
+  .coast-explore { padding: 11px 14px; font-size: 8px; }
+  .coast-official-note { bottom: 16px; font-size: 7px; }
+  .coast-exhibit .showroom-disclaimer { font-size: 9px; margin-top: 10px; }
+}

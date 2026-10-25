@@ -21,13 +21,13 @@ const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
 describe('reel-inspired intro', () => {
-  it('keeps one observation and its typed field mounted through report, review and warning', () => {
+  it('keeps one observation and its typed field mounted through report, review and shared delivery', () => {
     render(<SplashScreen />)
-    for (let scene = 0; scene < 3; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
+    for (let scene = 0; scene < 1; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
     const card = document.querySelector('.reel-report')!
     const field = card.querySelector('.reel-report__typed')!
     expect(card.getAttribute('data-workflow-step')).toBe('report')
-    for (const [scene, step, title] of [[3, 'review', 'Review before warning.'], [4, 'warning', 'Read the status clearly.']] as const) {
+    for (const [scene, step, title] of [[1, 'review', 'A person reviews every report.'], [2, 'shared', 'One community. One shared feed.']] as const) {
       tick(REEL_SCENES[scene].duration)
       expect(document.querySelectorAll('.reel-report')).toHaveLength(1)
       expect(document.querySelector('.reel-report')).toBe(card)
@@ -41,15 +41,28 @@ describe('reel-inspired intro', () => {
       expect(screen.getByRole('heading', { name: title })).toBeTruthy()
       expect(document.querySelector('.reel-workflow-copy .reel-text-reveal')).toBe(words)
     }
-    expect(card.textContent).toContain('Example approved report')
-    expect(card.textContent).toContain('laboratory confirmation')
-    tick(REEL_SCENES[5].duration); tick(INTRO_TRANSITION_MS)
+    expect(card.textContent).toContain('Reviewed observation')
+    expect(card.textContent).toContain('Never an automatic clearance')
+    tick(REEL_SCENES[3].duration); tick(INTRO_TRANSITION_MS)
     expect(document.querySelector('.reel-report')).toBeNull()
     fireEvent.click(enter()); tick(INTRO_EXIT_MS)
     fireEvent.click(screen.getByRole('button', { name: 'Watch introduction' }))
-    for (let scene = 0; scene < 3; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
+    for (let scene = 0; scene < 1; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
     expect(document.querySelector('.reel-report')).not.toBe(card)
     expect(document.querySelector('.reel-report')?.getAttribute('data-workflow-step')).toBe('report')
+  })
+  it('previews just the intro without rendering the landing page or changing first-visit storage', () => {
+    render(<SplashScreen introOnly />)
+    expect(dialog()).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Open the map' })).toBeNull()
+    fireEvent.click(enter()); tick(INTRO_EXIT_MS)
+    expect(dialog()).toBeNull()
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeNull()
+    const replay = screen.getByRole('button', { name: 'Replay the introduction' })
+    expect(document.activeElement).toBe(replay)
+    fireEvent.click(replay)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+    expect(document.querySelector('.showroom--opening')).toBeNull()
   })
   it('drives progress from the chapter clock, pauses at hidden time, and cancels it on exit', () => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate')
@@ -96,7 +109,7 @@ describe('reel-inspired intro', () => {
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
     expect(document.querySelector('.showroom-stage--out')).toBeTruthy()
     const incoming = document.querySelector('.showroom-stage--incoming')
-    const mark = incoming?.querySelector('.reel-mark')
+    const card = incoming?.querySelector('.reel-report')
     expect(incoming?.getAttribute('aria-hidden')).toBe('true')
     expect(screen.queryByRole('heading', { name: 'RED TIDE' })).toBeNull()
     expect(screen.queryByText('Explore coastal zones.')).toBeNull()
@@ -105,18 +118,18 @@ describe('reel-inspired intro', () => {
     tick(1)
     expect(dialog()?.getAttribute('data-scene')).toBe('1')
     expect(document.querySelector('.showroom-stage--out')).toBeNull()
-    expect(document.querySelector('.reel-mark')).toBe(mark)
+    expect(document.querySelector('.reel-report')).toBe(card)
     expect(document.querySelector('.showroom-stage--incoming')).toBeNull()
   })
-  it('restores the closing title and loops through all nine scenes with their own reading time', () => {
+  it('restores the closing title and loops through all six scenes with their own reading time', () => {
     render(<SplashScreen />)
     for (let cycle = 0; cycle < 2; cycle++) {
       for (let previous = 0; previous < REEL_SCENES.length; previous++) {
         const scene = (previous + 1) % REEL_SCENES.length
         tick(REEL_SCENES[previous].duration); tick(INTRO_TRANSITION_MS)
         expect(dialog()?.getAttribute('data-scene')).toBe(String(scene))
-        if (scene === 2) expect(document.querySelector('.reel-map')).toBeTruthy()
-        if (scene === 3) expect(screen.getByText('Awaiting admin review')).toBeTruthy()
+        if (scene === 0) expect(document.querySelector('.reel-map')).toBeTruthy()
+        if (scene === 1) expect(screen.getByText('Awaiting admin review')).toBeTruthy()
         if (scene === REEL_CLOSING_SCENE) {
           expect(screen.getByRole('heading', { name: 'RED TIDE' })).toBeTruthy()
           expect(document.querySelector('.reel-mark')).toBeTruthy()
