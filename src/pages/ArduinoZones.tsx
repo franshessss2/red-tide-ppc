@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../store'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
+import { ArduinoLedGuide } from '../components/ArduinoLedGuide'
 import { feedLabel } from '../lib/feed'
-import { selectDisplay, ZONE_IDS } from '../arduino/protocol'
+import { selectDisplay } from '../arduino/protocol'
 import { ZoneSerial } from '../arduino/serial'
 import type { LinkState, SerialAccess } from '../arduino/serial'
 
-const PINS = [13, 12, 11, 10, 9, 7, 6]
-const LABELS: Record<string, string> = { S: 'Off · no community warning recorded', A: 'On · community warning', U: 'Slow blink · under review', X: 'Fast blink · unknown' }
 
 export default function ArduinoZones() {
   const zones = useAppStore(state => state.zones)
   const zonesReady = useAppStore(state => state.zonesReady)
   const zonesFeed = useAppStore(state => state.zonesFeed)
   const backendKind = useAppStore(state => state.backendKind)
-  const frame = useMemo(() => selectDisplay({ zones, zonesReady, zonesFeed, backendKind }), [zones, zonesReady, zonesFeed, backendKind])
+  const online = useOnlineStatus()
+  const frame = useMemo(() => selectDisplay({ zones, zonesReady, zonesFeed: !online && backendKind === 'firebase' ? { ...zonesFeed, phase: 'cached' } : zonesFeed, backendKind }), [zones, zonesReady, zonesFeed, backendKind, online])
   const [link, setLink] = useState<LinkState>({ phase: 'disconnected', message: 'Disconnected', acknowledged: null })
   const [connecting, setConnecting] = useState(false)
   const serial = useMemo(() => new ZoneSerial(setLink), [])
@@ -41,7 +42,7 @@ export default function ArduinoZones() {
   const button = 'min-h-11 rounded-lg border border-line px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-40'
   return <main className="mx-auto max-w-3xl px-5 py-10 text-paper">
     <nav className="mb-8 flex flex-wrap gap-6 text-sm text-accent" aria-label="Display navigation"><Link to="/map">Public map</Link><a href="/arduino.html">Arduino setup</a></nav>
-    <h1 className="font-display text-4xl">{frame.demo ? 'Demo zone-status display' : 'Zone-status display'}</h1>
+    <h1 className="font-display text-4xl">{backendKind === 'demo' ? 'Demo zone-status display' : 'Zone-status display'}</h1>
     <p className="mt-3 font-semibold">Community records, not an official clearance.</p>
     <p className="mt-3 text-sm text-muted">Off alone does not mean safe. Interpret an off zone LED only with a working heartbeat, no stale warning and a checked LED map. Power loss or a failed LED can also look dark.</p>
     <section className="mt-6 rounded-xl border border-line bg-ink-2 p-5" aria-labelledby="source-heading">
@@ -55,14 +56,7 @@ export default function ArduinoZones() {
         <button className={button} onClick={() => void serial.disconnect()} disabled={!active && !connecting}>Disconnect</button>
       </div>
     </section>
-    <section className="mt-8" aria-labelledby="led-heading">
-      <h2 id="led-heading" className="text-xl font-semibold">Requested LED states</h2>
-      <p className="mt-2 text-sm text-muted">These are requested outputs, not measured light or wiring feedback. Check the standalone pin sweep before use.</p>
-      <ol className="mt-4 divide-y divide-line rounded-xl border border-line px-4">
-        {ZONE_IDS.map((id, index) => <li key={id} className="py-3 text-sm"><strong>LED {index + 1} · D{PINS[index]} · {zones.find(zone => zone.id === id)?.name ?? id}</strong><span className="block text-muted">{LABELS[frame.states[index]]}</span></li>)}
-      </ol>
-      <p className="mt-4 text-sm">LED 8 / D5: any advisory, dark when stale. LED 9 / D4: {frame.demo ? 'double pulse for demo data' : 'single pulse for synced Firebase data'}. LED 10 / D3: steady on when stale. The onboard L indicator mirrors the pp-bay LED on D13. Stale means seven fast-blinking unknowns, any-advisory dark and heartbeat off.</p>
-    </section>
+    <ArduinoLedGuide frame={frame} zones={zones} link={link} />
     <section className="mt-8 border-t border-line pt-5 text-sm text-muted" aria-labelledby="setup-heading">
       <h2 id="setup-heading" className="font-semibold text-paper">Before connecting</h2>
       <p className="mt-2">Use the ten-LED red_tide_zones sketch from this version. The combined sketch and older zone builds use different wiring. No buzzer, servo or HC-SR04 is connected; D8 is unused. The owner reported all ten LEDs working in the bench sweep. Zone patterns, current and fault behavior still need physical acceptance; issue #80 is separate.</p>

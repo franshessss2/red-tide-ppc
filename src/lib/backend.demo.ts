@@ -155,7 +155,7 @@ export function createDemoBackend(): Backend {
       data = {
         ...data,
         reports: data.reports.map((report) =>
-          report.id === reportId ? { ...report, status } : report,
+          report.id === reportId ? { ...report, status, reviewedAt: Date.now() } : report,
         ),
       }
       emitReports()

@@ -1,3 +1,5 @@
+import { ConnectionPanel } from './ConnectionPanel'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
 import { useAppStore } from '../store'
 import { feedLabel, type FeedName } from '../lib/feed'
 import { formatRecordTime } from '../lib/format'
@@ -40,6 +42,7 @@ export function DataProvenance({ reports = true }: { reports?: boolean }) {
   return (
     <div className="space-y-1.5 rounded-lg border border-line bg-ink-2/60 p-3" aria-label="Data source and connection">
       <CommunitySource />
+      <ConnectionPanel compact />
       <FeedDetail name="zones" />
       {reports && <FeedDetail name="reports" />}
       <p className="text-xs leading-relaxed text-muted">Server sync describes delivery, not when the coast was tested.</p>
@@ -49,10 +52,13 @@ export function DataProvenance({ reports = true }: { reports?: boolean }) {
 
 /** Remains visible when the zone drawer is closed. No duplicate live region. */
 export function MapFeedStatus() {
+  const online = useOnlineStatus()
+  const kind = useAppStore(state => state.backendKind)
   const phase = useAppStore((state) => state.zonesFeed.phase)
   const reportsPhase = useAppStore((state) => state.reportsFeed.phase)
-  if (phase === 'synced' && reportsPhase !== 'error') return null
+  if ((online || kind === 'demo') && phase === 'synced' && reportsPhase !== 'error') return null
   return <div className="pointer-events-auto max-w-[calc(100vw-5rem)] rounded-lg border border-line bg-ink-2/95 px-3 py-1.5">
+    {!online && kind === 'firebase' && <p className="text-xs text-accent">Offline · server updates unavailable</p>}
     {phase !== 'synced' && <FeedDetail name="zones" compact />}
     {reportsPhase === 'error' && <FeedDetail name="reports" compact />}
   </div>

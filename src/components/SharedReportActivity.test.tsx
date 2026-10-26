@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { SharedReportActivity } from './SharedReportActivity'
@@ -57,4 +57,26 @@ it('handles native Escape and restores focus without a layout scroll-lock leak',
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(document.body.style.overflow).toBe('')
   expect(document.activeElement).toBe(trigger)
+})
+
+it('filters public history, shows real review dates and opens change entries without writes', () => {
+  const pending = report()
+  const reviewed = { ...report('confirmed'), id: 'reviewed-r', description: 'Synthetic reviewed observation.', submittedAt: 1700000000000, reviewedAt: 1700003600000 }
+  useAppStore.setState({ reports: [reviewed, pending] })
+  const writes = { submitReport: vi.fn(), approveReport: vi.fn(), rejectReport: vi.fn(), setZoneStatus: vi.fn(), selectZone: vi.fn() }
+  useAppStore.setState(writes)
+  mount()
+  fireEvent.click(screen.getByRole('button', { name: /Report activity/ }))
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Find a report' }), { target: { value: 'reviewed-r' } })
+  expect(screen.getAllByText('Confirmed by admin')).toHaveLength(1)
+  expect(screen.queryByText('Awaiting admin review')).toBeNull()
+  fireEvent.click(document.querySelector('.report-sync-list button')!)
+  expect(screen.getByRole('region', { name: 'Report timeline' })).toBeTruthy()
+  expect(screen.getByText('Approved by admin')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'What changed?' }))
+  const changes = screen.getByRole('region', { name: 'Recent community changes' })
+  expect(within(changes).getByText('Approved by admin')).toBeTruthy()
+  fireEvent.click(within(changes).getAllByRole('button', { name: 'View report →' })[0])
+  expect(screen.getByText('Synthetic reviewed observation.')).toBeTruthy()
+  Object.values(writes).forEach(write => expect(write).not.toHaveBeenCalled())
 })
