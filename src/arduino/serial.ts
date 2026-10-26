@@ -141,6 +141,7 @@ export class ZoneSerial {
     await port?.close().catch(() => {})
   }
   pause() {
+    if (!this.port && !this.connecting) return
     // Best effort only: browser termination may prevent this write entirely.
     if (this.ready) this.write(encodeFrame(STALE_FRAME))
     this.state('disconnected', 'Paused: keep this tab visible. Reconnect to resume.')

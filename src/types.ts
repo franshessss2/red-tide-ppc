@@ -44,6 +44,9 @@ export interface Report {
   submittedAt: number | null
   submittedAtPending?: boolean
   status: ReportStatus
+  /** Review time from the record; older reports may not have one. */
+  reviewedAt?: number | null
+  reviewedAtPending?: boolean
 }
 
 /** Payload used when writing a brand-new report. */

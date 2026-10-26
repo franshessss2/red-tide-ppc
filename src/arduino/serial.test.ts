@@ -75,3 +75,10 @@ describe('zone serial lifecycle', () => {
     finishSecond(new FakeZonePort()); await second
   })
 })
+
+it('keeps a never-connected display disconnected when cleanup pauses an idle client', () => {
+  const update = vi.fn()
+  const idle = new ZoneSerial(update)
+  idle.pause()
+  expect(update).not.toHaveBeenCalled()
+})

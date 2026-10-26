@@ -146,6 +146,8 @@ export function mapReport(id: string, data: Record<string, unknown>, hasPendingW
     submittedAt: toMillis(data.submittedAt),
     ...(hasPendingWrites && data.submittedAt === null ? { submittedAtPending: true } : {}),
     status: normalizeReportStatus(data.status),
+    ...('reviewedAt' in data ? { reviewedAt: toMillis(data.reviewedAt) } : {}),
+    ...(hasPendingWrites && data.reviewedAt === null ? { reviewedAtPending: true } : {}),
   }
 }
 
