@@ -34,7 +34,12 @@ export function ObservationCard({ step = 'report' }: { step?: ObservationStep })
       </div>
       <p className="coast-observation-note">A change in water colour near the shore.</p>
       <div className="reel-report__receipt" data-status={step}>
-        <span className="reel-report__check">{status[3]}</span>
+        <span className="reel-report__check" key={`glyph-${step}`}>{step === 'review' ? <svg className="coast-review-glyph" viewBox="0 0 30 30" fill="none">
+          <path d="M6 5h12v7M6 5v19h7M9 10h5M9 14h3" />
+          <g><circle cx="18" cy="18" r="5" /><path d="m22 22 4 4" /></g>
+        </svg> : step === 'shared' ? <svg className="coast-reviewed-glyph" viewBox="0 0 30 30" fill="none">
+          <path pathLength="1" d="m7 15 5 5L24 8" />
+        </svg> : status[3]}</span>
         <span className="reel-report__status-copy" key={step}>{status[0]}<small>{status[1]}</small>
         </span>
         <span className="reel-report__pending">{status[2]}</span>
@@ -55,51 +60,5 @@ export function ObservationCard({ step = 'report' }: { step?: ObservationStep })
     <div className="coast-shared-destination">
       <SharedDevices compact />
     </div>
-  </div>
-}
-export function HardwarePreview() {
-  return <div className="coast-hardware coast-panel" aria-hidden="true">
-    <PanelHeader label="TEN-LED ZONE DISPLAY" />
-    <div className="coast-hardware-connection">
-      <span>RTP FEED</span>
-      <i />
-      <span>USB</span>
-      <i />
-      <span>UNO</span>
-    </div>
-    <div className="coast-uno">
-      <div className="coast-uno__ports">{Array.from({ length: 7 }, (_, i) => <i key={i} />)}</div>
-      <div className="coast-uno__body">
-        <span className="coast-uno__usb" />
-        <div>
-          <small>ARDUINO</small>
-          <strong>UNO</strong>
-        </div>
-        <span className="coast-uno__chip" />
-      </div>
-      <div className="coast-uno__ports">{Array.from({ length: 7 }, (_, i) => <i key={i} />)}</div>
-    </div>
-    <div className="coast-led-group">
-      <span>7 COASTAL ZONES</span>
-      <div className="coast-zone-leds">{['Bay', 'Lourdes', 'Inner', 'Outer', 'Binuatan', 'Sabang', 'Irawan'].map((zone, index) => <div key={zone}>
-        <i data-led-role="zone" className={index === 2 ? 'is-lit' : ''} />
-        <small>{zone}</small>
-      </div>)}</div>
-    </div>
-    <div className="coast-system-leds">
-      <div>
-        <i className="is-lit" data-led-role="warning" />
-        <span>Any warning</span>
-      </div>
-      <div>
-        <i className="coast-heartbeat" data-led-role="heartbeat" />
-        <span>Heartbeat</span>
-      </div>
-      <div>
-        <i data-led-role="stale" />
-        <span>Stale</span>
-      </div>
-    </div>
-    <p className="coast-panel-foot">Example light pattern · keep the USB display tab visible</p>
   </div>
 }

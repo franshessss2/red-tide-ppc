@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-import { StrictMode, useEffect } from 'react'
+import { StrictMode } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { INTRO_EXIT_MS, INTRO_SCENE_MS, INTRO_TRANSITION_MS, SplashScreen } from './SplashScreen'
 import { INTRO_SEEN_KEY } from './intro/introGate'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
-vi.mock('./intro/OpeningFilm', () => ({ OpeningFilm: ({ onComplete }: { onComplete: () => void }) => { useEffect(onComplete, [onComplete]); return null } }))
 vi.mock('../pages/Landing', () => ({ Landing: ({ onReplay }: { onReplay: () => void }) => <main><h1>Red Tide</h1><button data-intro-replay aria-label="Watch introduction" onClick={onReplay}>↻</button><a className="landing-map-cta" href="/map">Open the map</a></main> }))
 let reduced = false
 let preferenceListeners: Set<() => void> = new Set()
@@ -21,6 +20,30 @@ const enter = () => screen.getByRole('button', { name: 'Explore Red Tide' })
 function tick(ms: number) { act(() => vi.advanceTimersByTime(ms)) }
 
 describe('reel-inspired intro', () => {
+  it('holds the closing chapter for 25 seconds before fading into the next loop', () => {
+    render(<SplashScreen />)
+    for (let scene = 0; scene < REEL_CLOSING_SCENE; scene++) {
+      tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS)
+    }
+    tick(24999)
+    expect(dialog()?.getAttribute('data-scene')).toBe(String(REEL_CLOSING_SCENE))
+    expect(document.querySelector('.showroom-stage--out')).toBeNull()
+    tick(1)
+    expect(document.querySelector('.showroom-stage--out')).not.toBeNull()
+    tick(INTRO_TRANSITION_MS)
+    expect(dialog()?.getAttribute('data-scene')).toBe('0')
+  })
+  it('holds the closing scene for local review without changing first-visit storage', () => {
+    render(<SplashScreen introOnly previewClosing />)
+    expect(dialog()?.getAttribute('data-scene')).toBe(String(REEL_CLOSING_SCENE))
+    expect(screen.getByRole('region', { name: 'Collaborators' })).toBeTruthy()
+    tick(60000)
+    expect(dialog()?.getAttribute('data-scene')).toBe(String(REEL_CLOSING_SCENE))
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeNull()
+    fireEvent.click(enter()); tick(INTRO_EXIT_MS)
+    expect(dialog()).toBeNull()
+    expect(localStorage.getItem(INTRO_SEEN_KEY)).toBeNull()
+  })
   it('keeps one observation and its typed field mounted through report, review and shared delivery', () => {
     render(<SplashScreen />)
     for (let scene = 0; scene < 1; scene++) { tick(REEL_SCENES[scene].duration); tick(INTRO_TRANSITION_MS) }
@@ -105,11 +128,13 @@ describe('reel-inspired intro', () => {
   })
   it('crossfades overlapping chapters without remounting the incoming illustration', () => {
     render(<SplashScreen />)
+    expect(document.querySelector('.coast-chapter-transition')).toBeNull()
     tick(INTRO_SCENE_MS)
     expect(dialog()?.getAttribute('data-scene')).toBe('0')
     expect(document.querySelector('.showroom-stage--out')).toBeTruthy()
     const incoming = document.querySelector('.showroom-stage--incoming')
     const card = incoming?.querySelector('.reel-report')
+    expect(document.querySelector('.coast-chapter-transition')?.getAttribute('aria-hidden')).toBe('true')
     expect(incoming?.getAttribute('aria-hidden')).toBe('true')
     expect(screen.queryByRole('heading', { name: 'RED TIDE' })).toBeNull()
     expect(screen.queryByText('Explore coastal zones.')).toBeNull()
@@ -120,8 +145,9 @@ describe('reel-inspired intro', () => {
     expect(document.querySelector('.showroom-stage--out')).toBeNull()
     expect(document.querySelector('.reel-report')).toBe(card)
     expect(document.querySelector('.showroom-stage--incoming')).toBeNull()
+    expect(document.querySelector('.coast-chapter-transition')).toBeNull()
   })
-  it('restores the closing title and loops through all six scenes with their own reading time', () => {
+  it('restores the closing title and loops through all five scenes with their own reading time', () => {
     render(<SplashScreen />)
     for (let cycle = 0; cycle < 2; cycle++) {
       for (let previous = 0; previous < REEL_SCENES.length; previous++) {

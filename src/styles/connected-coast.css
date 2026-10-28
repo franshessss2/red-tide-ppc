@@ -1,4 +1,4 @@
-/* Connected Coast is scoped to the illustrated intro; the opening film is unchanged. */
+/* Connected Coast is scoped to the illustrated intro. */
 .coast-exhibit {
   --coast-teal: #88c7b9;
   --coast-amber: #e9b956;
@@ -103,13 +103,39 @@
 .coast-exhibit .coast-heartbeat { animation: coast-heartbeat 2s ease infinite; }
 .coast-closing { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; }
 .coast-closing__rings { position: absolute; inset: 0; pointer-events: none; display: grid; place-items: center; }
-.coast-closing__rings i { position: absolute; width: 250px; height: 250px; border: 1px solid #99bea816; border-radius: 50%; top: 0; }
-.coast-closing__rings i:nth-child(2) { width: 330px; height: 330px; top: -40px; }
-.coast-closing__rings i:nth-child(3) { width: 410px; height: 410px; top: -80px; border-color: #99bea809; }
-.coast-closing .reel-mark { width: 124px; height: 124px; margin: 20px 0 26px; }
+.coast-closing__rings i { position: absolute; width: 250px; height: 250px; border: 1px solid #99bea816; border-radius: 50%; }
+.coast-closing__rings i:nth-child(2) { width: 330px; height: 330px; }
+.coast-closing__rings i:nth-child(3) { width: 410px; height: 410px; border-color: #99bea809; }
+.coast-closing__identity { position: relative; width: 124px; height: 124px; margin: 20px 0 26px; }
+.coast-closing__float, .coast-closing .reel-mark { width: 100%; height: 100%; }
 .coast-closing__coordinate, .coast-closing__line { font: 8px/1.5 var(--font-mono, monospace); letter-spacing: .16em; color: #8ba898; position: relative; }
 .coast-closing .coast-devices { margin: 38px 0 22px; max-width: 380px; position: relative; }
 .coast-exhibit .coast-scene--closing h1 { font: 400 clamp(68px, 8.5vw, 126px)/.95 'Bebas Neue', sans-serif; letter-spacing: -.015em; color: #eef0e5; }
+.intro-acknowledgements { margin-top: 28px; }
+.intro-acknowledgements__label { margin: 0 0 10px; color: #a0b4ad; font: 9px/1.5 var(--font-mono, monospace); letter-spacing: .16em; text-transform: uppercase; }
+.intro-acknowledgements__logos { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.intro-acknowledgements__logo { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; width: 176px; max-width: calc((100% - 12px) / 2); height: 82px; padding: 10px 15px; border: 1px solid #a4c3c022; border-radius: 12px; background: #101b2a; }
+.intro-acknowledgements__logo img, .intro-acknowledgements__logo svg { display: block; min-width: 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.intro-acknowledgements__logo--bfar { background: #fff; }
+/* Animate Text micro-scale-fade: whole element, 600 ms, .96 to 1, no blur.
+   The title retains its existing per-word-crossfade reveal. */
+.coast-scene--closing .showroom-eyebrow,
+.coast-scene--closing .showroom-description,
+.coast-scene--closing .reel-scene__detail,
+.coast-scene--closing .intro-acknowledgements__label,
+.coast-scene--closing .intro-acknowledgements__logo,
+.coast-closing__coordinate,
+.coast-closing__line,
+.coast-closing .coast-device { animation: coast-closing-reveal 600ms cubic-bezier(.32, .72, 0, 1) both; }
+.coast-scene--closing .showroom-eyebrow { animation-delay: 80ms; }
+.coast-scene--closing .showroom-description { animation-delay: 240ms; }
+.coast-scene--closing .reel-scene__detail { animation-delay: 400ms; }
+.coast-closing__coordinate { animation-delay: 320ms; }
+.coast-closing__line { animation-delay: 520ms; }
+.coast-scene--closing .intro-acknowledgements__label { animation-delay: 600ms; }
+.coast-scene--closing .intro-acknowledgements__logo:nth-child(1) { animation-delay: 760ms; }
+.coast-scene--closing .intro-acknowledgements__logo:nth-child(2) { animation-delay: 920ms; }
+@keyframes coast-closing-reveal { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
 .coast-exhibit .showroom-footer { left: 7%; right: 7%; bottom: max(64px, calc(env(safe-area-inset-bottom) + 44px)); color: #94a99e; align-items: center; }
 .coast-exhibit .showroom-chapter { color: #c3cdbd; font-size: 10px; letter-spacing: .03em; }
 .coast-exhibit .showroom-progress { margin-top: 14px; gap: 7px; }
@@ -183,16 +209,19 @@
   .coast-system-leds { padding: 8px 16px 14px; }
   .coast-system-leds > div { font-size: 8px; gap: 6px; }
   .coast-closing { min-height: 290px; }
-  .coast-closing .reel-mark { width: 88px; height: 88px; margin: 8px 0 20px; }
+  .coast-closing__identity { width: 88px; height: 88px; margin: 8px 0 20px; }
   .coast-closing__rings i { width: 170px; height: 170px; }
-  .coast-closing__rings i:nth-child(2) { width: 230px; height: 230px; top: -30px; }
-  .coast-closing__rings i:nth-child(3) { width: 290px; height: 290px; top: -60px; }
+  .coast-closing__rings i:nth-child(2) { width: 230px; height: 230px; }
+  .coast-closing__rings i:nth-child(3) { width: 290px; height: 290px; }
   .coast-closing .coast-devices { margin: 24px 0 16px; }
   .coast-closing .coast-device { padding: 10px 6px; }
   .coast-closing .coast-device svg { width: 32px; height: 25px; margin-bottom: 7px; }
   .coast-closing .coast-device strong { font-size: 9px; }
   .coast-closing .coast-device span { font-size: 6px; }
   .coast-exhibit .coast-scene--closing h1 { font-size: 68px; }
+  .intro-acknowledgements { margin-top: 16px; }
+  .intro-acknowledgements__label { font-size: 7px; margin-bottom: 7px; }
+  .intro-acknowledgements__logo { width: 146px; height: 64px; padding: 8px 12px; border-radius: 10px; }
   .coast-exhibit .showroom-footer { left: 7%; right: 7%; bottom: max(53px, calc(env(safe-area-inset-bottom) + 35px)); gap: 12px; }
   .coast-exhibit .showroom-chapter { font-size: 7px; }
   .coast-exhibit .showroom-progress { gap: 5px; margin-top: 10px; }
@@ -248,7 +277,7 @@
   .coast-zone-leds { margin-top: 10px; }
   .coast-system-leds { padding: 6px 16px 12px; }
   .coast-closing { min-height: 250px; }
-  .coast-closing .reel-mark { width: 74px; height: 74px; margin: 0 0 14px; }
+  .coast-closing__identity { width: 74px; height: 74px; margin: 0 0 14px; }
   .coast-closing .coast-devices { margin: 18px 0 14px; }
   .coast-device { padding: 8px; }
   .coast-device > svg { width: 30px; height: 24px; margin-bottom: 6px; }
@@ -315,7 +344,7 @@
   .coast-system-leds { padding: 6px 14px 10px; }
   .coast-system-leds > div { font-size: 7px; gap: 5px; }
   .coast-closing { min-height: 205px; }
-  .coast-closing .reel-mark { width: 61px; height: 61px; margin: 0 0 10px; }
+  .coast-closing__identity { width: 61px; height: 61px; margin: 0 0 10px; }
   .coast-closing__rings { display: none; }
   .coast-closing .coast-devices { margin: 15px 0 11px; gap: 8px; }
   .coast-device { padding: 7px; }
@@ -324,6 +353,9 @@
   .coast-device > span { font-size: 5px; }
   .coast-closing__coordinate, .coast-closing__line { font-size: 6px; }
   .coast-exhibit .coast-scene--closing h1 { font-size: 60px; }
+  .intro-acknowledgements { margin-top: 10px; }
+  .intro-acknowledgements__label { font-size: 6px; margin-bottom: 5px; }
+  .intro-acknowledgements__logo { width: 116px; height: 50px; padding: 5px 9px; }
   .coast-exhibit .showroom-footer { bottom: 42px; }
   .coast-exhibit .showroom-chapter { font-size: 8px; }
   .coast-exhibit .showroom-progress { margin-top: 8px; }

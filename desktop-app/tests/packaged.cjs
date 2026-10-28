@@ -37,12 +37,13 @@ async function run() {
       }
       return { secure: window.isSecureContext, node: typeof window.require,
         sampleLabel: document.body.innerText.includes('Sample data'),
-        mapRoute: await check('/map'), film: await check('/media/opening-peak.mp4', { Range: 'bytes=0-31' }),
+        mapRoute: await check('/map'), collaboratorLogo: await check('/media/acknowledgements/dict-philippines.png', { Range: 'bytes=0-31' }),
         qr: await check('/media/android/red-tide-download-qr.svg'), sketch: await check('/red_tide_combined.ino') }
     })
     assert.equal(result.secure, true); assert.equal(result.node, 'undefined')
     assert.equal(result.sampleLabel, !live); assert.equal(result.mapRoute.status, 200)
-    assert.equal(result.film.status, 206); assert.equal(result.film.bytes, 32)
+    assert.equal(result.collaboratorLogo.status, 206); assert.equal(result.collaboratorLogo.bytes, 32)
+    assert.equal(result.collaboratorLogo.type, 'image/png')
     assert.equal(result.qr.status, 200); assert.equal(result.sketch.status, 200)
     // Exercise the real bundled gate in an isolated profile. Do not submit or
     // approve reports; only sample-mode access is tested.

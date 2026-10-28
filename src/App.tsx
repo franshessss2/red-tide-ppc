@@ -100,6 +100,7 @@ export default function App() {
       */}
       <RouteTransition prepare={ROUTE_PREPARATION}>
         <Route path="/" element={<SplashScreen />} />
+        {import.meta.env.DEV && <Route path="/intro-preview" element={<SplashScreen introOnly previewClosing={new URLSearchParams(window.location.search).get('chapter') === 'closing'} />} />}
         <Route
           path="/map"
           element={
