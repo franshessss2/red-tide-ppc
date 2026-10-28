@@ -1,7 +1,8 @@
 import { TextReveal } from '../TextReveal'
 import { INTRO_COAST_PATH } from '../../data/introCoast'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './reelScenes'
-import { HardwarePreview, ObservationCard, PanelHeader, SharedDevices, type ObservationStep } from './IntroFeaturePreviews'
+import { ObservationCard, PanelHeader, SharedDevices, type ObservationStep } from './IntroFeaturePreviews'
+import { IntroAcknowledgements } from './IntroAcknowledgements'
 const ZONES = [{ x: 130, y: 65 }, { x: 205, y: 145 }, { x: 265, y: 204 }, { x: 344, y: 230 }, { x: 215, y: 278 }, { x: 320, y: 348 }, { x: 365, y: 386 }]
 export function TideMark({ animated = false }: { animated?: boolean }) {
   return <span className={`reel-mark${animated ? ' reel-mark--join' : ''}`} aria-hidden="true">
@@ -20,7 +21,12 @@ function CoastPreview() {
       <div className="coast-map__grid" />
       <svg viewBox="0 0 490 435" fill="none">
         <path className="coast-map__land" d={`${INTRO_COAST_PATH} L-60 125 L-60 470 L345 470 L305.5 376.8`} transform="translate(55 5)" />
-        <path className="coast-map__contour" d={INTRO_COAST_PATH} transform="translate(55 5)" />
+        <path className="coast-map__contour" d={INTRO_COAST_PATH} pathLength="1" transform="translate(55 5)" />
+        <g className="coast-map__currents">
+          <path d="M310 50Q420 130 395 210" />
+          <path d="M335 55Q445 135 420 215" />
+          <path d="M360 60Q470 140 445 220" />
+        </g>
         <path className="coast-map__route" d="M130 65Q245 80 205 145T265 204T344 230T215 278T320 348T365 386" />{ZONES.map((p, index) => <g key={index} className="coast-map__pin" style={{ animationDelay: `${index * 120}ms` }}>
           <circle cx={p.x} cy={p.y} r="17" className="coast-map__halo" />
           <circle cx={p.x} cy={p.y} r="5" />
@@ -38,12 +44,12 @@ function CoastPreview() {
 }
 function ClosingPreview() {
   return <div className="coast-closing" aria-hidden="true">
-    <div className="coast-closing__rings">
-      <i />
-      <i />
-      <i />
+    <div className="coast-closing__identity">
+      <div className="coast-closing__rings">
+        <i /><i /><i />
+      </div>
+      <div className="coast-closing__float"><TideMark animated /></div>
     </div>
-    <TideMark animated />
     <span className="coast-closing__coordinate">PUERTO PRINCESA · PALAWAN</span>
     <SharedDevices />
     <span className="coast-closing__line">THE COAST CONNECTS US.</span>
@@ -52,7 +58,6 @@ function ClosingPreview() {
 export function ReportPreview({ step = 'report' }: { step?: ObservationStep }) { return <ObservationCard step={step} /> }
 function SceneVisual({ visual }: { visual: (typeof REEL_SCENES)[number]['visual'] }) {
   if (visual === 'coast') return <CoastPreview />
-  if (visual === 'hardware') return <HardwarePreview />
   if (visual === 'closing') return <ClosingPreview />
   return <ReportPreview step={visual} />
 }
@@ -64,7 +69,7 @@ export function ReelCopy({ scene, reduced = false }: { scene: number; reduced?: 
       <TextReveal text={copy.title} effect="words" trigger="mount" className="reel-text-reveal" />
     </h1>
     <p className="showroom-description">{copy.description}</p>
-    <p className="reel-scene__detail">{copy.detail}</p>{reduced && <p className="showroom-disclaimer">Reports are reviewed by an admin. Connected website, Android and Windows apps share community records. Ten Arduino LEDs display zone and connection states. Check official BFAR bulletins.</p>}</>
+    <p className="reel-scene__detail">{copy.detail}</p>{reduced && <p className="showroom-disclaimer">Reports are reviewed by an admin. Connected website, Android and Windows apps share community records. Check official BFAR bulletins.</p>}</>
 }
 export const isWorkflowScene = (scene: number) => scene >= 1 && scene <= 3
 /** Keep the observation DOM mounted through report, review and shared delivery. */
@@ -88,6 +93,7 @@ export function ReelStage({ scene, reduced }: { scene: number; reduced: boolean 
     </div>
     <div className="reel-scene__copy">
       <ReelCopy scene={current} reduced={reduced} />
+      {current === REEL_CLOSING_SCENE && <IntroAcknowledgements />}
     </div>
   </div>
 }

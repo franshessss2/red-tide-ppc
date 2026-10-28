@@ -1,5 +1,5 @@
 /* Match the measured primary font metrics while self-hosted fonts load.
-   Scope these stacks to Landing: the opening film and intro inherit no changes.
+   Scope these stacks to Landing: the intro inherits no changes.
    Width adjustment is based on the landing description / RED TIDE in Chromium;
    it approximates glyph widths, not a promise of identical font outlines. */
 @font-face {

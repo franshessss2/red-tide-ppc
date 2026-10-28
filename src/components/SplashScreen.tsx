@@ -4,23 +4,24 @@ import { motion } from 'motion/react'
 import { Landing } from '../pages/Landing'
 import { useReducedMotion } from '../motion/preferences'
 import { markIntroSeen, shouldShowIntro } from './intro/introGate'
-import { OpeningFilm } from './intro/OpeningFilm'
 import { isWorkflowScene, ReelStage, WorkflowStage } from './intro/ReelStage'
 import { REEL_SCENES, REEL_CLOSING_SCENE } from './intro/reelScenes'
 import '../styles/showroom.css'
 import '../styles/connected-coast.css'
+import '../styles/connected-coast-motion.css'
 
 export const INTRO_EXIT_MS = 650
 export const INTRO_SCENE_MS = REEL_SCENES[0].duration
 export const INTRO_TRANSITION_MS = 450
 export const INTRO_SCENE_COUNT = REEL_SCENES.length
-type Phase = 'opening' | 'playing' | 'leaving' | 'done'
+type Phase = 'playing' | 'leaving' | 'done'
 
 /** Looping showroom sequence. Every activation exits; timers never navigate. */
-export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
+export function SplashScreen({ introOnly = false, previewClosing = false }: { introOnly?: boolean; previewClosing?: boolean }) {
   const reduce = useReducedMotion()
-  const [phase, setPhase] = useState<Phase>(() => introOnly ? 'playing' : shouldShowIntro() ? 'opening' : 'done')
-  const [scene, setScene] = useState(0)
+  const closingPreview = introOnly && previewClosing
+  const [phase, setPhase] = useState<Phase>(() => introOnly || shouldShowIntro() ? 'playing' : 'done')
+  const [scene, setScene] = useState(closingPreview ? REEL_CLOSING_SCENE : 0)
   const [transitioning, setTransitioning] = useState(false)
   const [run, setRun] = useState(0)
   const [hidden, setHidden] = useState(() => document.hidden)
@@ -30,14 +31,6 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
   const pageRef = useRef<HTMLDivElement>(null)
   const replaying = useRef(false)
   const active = phase !== 'done'
-
-  const completeOpening = useCallback(() => {
-    if (phaseRef.current !== 'opening') return
-    phaseRef.current = 'playing'
-    setPhase('playing')
-  }, [])
-
-  useEffect(() => { if (reduce) completeOpening() }, [reduce, completeOpening])
 
   const dismiss = useCallback(() => {
     if (phaseRef.current !== 'playing') return
@@ -56,7 +49,7 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
   // One visible-time clock owns both the reading interval and fade. Hidden
   // tabs pause either phase; replay, dismissal and StrictMode clean it up.
   useEffect(() => {
-    if (phase !== 'playing' || reduce) return
+    if (phase !== 'playing' || reduce || closingPreview) return
     let remaining = transitioning ? INTRO_TRANSITION_MS : REEL_SCENES[scene].duration
     let started = performance.now()
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -96,7 +89,7 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
       fill?.cancel()
       document.removeEventListener('visibilitychange', visibility)
     }
-  }, [phase, scene, reduce, run, transitioning])
+  }, [phase, scene, reduce, run, transitioning, closingPreview])
 
   useEffect(() => {
     if (reduce) setTransitioning(false)
@@ -134,12 +127,11 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
 
   const replay = () => {
     replaying.current = true
-    const nextPhase = reduce || introOnly ? 'playing' : 'opening'
-    phaseRef.current = nextPhase
-    setScene(0)
+    phaseRef.current = 'playing'
+    setScene(closingPreview ? REEL_CLOSING_SCENE : 0)
     setTransitioning(false)
     setRun(value => value + 1)
-    setPhase(nextPhase)
+    setPhase('playing')
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
@@ -153,21 +145,20 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
       {introOnly ? <main className="coast-preview-complete"><p>LOCAL INTRO PREVIEW</p><h1>Thanks for exploring.</h1><button type="button" data-intro-replay onClick={replay}>Replay the introduction</button><small>Your first-visit preference has not changed.</small></main> : <Landing onReplay={replay} covered={active} />}
     </div>
     {active && createPortal(<motion.div key={run} role="dialog" aria-modal="true" aria-label="Introduction"
-      className={`showroom showroom--${phase}${phase !== 'opening' ? ' coast-exhibit' : ''}${reduce ? ' showroom--reduced' : ''}${hidden ? ' showroom--paused' : ''}`} data-scene={scene}
+      className={`showroom showroom--${phase} coast-exhibit${reduce ? ' showroom--reduced' : ''}${hidden ? ' showroom--paused' : ''}`} data-scene={scene}
       initial={false} animate={{ opacity: phase === 'leaving' ? 0 : 1 }}
       transition={{ duration: reduce ? 0.12 : 0.65 }}
       onKeyDown={event => {
-        if (phaseRef.current === 'opening') return
         if (['Enter', ' ', 'Escape'].includes(event.key)) {
           event.preventDefault()
           if (!event.repeat) dismiss()
         }
         if (event.key === 'Tab') { event.preventDefault(); buttonRef.current?.focus() }
       }}>
-      {phase === 'opening' && !reduce && <OpeningFilm onComplete={completeOpening} />}
-      {phase !== 'opening' && <div key="showroom">
+      <div key="showroom">
       <div className="showroom-top"><span className="coast-brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="10" r="3" /><path d="M8 20c4-5 8 5 12 0s8 5 12 0M8 27c4-5 8 5 12 0s8 5 12 0" /></svg><span>RED TIDE<small>PUERTO PRINCESA / PALAWAN</small></span></span><span className="showroom-prototype"><i />COMMUNITY · SCHOOL PROTOTYPE</span></div>
       <div className="reel-ambient" aria-hidden="true"><span /><span /></div>
+      {transitioning && !reduce && <div className="coast-chapter-transition" aria-hidden="true" />}
       {workflowScenes.length > 0 && <div key="workflow" className={`showroom-stage${workflowEntering ? ' showroom-stage--incoming' : workflowLeaving ? ' showroom-stage--out' : ''}`}
         aria-hidden={workflowEntering ? true : undefined}>
         <WorkflowStage scenes={workflowScenes} current={scene} />
@@ -183,7 +174,7 @@ export function SplashScreen({ introOnly = false }: { introOnly?: boolean }) {
       </div>
       <p className="coast-official-note">Community records, not an official clearance.</p>
       <button ref={buttonRef} type="button" className="showroom-enter-surface" aria-label="Explore Red Tide" onClick={dismiss} disabled={phase !== 'playing'} />
-      </div>}
+      </div>
     </motion.div>, document.body)}
   </div>
 }

@@ -232,7 +232,7 @@ export function Landing({ onReplay, covered = false }: { onReplay?: () => void; 
                   >Community early warning</motion.p>
 
                   {/* The landing title joins the shared timeline. The separate
-                      opening film and intro reel retain their word animations. */}
+                      intro reel retains its word animations. */}
                   <motion.h1 variants={heroStep}
                     aria-label="Red Tide"
                     className="landing-heading font-display mt-4 text-7xl leading-[0.9] text-paper sm:mt-3 sm:text-8xl xl:text-9xl"

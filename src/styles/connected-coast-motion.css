@@ -1,0 +1,131 @@
+/* Decorative chapter motion only. The existing visible-time clock owns playback.
+   Animate Text: micro-scale-fade for whole supporting elements (600 ms, .96 → 1).
+   Titles retain their existing per-word-crossfade contract. */
+.coast-exhibit { --coast-step-x: 24px; }
+/* Stable wrapper owns entry from mount through commit. Removing --incoming
+   therefore never restarts an animation. The visible-time clock stays at 450 ms. */
+.coast-exhibit .showroom-stage {
+  animation: coast-chapter-in 450ms cubic-bezier(.2, 0, 0, 1) both;
+  transition: none;
+}
+.coast-exhibit .showroom-stage--out { animation-name: coast-chapter-out; }
+.coast-exhibit .coast-scene { animation: none; }
+.coast-exhibit .reel-workflow-copy__chapter {
+  animation: coast-copy-next-in 450ms cubic-bezier(.2, 0, 0, 1) both;
+  transition: none;
+}
+.coast-exhibit .reel-workflow-copy__chapter.showroom-stage--out { animation-name: coast-copy-next-out; }
+.coast-chapter-transition {
+  position: absolute; left: 7%; right: 7%; top: max(94px, calc(env(safe-area-inset-top) + 76px));
+  height: 1px; overflow: hidden; pointer-events: none;
+}
+.coast-chapter-transition::after {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: 30%;
+  background: linear-gradient(90deg, transparent, #88c7b94d, #e9b95680, transparent);
+  animation: coast-chapter-trace 450ms ease-in-out both;
+}
+.coast-exhibit .coast-brand { animation: coast-axis-in 700ms cubic-bezier(.2, 0, 0, 1) both; }
+.coast-exhibit .showroom-prototype { animation: coast-closing-reveal 600ms 180ms ease both; }
+.coast-exhibit .showroom-footer { animation: coast-closing-reveal 600ms 350ms ease both; }
+.coast-exhibit .coast-scene .showroom-eyebrow,
+.coast-exhibit .coast-scene .showroom-description,
+.coast-exhibit .coast-scene .reel-scene__detail {
+  animation: coast-closing-reveal 600ms cubic-bezier(.32, .72, 0, 1) both;
+}
+.coast-exhibit .coast-scene .showroom-eyebrow { animation-delay: 80ms; }
+.coast-exhibit .coast-scene .showroom-description { animation-delay: 240ms; }
+.coast-exhibit .coast-scene .reel-scene__detail { animation-delay: 400ms; }
+
+/* 01 — Trace the coast, then discover its seven illustrative points. */
+.coast-exhibit .coast-map__contour { animation: coast-contour-draw 1800ms 100ms cubic-bezier(.22, 1, .36, 1) both; }
+.coast-exhibit .coast-map__route { animation: coast-route-travel 3600ms linear infinite; }
+.coast-exhibit .coast-map__pin { animation-name: coast-pin-arrive; transform-box: fill-box; transform-origin: center; }
+.coast-exhibit .coast-map__halo { animation: coast-pin-ripple 2600ms 600ms ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.coast-map__currents { stroke: #9ac9bb; stroke-width: .8; stroke-dasharray: 9 18; opacity: .22; animation: coast-current-drift 6500ms linear infinite; }
+.coast-map__caption { animation: coast-axis-in 600ms 700ms cubic-bezier(.2, 0, 0, 1) both; }
+.coast-map__compass { animation: coast-closing-reveal 600ms 300ms ease both; }
+
+/* 02 — The original observation stays mounted through report → review → share. */
+.coast-workflow .coast-observation-location { animation: coast-copy-lift 650ms 100ms both; }
+.coast-workflow .reel-report__typed { animation: coast-observation-reveal 1400ms 220ms cubic-bezier(.22, 1, .36, 1) both; }
+.coast-workflow .coast-observation-note { animation: coast-copy-lift 650ms 400ms both; }
+.coast-workflow .coast-record-footer { animation: coast-copy-lift 650ms 650ms both; }
+.coast-workflow--report .reel-report__receipt { animation: coast-copy-lift 650ms 700ms both; }
+.coast-workflow .reel-report__receipt { position: relative; overflow: hidden; }
+.coast-workflow .reel-report__receipt::after {
+  content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+  background: #d9b762; transform: scaleX(0); transform-origin: left; pointer-events: none;
+}
+.coast-workflow--report .reel-report__receipt::after { animation: coast-receipt-line 850ms 900ms both; }
+.coast-record-journey i { position: relative; overflow: hidden; }
+.coast-record-journey i::after { content: ''; position: absolute; inset: 0; background: #bca86b; transform: scaleX(0); transform-origin: left; }
+
+/* 03 — A document/lens gesture and amber review trace; no approval animation. */
+.coast-workflow--review .reel-report__receipt::after { animation: coast-review-line 2200ms 200ms ease both; }
+.coast-workflow--review .coast-record-journey i:first-of-type::after { animation: coast-receipt-line 850ms 200ms both; }
+.coast-review-glyph, .coast-reviewed-glyph { width: 25px; height: 25px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.coast-review-glyph g { animation: coast-review-lens 1800ms 200ms ease-in-out both; }
+
+/* 04 — A reviewed community record is delivered to three connected clients. */
+.coast-workflow--shared .coast-record-journey i::after { transform: scaleX(1); }
+.coast-workflow--shared .coast-record-journey i:last-of-type::after { animation: coast-receipt-line 850ms 200ms both; }
+.coast-workflow--shared .reel-report__receipt::after { background: #90c7ac; animation: coast-receipt-line 850ms 120ms both; }
+.coast-reviewed-glyph path { animation: coast-contour-draw 650ms 150ms ease both; }
+.coast-workflow--shared .coast-device { animation: coast-copy-lift 650ms cubic-bezier(.22, 1, .36, 1) both; }
+.coast-workflow--shared .coast-device:nth-child(1) { animation-delay: 250ms !important; }
+.coast-workflow--shared .coast-device:nth-child(2) { animation-delay: 400ms !important; }
+.coast-workflow--shared .coast-device:nth-child(3) { animation-delay: 550ms !important; }
+.coast-workflow--shared .coast-device > span i { animation: coast-delivery-pulse 1500ms 900ms 2; }
+.coast-workflow--shared .coast-device:nth-child(2) > span i { animation-delay: 1100ms; }
+.coast-workflow--shared .coast-device:nth-child(3) > span i { animation-delay: 1300ms; }
+
+/* 05 — A quiet beacon, concentric tide rings and separate device/icon entrances.
+   The float wrapper does not replace the existing mark-joining transforms. */
+.coast-closing__float { animation: coast-mark-float 6500ms 1400ms ease-in-out infinite; }
+.coast-closing__rings i { animation: coast-closing-ripple 8000ms ease-in-out infinite; }
+.coast-closing__rings i:nth-child(2) { animation-delay: -2600ms; }
+.coast-closing__rings i:nth-child(3) { animation-delay: -5200ms; }
+.coast-closing__rings i:nth-child(2)::after {
+  content: ''; position: absolute; left: 50%; top: -2px; width: 4px; height: 4px;
+  background: #b5c7a1; border-radius: 50%; opacity: .55;
+}
+.coast-closing .coast-device > svg { animation: coast-device-icon 700ms cubic-bezier(.22, 1, .36, 1) both; }
+.coast-closing .coast-device:nth-child(1) > svg { animation-delay: 400ms; }
+.coast-closing .coast-device:nth-child(2) > svg { animation-delay: 550ms; }
+.coast-closing .coast-device:nth-child(3) > svg { animation-delay: 700ms; }
+.coast-closing .coast-device > span i { animation: coast-delivery-pulse 5000ms 1400ms infinite; }
+.coast-closing .coast-device:nth-child(2) > span i { animation-delay: 1800ms; }
+.coast-closing .coast-device:nth-child(3) > span i { animation-delay: 2200ms; }
+
+@keyframes coast-contour-draw { from { stroke-dasharray: 1; stroke-dashoffset: 1; } to { stroke-dasharray: 1; stroke-dashoffset: 0; } }
+@keyframes coast-route-travel { to { stroke-dashoffset: -36; } }
+@keyframes coast-pin-arrive { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes coast-pin-ripple { 0%, 100% { opacity: .45; transform: scale(.85); } 50% { opacity: .85; transform: scale(1.15); } }
+@keyframes coast-current-drift { to { stroke-dashoffset: -54; } }
+@keyframes coast-copy-lift { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes coast-observation-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes coast-receipt-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes coast-review-line { 0% { transform: scaleX(.15); opacity: .4; } 70% { transform: scaleX(.8); opacity: 1; } 100% { transform: scaleX(1); opacity: .5; } }
+@keyframes coast-review-lens { 0%, 100% { transform: translate(0, 0); } 45% { transform: translate(-3px, -2px); } 75% { transform: translate(1px, -1px); } }
+@keyframes coast-delivery-pulse { 0%, 15%, 65%, 100% { opacity: .5; transform: scale(1); } 35% { opacity: 1; transform: scale(1.7); } }
+@keyframes coast-mark-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes coast-closing-ripple { 0%, 100% { opacity: .55; transform: scale(.94) rotate(0); } 50% { opacity: 1; transform: scale(1.04) rotate(12deg); } }
+@keyframes coast-device-icon { from { opacity: 0; transform: translateY(5px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes coast-chapter-in { from { opacity: 0; transform: translateX(var(--coast-step-x)) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes coast-chapter-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(calc(var(--coast-step-x) * -.83)) scale(.98); } }
+@keyframes coast-copy-next-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes coast-copy-next-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-10px); } }
+@keyframes coast-chapter-trace { 0% { opacity: 0; transform: translateX(-100%); } 25%, 65% { opacity: 1; } 100% { opacity: 0; transform: translateX(430%); } }
+@media (max-width: 720px) {
+  .coast-exhibit { --coast-step-x: 12px; }
+  .coast-chapter-transition { top: max(78px, calc(env(safe-area-inset-top) + 62px)); }
+}
+@media (max-height: 460px) { .coast-chapter-transition { display: none; } }
+
+/* Static content is the baseline when motion is disabled. No hidden reveal state
+   is left behind, and the existing pause class covers every pseudo-element. */
+.coast-exhibit.showroom--paused *, .coast-exhibit.showroom--paused *::before, .coast-exhibit.showroom--paused *::after { animation-play-state: paused !important; }
+.coast-exhibit.showroom--reduced *, .coast-exhibit.showroom--reduced *::before, .coast-exhibit.showroom--reduced *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .coast-exhibit *, .coast-exhibit *::before, .coast-exhibit *::after { animation: none !important; transition: none !important; }
+}

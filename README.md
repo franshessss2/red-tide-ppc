@@ -19,7 +19,7 @@ describes the earlier sample release, not proof of live cross-device activation.
 
 - **Hosting:** Vercel, deployed from `main`. Record labels distinguish sample/local data, cached records and server delivery. Hosting does not imply live or official data.
 - **Sample mode:** missing, incomplete or placeholder Firebase configuration falls back to browser-local records; `VITE_USE_DEMO_BACKEND=true` forces that mode. Visitors see **Sample data** beside community records and **Sample data · local records** in source details. The current production check is dated in §9.
-- **Introduction:** an opening film followed by a nine-chapter reel. The reel loops until the visitor enters; reduced motion skips the film and shows a static equivalent. Replay restarts the sequence. See [Opening film](docs/opening-video.md) and [Reel intro](docs/reel-intro.md).
+- **Introduction:** a five-chapter Connected Coast exhibit that starts immediately and loops until the visitor enters. Reduced motion shows a static closing summary; replay restarts the illustrated intro. The closing scene holds for 25 seconds and credits DICT and BFAR under "In collaboration with". See [Intro guide](docs/reel-intro.md).
 - **Map:** below 768px, a compact bottom panel; at desktop widths, the original zone/advisory drawers. A separate street-map dialog uses MapLibre. See [Mobile map layout](docs/mobile-map-layout.md) and [Street map](docs/mapcn-text-motion.md).
 - **Android:** a Capacitor debug alpha bundles the web build. The shared Drive folder currently contains the PR #99 status-bar/cutout fix as `RTP.apk`; it is outside Google Play. Real-phone verification remains pending. Build details are in §9 and [Android setup](android-app/README.md).
 - **Windows:** **RedTide ppc (RTP)** is an Electron x64 testing alpha with a native window, menus and per-user installer. It bundles the web build; sample/local records are separate from the website and Android. The installer is unsigned and is not yet attached to a GitHub release. See [Windows setup and limits](desktop-app/README.md).
@@ -45,7 +45,7 @@ For Philippine official advice, check [BFAR shellfish bulletins](https://www.bfa
 
 **Routes**
 
-- `/` — opening film/reel on eligible first visits, then the landing page with community figures, source labels, replay and the Android QR download dialog.
+- `/` — illustrated intro on eligible first visits, then the landing page with community figures, source labels, replay and the Android QR download dialog.
 - `/map` — the public map (lazy-loaded; the landing and admin never pay for Leaflet).
 - `/admin` — Google sign-in and an administrator claim in Firebase mode; a public demo lock in sample mode.
 - `/devices` — local rehearsal page for the optional virtual ESP32, with no accounts or hardware (see [Virtual device setup](docs/virtual-device-setup.md)).
@@ -434,7 +434,7 @@ From `android-app/android`, run `gradlew.bat :app:connectedDebugAndroidTest` wit
 | **Adjust a drawer's snap feel** | `src/motion/sidePanelAnchors.ts` (projection time, flick velocity, spring constants) — pure and unit-tested, change here before touching `ZoneDrawer.tsx` / `AdvisoryDrawer.tsx`. |
 | **Adjust map zone/camera animation timing** | `src/motion/mapMotion.ts` (stagger, flight duration, focus padding), then `src/styles/map-motion.css`. |
 | **Adjust the route transition feel** | `src/motion/RouteTransition.tsx` (variants, durations) — re-run `scripts/route-transition-pass.mjs` after any change. |
-| **Adjust the intro timing or look** | `src/components/SplashScreen.tsx`, `src/components/intro/reelScenes.ts`, `src/styles/showroom.css` and the intro illustration styles. The opening film is separate; see the film/reel guides. Legacy `tide-intro.css` and `introHold`/`introExit` tokens do not define the active reel clock. |
+| **Adjust the intro timing or look** | `src/components/SplashScreen.tsx`, `src/components/intro/reelScenes.ts`, `src/styles/showroom.css` and the intro illustration styles. See the intro guide; the opening video has been removed. Legacy `tide-intro.css` and `introHold`/`introExit` tokens do not define the active reel clock. |
 | **Fill the Team roster** | `src/data/team.ts`: fill all three names, roles, initials, `posterSrc` and `videoSrc`; supply real files in `public/media/team/`; clear each real entry's `placeholder`, remove replaced paths from `TEAM_PLACEHOLDER_ASSETS`, then set `TEAM_SECTION_ENABLED=true`. Run the real-roster gate and media checks before enabling. |
 | **Publish a new Android build** | Build root `dist/`, sync/verify it in `android-app/`, rebuild and test the APK. Upload and verify it in the existing shared folder, then remove older APKs. Keep the folder URL stable for the QR. |
 
@@ -444,7 +444,7 @@ From `android-app/android`, run `gradlew.bat :app:connectedDebugAndroidTest` wit
 
 These are merged changes on main as of **13 October 2026**, not claims of physical-device acceptance:
 
-- **Film and nine-chapter reel:** full opening film before each sequence; persistent observation/review illustration, shared chapter clock, 450ms crossfades, 650ms landing exit and a 120ms reduced-motion exit. The reel loop is 38.25 seconds, excluding the film. First-visit state uses `red-tide-ppc:intro:v3`; the film does not loop. See [Film](docs/opening-video.md), [Reel](docs/reel-intro.md) and [Archived intro](docs/intro-archive.md).
+- **Film and nine-chapter reel:** full opening film before each sequence; persistent observation/review illustration, shared chapter clock, 450ms crossfades, 650ms landing exit and a 120ms reduced-motion exit. The reel loop is 38.25 seconds, excluding the film. First-visit state uses `red-tide-ppc:intro:v3`; the film does not loop. This is historical behavior; the opening video has since been removed. See [Current intro](docs/reel-intro.md) and [Archived intro](docs/intro-archive.md).
 - **#92:** empty Team cards and media guards, retained behind the OFF flag. No placeholder people are shown to visitors.
 - **#96:** opt-in Firebase build guard; missing configuration still selects sample mode when the guard is unset.
 - **#97:** reserved landing geometry/font fallback metrics, restrained amber shader rims, steadier dark overview surface and one coordinated hero entrance timeline. Landing reduced-motion/Save-Data guards are scoped so the opening film/reel retains its behavior.

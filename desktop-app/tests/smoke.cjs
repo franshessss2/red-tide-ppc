@@ -72,27 +72,21 @@ async function run() {
     await qr.evaluate(image => image.decode())
     result.qrLoaded = true
     await page.getByRole('button', { name: 'Close Android download' }).click()
-    result.video = await page.evaluate(async () => {
-      const response = await fetch('/media/opening-peak.mp4', { headers: { Range: 'bytes=0-31' } })
+    result.collaboratorLogo = await page.evaluate(async () => {
+      const response = await fetch('/media/acknowledgements/dict-philippines.png', { headers: { Range: 'bytes=0-31' } })
       return { status: response.status, type: response.headers.get('content-type'), bytes: (await response.arrayBuffer()).byteLength }
     })
-    assert.equal(result.video.status, 206)
-    assert.equal(result.video.type, 'video/mp4')
-    assert.equal(result.video.bytes, 32)
-    result.filmMetadata = await page.evaluate(async () => {
-      const video = document.createElement('video')
-      video.muted = true; video.preload = 'metadata'
-      video.src = '/media/opening-peak.mp4'
-      document.body.append(video)
-      try {
-        return await new Promise((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error('Film metadata timed out')), 8000)
-          video.onloadedmetadata = () => { clearTimeout(timer); resolve({ duration: video.duration, width: video.videoWidth, height: video.videoHeight }) }
-          video.onerror = () => { clearTimeout(timer); reject(new Error('Film decode failed')) }
-        })
-      } finally { video.remove() }
+    assert.equal(result.collaboratorLogo.status, 206)
+    assert.equal(result.collaboratorLogo.type, 'image/png')
+    assert.equal(result.collaboratorLogo.bytes, 32)
+    result.collaboratorImage = await page.evaluate(async () => {
+      const image = new Image()
+      image.src = '/media/acknowledgements/dict-philippines.png'
+      await image.decode()
+      return { width: image.naturalWidth, height: image.naturalHeight }
     })
-    assert.ok(result.filmMetadata.duration > 17 && result.filmMetadata.duration < 20)
+    assert.equal(result.collaboratorImage.width, 1400)
+    assert.equal(result.collaboratorImage.height, 692)
     result.deviceApi = await page.evaluate(async () => {
       const response = await fetch('/api/device-readings')
       return { status: response.status, data: await response.json() }

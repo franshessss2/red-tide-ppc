@@ -1,4 +1,66 @@
-# Red Tide product-film introduction
+# Connected Coast introduction
+
+## Current presentation
+
+The site starts directly in the five illustrated chapters: Our coast, Your
+observation, Human review, Shared updates, and Your turn. The
+opening video player, its styles/tests, both MP4s, poster, and separate guide
+have been removed at the owner's request. The closing chapter holds for 25
+seconds; the other chapter timings remain. Holds total 43.9 seconds; including
+five 450 ms transitions, the repeating story takes 46.15 seconds.
+
+Replay begins at the coast chapter. The existing first-visit preference,
+click/keyboard dismissal, hidden-tab clock and reduced-motion closing summary
+remain. The closing scene places DICT and the official paired DA/BFAR logo side
+by side below "In collaboration with", as requested by the project owner.
+ICT is deferred. Logo source/provenance lives beside the image in
+`public/media/acknowledgements/README.md`.
+
+Closing text, the device cards and the two agency badges enter individually.
+The title retains the existing per-word crossfade (700 ms with 70 ms word
+stagger); supporting items use Animate Text's micro-scale-fade contract
+(600 ms, opacity 0 to 1, scale .96 to 1) with separate delays. Hidden tabs pause
+motion and the chapter clock; reduced motion shows the content immediately.
+
+### Individual chapter motion
+
+All five chapters now have decorative CSS/SVG motion, scoped to the intro:
+
+| Chapter | Motion |
+| --- | --- |
+| Our coast | Coastline traces once, seven points appear in order, route dashes travel, and three faint current lines drift. |
+| Your observation | Location, observation text, note and receipt reveal separately; an amber receipt line settles. |
+| Human review | A small document/lens gesture, amber receipt trace and journey connector emphasize manual review. |
+| Shared updates | The reviewed tick draws, the final journey connector fills, and Website/Android/Windows appear in sequence with brief delivery pulses. |
+| Your turn | Centered tide rings breathe, the mark floats by five pixels, device icons enter separately, and small connection dots pulse slowly. Agency badges remain still after their staggered entrances. |
+
+Supporting copy uses the same 600 ms micro-scale-fade as the closing chapter;
+heading word reveals and chapter timing remain unchanged. The observation DOM
+is retained across report, review and sharing. The closing mark has a separate
+float wrapper so its original joining animation remains intact. Hidden-tab
+pause and reduced-motion overrides cover pseudo-elements as well as elements.
+No new animation dependency, chapter timer, live record or device operation is
+introduced. The code is in `src/styles/connected-coast-motion.css`.
+
+Between chapters, the complete illustration/copy frame moves gently left while
+the next frame enters from the right. During observation → review → shared
+updates, only the keyed copy frames move and the original report card stays
+anchored. A faint one-pixel light trace runs below the header during handoff.
+The same 450 ms visible-time clock owns every transition, including the return
+from closing to coast. Entrance animation names stay on stable wrapper classes
+after commit, preventing a replay or snap when the incoming class is removed.
+Phones use half the page travel; short landscape omits the decorative trace.
+
+During development only, `/intro-preview` shows the intro without the landing
+page or first-visit preference changes. `/intro-preview?chapter=closing` holds
+the last chapter for visual review. These preview routes are excluded from
+production builds.
+
+## Historical notes
+
+The sections below record earlier versions and their verification evidence;
+their nine-chapter timings and hardware/video descriptions are not the current
+presentation.
 
 ## Connected workflow and progress (PR89)
 

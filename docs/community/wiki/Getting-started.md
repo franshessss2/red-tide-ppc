@@ -2,7 +2,7 @@
 
 ## Explore and report
 
-1. Open the [website](https://red-tide-ppc.vercel.app/). On eligible first visits, enter after the opening film/reel. The replay control restarts it; reduced motion uses the existing static equivalent.
+1. Open the [website](https://red-tide-ppc.vercel.app/). On eligible first visits, enter from the illustrated intro. The replay control restarts it; reduced motion uses the existing static equivalent.
 2. Select **Open the map**, or visit [/map](https://red-tide-ppc.vercel.app/map).
 3. Select a coastal zone and read its community status and data-source label. Boundaries are approximate.
 4. Use **Report a sighting**. Add a description; a photo is optional. The report starts pending. Sample-data reports stay on this browser/app origin.
