@@ -252,8 +252,8 @@ export function ReportForm({
                 >
                   <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line sm:hidden" />
 
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 basis-48">
                       <h2
                         id={`${textareaId}-title`}
                         className="font-display text-2xl leading-none text-paper"
@@ -268,7 +268,7 @@ export function ReportForm({
                   </div>
 
                   <p className="mt-3 flex items-center gap-2 rounded-lg border border-line bg-ink-3 px-3 py-2">
-                    <span className="font-display truncate text-base text-paper">
+                    <span className="font-display text-base text-paper [overflow-wrap:anywhere]">
                       {zone.name}
                     </span>
                   </p>

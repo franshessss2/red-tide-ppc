@@ -24,6 +24,15 @@ dialog.report-sync-dialog { width: min(620px, calc(100vw - 24px)); }
 .report-activity-views button[aria-pressed=true] { color: var(--color-paper); }
 .report-activity-selected { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--color-ink-3); box-shadow: 0 1px 4px #0003; }
 .report-activity-view-label { position: relative; }
+.report-view-short { display: none; }
+.report-connection-details { border-bottom: 1px solid var(--color-line); padding-bottom: 10px; }
+.report-connection-details > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; font-size: 12px; color: var(--color-accent); }
+.report-connection-details > summary::-webkit-details-marker { display: none; }
+.report-connection-details > summary strong { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.report-connection-details > summary span { font-size: 10px; color: var(--color-muted); }
+.report-connection-details > summary svg { flex-shrink: 0; }
+.report-connection-details[open] > summary > svg:last-child { transform: rotate(180deg); }
+.report-connection-details > .connection-card { margin-top: 8px; }
 .report-activity-view-label small { font: 9px var(--font-mono); margin-left: 7px; color: var(--color-accent); }
 .report-history-tools { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; margin: 8px 0 14px; }
 .report-history-tools label > span { display: block; margin-bottom: 7px; font-size: 10px; color: var(--color-muted); }
@@ -85,8 +94,20 @@ dialog.report-sync-dialog { width: min(620px, calc(100vw - 24px)); }
   .connection-card { padding: 13px; }
   .connection-card__feeds { grid-template-columns: 1fr; gap: 13px; }
   .connection-card__heading > span { font-size: 6px; }
-  .report-sync-dialog .report-sync-heading { padding: 18px 16px 14px; }
-  .report-sync-dialog .report-sync-content { padding: 16px; }
+  dialog.report-sync-dialog { --activity-top: max(8px, env(safe-area-inset-top)); width: calc(100vw - 16px); max-width: none; max-height: calc(100dvh - var(--activity-top) - max(8px, env(safe-area-inset-bottom))); border-radius: 14px; }
+  .report-sync-dialog .report-sync-heading { padding: 12px 14px; }
+  .report-sync-heading h2 { font-size: 25px; }
+  .report-sync-dialog .report-sync-content { padding: 8px 14px 16px; }
+  .report-activity-views { margin-top: 12px; gap: 2px; padding: 3px; }
+  .report-activity-views button { padding: 8px 4px; font-size: 12px; line-height: 1.4; }
+  .report-view-long { display: none; }
+  .report-view-short { display: inline; }
+  .report-activity-view-label small { margin-left: 4px; }
+  .report-connection-details > summary span { display: none; }
+  .report-sync-dialog .report-sync-note { padding: 10px 0; font-size: 12px; }
+  .report-sync-dialog input, .report-sync-dialog select { font-size: 16px; }
+  .report-outbox-actions { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .report-outbox-actions button { border: 1px solid var(--color-line); border-radius: 8px; padding: 10px 12px; text-align: center; text-decoration: none; }
   .report-history-tools { grid-template-columns: 1fr; }
   .report-journey { padding: 16px; }
   .led-guide > header { align-items: flex-start; padding: 18px; }

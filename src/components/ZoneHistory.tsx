@@ -63,14 +63,17 @@ export function ZoneHistory() {
   return <section className="mt-5 rounded-xl border border-line bg-ink-2 p-4" aria-label="Zone status history">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h3 className="font-display text-xl text-paper">Zone status history</h3>
-      <label className="text-xs text-muted">Coastal area
-        <select aria-label="Filter zone history" value={zoneId} onChange={event => { setZoneId(event.target.value); setLimit(30) }} className="ml-2 max-w-48 rounded-lg border border-line bg-ink p-2 text-paper">
+      <label className="grid w-full min-w-0 gap-2 text-xs text-muted">Coastal area
+        <select aria-label="Filter zone history" value={zoneId} onChange={event => { setZoneId(event.target.value); setLimit(30) }} className="min-h-11 w-full min-w-0 rounded-lg border border-line bg-ink p-2 text-paper">
           <option value="">All zones</option>{zones.map(zone => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
         </select>
       </label>
     </div>
-    <p className="mt-2 text-xs leading-relaxed text-muted">Recorded changes from this upgrade onward. Earlier changes were not stored and cannot be reconstructed.</p>
-    <p className="mt-2 text-xs text-muted">Recent changes load first. The coastal-area filter applies to loaded pages. Older pages are snapshots; retry history to refresh them.</p>
+    {zoneId && <p className="mt-2 text-sm text-paper [overflow-wrap:anywhere]">{zones.find(zone => zone.id === zoneId)?.name ?? zoneId}</p>}
+    <details className="mt-3 text-xs leading-relaxed text-muted"><summary className="cursor-pointer py-2">About this history</summary>
+      <p>Recorded changes from this upgrade onward. Earlier changes were not stored and cannot be reconstructed.</p>
+      <p className="mt-2">Recent changes load first. The coastal-area filter applies to loaded pages. Older pages are snapshots; retry history to refresh them.</p>
+    </details>
     <p className="mt-2 font-mono text-[10px] text-faint">{kind === 'demo' ? 'Local sample history' : pending ? 'Awaiting server confirmation' : !online || cached ? 'Saved on this device · may be out of date' : phase === 'ready' ? 'Server-delivered history' : 'History connection pending'}</p>
     {phase === 'loading' && <p role="status" className="mt-4 text-sm text-muted">Loading zone history…</p>}
     {phase === 'error' && <p role="alert" className="mt-4 text-sm text-muted">Zone history could not load. <button type="button" onClick={() => setRetry(value => value + 1)} className="text-accent underline">Retry history</button></p>}

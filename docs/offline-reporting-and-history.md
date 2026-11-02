@@ -75,6 +75,10 @@ stable top position. Departing content becomes inert, rapid switches resolve to
 the latest view, and receipt navigation restores keyboard focus. Reduced motion
 switches content immediately and disables row entrance effects.
 
+On phones, connection diagnostics and history guidance expand on request. Short
+view labels stay on one row, form controls use the available width, long zone
+names wrap in report content, and receipt actions stack with 44-pixel targets.
+
 ## Evidence
 
 - Full suite: 635 passed, with five emulator-only cases skipped there and
