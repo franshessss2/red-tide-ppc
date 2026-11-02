@@ -4,6 +4,8 @@ import { DEMO_ADMIN_PASSCODE } from './lib/demoAdminPasscode'
 import { emptyFeed, receivedFeed, type FeedName, type FeedState } from './lib/feed'
 import { zoneStatusMeta } from './lib/status'
 import { isImageFile, MAX_PHOTO_BYTES } from './lib/image'
+import { clearReportDraft } from './lib/reportDraft'
+import { saveToOutbox, sendOutboxReport, waitForOutboxSend } from './lib/reportOutbox'
 import type { Report, Zone, KnownZoneStatus } from './types'
 
 /**
@@ -20,7 +22,9 @@ export interface ReportDraft {
   zoneId: string
   description: string
   photo: File | null
+  saveOnly?: boolean
 }
+export interface SubmitOutcome { delivery: 'saved' | 'sent'; id: string }
 
 export const MIN_DESCRIPTION_LENGTH = 10
 export const MAX_DESCRIPTION_LENGTH = 2000
@@ -61,6 +65,9 @@ function writeAdminSession(unlocked: boolean): void {
 export interface AppState {
   zones: Zone[]
   reports: Report[]
+  reportsLimited: boolean
+  reportsCursor: unknown
+  reportsHasMore: boolean
   backendKind: 'firebase' | 'demo'
 
   zonesReady: boolean
@@ -94,10 +101,10 @@ export interface AppState {
   selectZone: (zoneId: string | null) => void
   openReportForm: (zoneId: string) => void
   closeReportForm: () => void
-  submitReport: (draft: ReportDraft) => Promise<void>
-  approveReport: (reportId: string) => Promise<void>
-  rejectReport: (reportId: string) => Promise<void>
-  setZoneStatus: (zoneId: string, status: KnownZoneStatus) => Promise<void>
+  submitReport: (draft: ReportDraft) => Promise<SubmitOutcome | void>
+  approveReport: (reportId: string, note?: string) => Promise<void>
+  rejectReport: (reportId: string, note?: string) => Promise<void>
+  setZoneStatus: (zoneId: string, status: KnownZoneStatus, note?: string) => Promise<void>
   tryUnlockAdmin: (passcode: string) => boolean
   lockAdmin: () => void
   dismissMessages: () => void
@@ -106,6 +113,9 @@ export interface AppState {
 export const useAppStore = create<AppState>()((set, get) => ({
   zones: [],
   reports: [],
+  reportsLimited: false,
+  reportsCursor: undefined,
+  reportsHasMore: false,
   backendKind: getBackend().kind,
 
   zonesReady: false,
@@ -169,6 +179,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
                 reports: metadata?.fromCache && reports.length === 0 && state.reportsReady
                   ? state.reports : sortByNewest(reports),
                 reportsReady: true,
+                reportsLimited: !!metadata?.limited,
+                reportsCursor: metadata?.cursor,
+                reportsHasMore: !!metadata?.hasMore,
                 reportsFeed: receivedFeed(state.reportsFeed, backend.kind, metadata),
               }))
             }, onError)
@@ -251,6 +264,19 @@ export const useAppStore = create<AppState>()((set, get) => ({
     try {
       const backend = getBackend()
 
+      if (typeof indexedDB !== 'undefined' && backend.outboxScope) {
+        const saved = await saveToOutbox(backend, { ...draft, description, zoneName: zone.name })
+        clearReportDraft(backend.kind, zone.id)
+        const received = !draft.saveOnly && navigator.onLine
+          ? await waitForOutboxSend(sendOutboxReport(backend, saved.id)) : null
+        const delivery = received?.phase === 'sent' ? 'sent' : 'saved'
+        set({ submitting: false, reportZoneId: null, formError: null,
+          notice: delivery === 'sent' ? `Salamat! Your report for ${zone.name} was received. Its receipt is in My reports.`
+            : 'Saved on this device. Open Reports → My reports to send or check delivery.' })
+        return { delivery, id: saved.id }
+      }
+      if (draft.saveOnly || (typeof navigator !== 'undefined' && navigator.onLine === false)) throw new Error('Offline saving is unavailable on this device. Keep your report open and retry when connected.')
+
       // Photo first: if the upload fails we have not written a report that
       // points at a URL that does not exist.
       let photoUrl: string | null = null
@@ -266,6 +292,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         description,
         photoUrl,
       })
+      clearReportDraft(backend.kind, zone.id)
 
       set({
         submitting: false,
@@ -285,7 +312,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
-  async approveReport(reportId) {
+  async approveReport(reportId, note = '') {
     const report = get().reports.find((r) => r.id === reportId)
     if (!report) {
       set({ error: 'That report is no longer in the list.' })
@@ -295,12 +322,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
     set({ busyReportId: reportId, error: null })
     try {
       const backend = getBackend()
-      await backend.setReportStatus(reportId, 'confirmed')
+      await backend.setReportStatus(reportId, 'confirmed', note)
 
       // The zone flip is a second write. If it fails we still keep the report
       // confirmed, but say so loudly.
       try {
-        await backend.setZoneStatus(report.zoneId, 'advisory')
+        await backend.setZoneStatus(report.zoneId, 'advisory', { note, reportId })
       } catch (zoneError) {
         set({
           busyReportId: null,
@@ -325,7 +352,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
-  async rejectReport(reportId) {
+  async rejectReport(reportId, note = '') {
     const report = get().reports.find((r) => r.id === reportId)
     if (!report) {
       set({ error: 'That report is no longer in the list.' })
@@ -334,7 +361,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
     set({ busyReportId: reportId, error: null })
     try {
-      await getBackend().setReportStatus(reportId, 'rejected')
+      await getBackend().setReportStatus(reportId, 'rejected', note)
       set({
         busyReportId: null,
         notice: `Rejected. ${zoneNameFor(get().zones, report.zoneId)} was left unchanged.`,
@@ -347,10 +374,10 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
-  async setZoneStatus(zoneId, status) {
+  async setZoneStatus(zoneId, status, note = '') {
     set({ busyZoneId: zoneId, error: null })
     try {
-      await getBackend().setZoneStatus(zoneId, status)
+      await getBackend().setZoneStatus(zoneId, status, { note })
       set({
         busyZoneId: null,
         notice: `${zoneNameFor(get().zones, zoneId)} set to ${zoneStatusMeta(status).label}.`,

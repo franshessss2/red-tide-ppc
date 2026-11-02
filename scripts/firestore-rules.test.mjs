@@ -1,7 +1,7 @@
 import { after, before, beforeEach, test } from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 
 const projectId = 'demo-red-tide-admin'
 const [host, port] = (process.env.FIRESTORE_EMULATOR_HOST ?? '').split(':')
@@ -48,8 +48,11 @@ test(`${prefix || 'legacy/'} verified Google admin can approve/reject and change
   const db = database(adminToken)
   await assertSucceeds(updateDoc(doc(db, path('reports/test-report')), { status: 'confirmed', reviewedAt: serverTimestamp() }))
   await assertSucceeds(updateDoc(doc(db, path('reports/test-report')), { status: 'rejected', reviewedAt: serverTimestamp() }))
+  let previous = 'safe'
   for (const status of ['advisory', 'unconfirmed', 'safe']) {
-    await assertSucceeds(updateDoc(doc(db, path('zones/pp-bay')), { status, lastUpdated: serverTimestamp() }))
+    if (!prefix) await assertSucceeds(updateDoc(doc(db, path('zones/pp-bay')), { status, lastUpdated: serverTimestamp() }))
+    else await assertSucceeds(statusBatch(db, status, `change-${status}`, {}, previous).commit())
+    previous = status
   }
 })
 test(`${prefix || 'legacy/'} even admin cannot edit geometry, report content, inject fields, fake timestamps or delete`, async () => {
@@ -78,3 +81,31 @@ test(`${prefix || 'legacy/'} public submissions cannot self-confirm, inject admi
 })
 
 }
+
+function statusBatch(db, status, id, overrides = {}, fromStatus = 'safe') {
+  const batch = writeBatch(db)
+  batch.set(doc(db, `datasets/community-v1/zoneChanges/${id}`), { zoneId: 'pp-bay', fromStatus, toStatus: status, note: 'Synthetic review note.', reportId: null, changedAt: serverTimestamp(), ...overrides })
+  batch.update(doc(db, 'datasets/community-v1/zones/pp-bay'), { status, lastUpdated: serverTimestamp(), lastChangeId: id })
+  return batch
+}
+
+test('zone history requires a paired admin status write and is immutable', async () => {
+  const db = database(adminToken), publicDb = database(null)
+  await assertFails(updateDoc(doc(db, 'datasets/community-v1/zones/pp-bay'), { status: 'advisory', lastUpdated: serverTimestamp() }))
+  await assertFails(statusBatch(publicDb, 'advisory', 'public-change').commit())
+  await assertFails(setDoc(doc(db, 'datasets/community-v1/zoneChanges/orphan'), { zoneId: 'pp-bay', fromStatus: 'safe', toStatus: 'advisory', note: '', reportId: null, changedAt: serverTimestamp() }))
+  for (const overrides of [{ fromStatus: 'unconfirmed' }, { note: 'x'.repeat(501) }, { changedAt: new Date(0) }, { actorEmail: 'injected@example.test' }, { reportId: 'missing' }]) {
+    await assertFails(statusBatch(db, 'advisory', 'bad-change', overrides).commit())
+  }
+  await assertSucceeds(statusBatch(db, 'advisory', 'good-change').commit())
+  await assertSucceeds(getDoc(doc(publicDb, 'datasets/community-v1/zoneChanges/good-change')))
+  await assertFails(updateDoc(doc(db, 'datasets/community-v1/zoneChanges/good-change'), { note: 'Rewritten' }))
+  await assertFails(deleteDoc(doc(db, 'datasets/community-v1/zoneChanges/good-change')))
+})
+test('public review notes are bounded and anonymous submissions cannot inject them', async () => {
+  const db = database(adminToken), ref = doc(db, 'datasets/community-v1/reports/test-report')
+  await assertSucceeds(updateDoc(ref, { status: 'rejected', reviewedAt: serverTimestamp(), reviewNote: 'Duplicate observation; kept for reference.' }))
+  await assertFails(updateDoc(ref, { status: 'confirmed', reviewedAt: serverTimestamp(), reviewNote: 'x'.repeat(501) }))
+  await assertFails(updateDoc(doc(database(null), 'datasets/community-v1/reports/test-report'), { reviewNote: 'Self approved' }))
+  await assertFails(setDoc(doc(database(null), 'datasets/community-v1/reports/injected-note'), { ...report(), reviewNote: 'Self approved' }))
+})

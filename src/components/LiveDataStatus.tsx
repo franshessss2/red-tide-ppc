@@ -16,6 +16,7 @@ import { zoneLabel } from '../styles/statusTheme'
 export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
+  const limited = useAppStore(state => state.reportsLimited)
   const zonesReady = useAppStore((state) => state.zonesReady)
   const reportsReady = useAppStore((state) => state.reportsReady)
   const zonesFeed = useAppStore((state) => state.zonesFeed)
@@ -36,14 +37,14 @@ export function LiveDataStatus({ admin = false }: { admin?: boolean }) {
           : 'Zone data loading.',
         reportsReady ? `${pending} pending reports.` : 'Report data loading.',
         `Zones: ${feedLabel(zonesFeed)}. Reports: ${feedLabel(reportsFeed)}.`,
-        admin && reportsReady ? `${reports.length} total reports. ${reports.length - pending} reviewed reports.` : '',
+        admin && reportsReady ? `${reports.length} ${limited ? 'recent or pending' : 'total'} reports. ${reports.length - pending} ${limited ? 'reviewed reports in the live window' : 'reviewed reports'}.` : '',
       ].filter(Boolean).join(' '),
       zones: Object.fromEntries((zonesReady ? zones : []).map((zone) => [zone.id,
         `${zone.name}: ${zoneLabel(zone.status)}. ` +
           (reportsReady ? `${pendingCounts[zone.id] ?? 0} pending reports.` : 'Report data loading.'),
       ])),
     }
-  }, [zones, reports, zonesReady, reportsReady, zonesFeed, reportsFeed, admin])
+  }, [zones, reports, limited, zonesReady, reportsReady, zonesFeed, reportsFeed, admin])
   const announced = useRef<typeof snapshot | null>(null)
 
   useEffect(() => {

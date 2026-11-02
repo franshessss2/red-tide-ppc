@@ -7,7 +7,10 @@ import { createMotionScope } from '../motion/scope'
 import { MOTION, spring, tween } from '../motion/tokens'
 import { useModalFocus } from '../motion/useModalFocus'
 import { formatBytes } from '../lib/format'
-import { MAX_PHOTO_BYTES } from '../lib/image'
+import { prepareReportPhoto, type PreparedPhoto } from '../lib/lowDataPhoto'
+import { readReportDraft, saveReportDraft, clearReportDraft } from '../lib/reportDraft'
+import { OPEN_RECEIPTS_EVENT } from '../lib/reportOutbox'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
 import {
   MAX_DESCRIPTION_LENGTH,
   MIN_DESCRIPTION_LENGTH,
@@ -16,7 +19,7 @@ import {
 import type { Zone } from '../types'
 import { ZoneStatusBadge } from './StatusBadge'
 
-type Phase = 'idle' | 'submitting' | 'success' | 'closing'
+type Phase = 'idle' | 'submitting' | 'success' | 'saved' | 'closing'
 
 /** How long the success confirmation stays up before the sheet dismisses. */
 const SUCCESS_HOLD_MS = MOTION.time.successHold * 1000
@@ -62,13 +65,32 @@ export function ReportForm({
     import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET?.trim())
   const canAttachPhoto = backendKind === 'demo' || photoConfigured
   const reduceMotion = useReducedMotion()
+  const online = useOnlineStatus()
 
-  const [description, setDescription] = useState('')
+  const [recoveredDraft, setRecoveredDraft] = useState(() => readReportDraft(backendKind, zone.id))
+  const [description, setDescription] = useState(recoveredDraft)
+  const [draftAvailable, setDraftAvailable] = useState(true)
+  const completedDraft = useRef(false)
+  const latestDescription = useRef(description)
+  latestDescription.current = description
+  useEffect(() => {
+    const flush = () => { if (!completedDraft.current) saveReportDraft(backendKind, zone.id, latestDescription.current) }
+    window.addEventListener('pagehide', flush)
+    return () => { window.removeEventListener('pagehide', flush); flush() }
+  }, [backendKind, zone.id])
+  useEffect(() => {
+    const timer = setTimeout(() => { if (!completedDraft.current) setDraftAvailable(saveReportDraft(backendKind, zone.id, description)) }, 350)
+    return () => clearTimeout(timer)
+  }, [description, backendKind, zone.id])
   const [photo, setPhoto] = useState<File | null>(null)
+  const [photoInfo, setPhotoInfo] = useState<PreparedPhoto | null>(null)
+  const [preparingPhoto, setPreparingPhoto] = useState(false)
+  const photoSelection = useRef(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
+  const [savingOnly, setSavingOnly] = useState(false)
   const [failedAttempt, setFailedAttempt] = useState(0)
   const shakeX = useMotionValue(0)
   const acknowledgedFailure = useRef(0)
@@ -96,7 +118,7 @@ export function ReportForm({
   const characterCount = description.trim().length
   const tooShort = characterCount < MIN_DESCRIPTION_LENGTH
 
-  const isSuccess = phase === 'success'
+  const isSuccess = phase === 'success' || phase === 'saved'
   const isSubmitting = phase === 'submitting'
   // `submitting` is included so the sheet does not flash out in the instant
   // between the store closing it and this component learning it succeeded.
@@ -111,11 +133,11 @@ export function ReportForm({
 
   // Hold the success state briefly, then let it exit.
   useEffect(() => {
-    if (!isSuccess) return
+    if (!isSuccess || phase === 'saved') return
     const scope = createMotionScope()
     scope.timeout(() => setPhase('closing'), SUCCESS_HOLD_MS)
     return () => scope.dispose()
-  }, [isSuccess])
+  }, [isSuccess, phase])
 
   useEffect(() => {
     return () => {
@@ -124,35 +146,35 @@ export function ReportForm({
   }, [previewUrl])
   useEffect(() => () => releaseRetiredPhotos(), [])
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selection = ++photoSelection.current
     const file = event.target.files?.[0] ?? null
-    if (!file) {
-      setPhoto(null)
-      setPreviewUrl(null)
-      setLocalError(null)
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      setLocalError('Please choose an image file.')
-      setPhoto(null)
-      setPreviewUrl(null)
-      return
-    }
-    if (file.size > MAX_PHOTO_BYTES) {
-      setLocalError(`That photo is ${formatBytes(file.size)} — the limit is 5 MB.`)
-      setPhoto(null)
-      setPreviewUrl(null)
-      return
-    }
-
+    setPhoto(null)
+    setPhotoInfo(null)
+    setPreviewUrl(null)
     setLocalError(null)
-    setPhoto(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    if (!file) {
+      setPreparingPhoto(false)
+      return
+    }
+    setPreparingPhoto(true)
+    try {
+      const info = await prepareReportPhoto(file)
+      if (!alive.current || selection !== photoSelection.current) return
+      const preview = URL.createObjectURL(info.file)
+      setPhoto(info.file)
+      setPhotoInfo(info)
+      setPreviewUrl(preview)
+    } catch (error) {
+      if (alive.current && selection === photoSelection.current) setLocalError(error instanceof Error ? error.message : 'Could not prepare that photo.')
+    } finally {
+      if (alive.current && selection === photoSelection.current) setPreparingPhoto(false)
+    }
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent, saveOnly = false) {
     event.preventDefault()
-    if (submittingRef.current || !open) return
+    if (submittingRef.current || preparingPhoto || !open) return
     if (tooShort) {
       setDescriptionError(`Please describe what you saw in at least ${MIN_DESCRIPTION_LENGTH} characters. Add ${MIN_DESCRIPTION_LENGTH - characterCount} more to submit.`)
       descriptionRef.current?.focus()
@@ -161,10 +183,13 @@ export function ReportForm({
     setDescriptionError(null)
     submittingRef.current = true
 
+    setSavingOnly(saveOnly || !online)
     setPhase('submitting')
     try {
-      await submitReport({ zoneId: zone.id, description, photo })
-      if (alive.current) setPhase('success')
+      const outcome = await submitReport({ zoneId: zone.id, description, photo, ...(saveOnly ? { saveOnly: true } : {}) })
+      completedDraft.current = true
+      clearReportDraft(backendKind, zone.id)
+      if (alive.current) setPhase(outcome?.delivery === 'saved' ? 'saved' : 'success')
     } catch {
       // store.submitReport already recorded the message in `formError`; the
       // form stays open and shows it inline.
@@ -198,7 +223,7 @@ export function ReportForm({
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            aria-label={isSuccess ? 'Report sent' : undefined}
+            aria-label={isSuccess ? phase === 'saved' ? 'Report saved on this device' : 'Report sent' : undefined}
             aria-labelledby={isSuccess ? undefined : `${textareaId}-title`}
             initial={{ opacity: 0, y: reduceMotion ? 0 : 34 }}
             animate={{ opacity: 1, y: 0 }}
@@ -208,7 +233,12 @@ export function ReportForm({
           >
             <AnimatePresence mode="wait" initial={false}>
               {isSuccess ? (
-                <SuccessPanel key="success" zoneName={zone.name} hasPhoto={!!photo} />
+                phase === 'saved' ? <div key="saved" role="status" className="p-6 text-center">
+                  <h2 className="font-display text-3xl text-paper">Saved on this device</h2>
+                  <p className="mt-3 text-sm text-muted">No server receipt yet. Your text and prepared photo are kept in My reports. Sending continues only if you already requested it; saved-only reports wait for you to press Send.</p>
+                  <button type="button" className="mt-5 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-ink" onClick={() => { dismiss(); window.dispatchEvent(new Event(OPEN_RECEIPTS_EVENT)) }}>Open My reports</button>
+                  <button type="button" className="ml-3 mt-3 text-sm text-muted underline" onClick={dismiss}>Close</button>
+                </div> : <SuccessPanel key="success" zoneName={zone.name} hasPhoto={!!photo} />
               ) : (
                 <motion.form
                   key="form"
@@ -281,6 +311,10 @@ export function ReportForm({
                   </div>
 
                   <div className="mt-4">
+                    {(description || recoveredDraft) && <div className="mb-3 rounded-lg border border-line bg-ink-3 p-3 text-xs text-muted">
+                      <p>{!draftAvailable ? 'Draft recovery is unavailable on this device. Keep this page open until you finish.' : recoveredDraft ? 'Recovered an unfinished draft from this device. Choose your photo again, or check My reports for saved photo reports.' : 'Draft text stays on this device for up to 7 days. Use Save report for later to also keep the photo.'}</p>
+                      <button type="button" disabled={isSubmitting} className="mt-2 text-accent underline" onClick={() => { setDescription(''); setRecoveredDraft(''); clearReportDraft(backendKind, zone.id) }}>Clear saved text</button>
+                    </div>}
                     <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
                       Photo{' '}
                       <span className="normal-case tracking-normal text-faint/70">
@@ -307,12 +341,14 @@ export function ReportForm({
                             {photo?.name}
                           </p>
                           <p className="font-mono text-[10px] text-faint">
-                            {photo ? formatBytes(photo.size) : ''}
+                            {photoInfo ? `${formatBytes(photoInfo.originalBytes)} → ${formatBytes(photoInfo.file.size)}` : ''}
                           </p>
+                          <p className="mt-1 text-xs text-safe">Low-data photo ready</p>
                           <button
                             type="button"
                             onClick={() => {
                               setPhoto(null)
+                              setPhotoInfo(null)
                               setPreviewUrl(null)
                               if (fileInputRef.current) fileInputRef.current.value = ''
                             }}
@@ -344,13 +380,14 @@ export function ReportForm({
                         <input
                           ref={fileInputRef}
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
                           onChange={handleFileChange}
                           className="sr-only"
                         />
                       </motion.label>
                     )}
                     </AnimatePresence>
+                    <p role="status" className="mt-2 text-xs text-muted">{preparingPhoto ? 'Preparing a smaller photo on this device…' : 'Photos are resized on this device before sending. Original files stay unchanged. Up to 20 MB.'}</p>
                     </div>}
                   </div>
 
@@ -384,7 +421,7 @@ export function ReportForm({
 
                     <motion.button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || preparingPhoto}
                       className="motion-press relative flex-[1.4] overflow-hidden rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-ink transition-colors duration-[var(--motion-base)] hover:bg-accent/90 disabled:cursor-wait"
                     >
                       {/* Indeterminate sweep while the photo uploads and the
@@ -401,13 +438,14 @@ export function ReportForm({
                         {isSubmitting && (
                           <Spinner className="h-3.5 w-3.5 text-ink/70" />
                         )}
-                        {isSubmitting ? 'Sending…' : 'Submit report'}
+                        {isSubmitting ? savingOnly ? 'Saving…' : 'Sending…' : online ? 'Submit report' : 'Save on this device'}
                       </span>
                     </motion.button>
                   </div>
 
-                  {backendKind === 'firebase' && isSubmitting && <p role="status" className="mt-3 text-xs text-muted">Waiting for server confirmation. Keep this form open; if the connection drops, sending resumes when it returns.</p>}
+                  {backendKind === 'firebase' && isSubmitting && !savingOnly && <p role="status" className="mt-3 text-xs text-muted">Waiting for a server receipt. If confirmation takes longer, check the saved report in My reports.</p>}
 
+                  {typeof indexedDB !== 'undefined' && <button type="button" disabled={isSubmitting || preparingPhoto || tooShort} className="mt-3 min-h-11 w-full text-sm text-muted underline disabled:opacity-40" onClick={event => void handleSubmit(event, true)}>Save report for later</button>}
                   <p className="mt-3 font-mono text-[10px] leading-relaxed text-faint">
                     Reports are reviewed by an admin before they change a zone's
                     status. This app does not replace an official BFAR advisory.

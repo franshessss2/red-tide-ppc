@@ -1,5 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { uploadPhotoToCloudinary } from './backend.firebase'
+const prepare = vi.hoisted(() => vi.fn())
+vi.mock('./lowDataPhoto', () => ({ prepareReportPhoto: prepare }))
+beforeEach(() => prepare.mockImplementation(async (file: File) => ({ file })))
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -17,6 +20,8 @@ describe('uploadPhotoToCloudinary', () => {
       }),
     )
     const file = new File(['photo'], 'water.jpg', { type: 'image/jpeg' })
+    const smaller = new File(['tiny'], 'report-photo.jpg', { type: 'image/jpeg' })
+    prepare.mockResolvedValueOnce({ file: smaller })
 
     await expect(uploadPhotoToCloudinary(file)).resolves.toBe(
       'https://res.cloudinary.com/red-tide/photo.jpg',
@@ -27,7 +32,8 @@ describe('uploadPhotoToCloudinary', () => {
     expect(init?.method).toBe('POST')
     expect(init?.body).toBeInstanceOf(FormData)
     const body = init?.body as FormData
-    expect(body.get('file')).toBe(file)
+    expect(prepare).toHaveBeenCalledWith(file)
+    expect(body.get('file')).toBe(smaller)
     expect(body.get('upload_preset')).toBe('public-reports')
   })
 

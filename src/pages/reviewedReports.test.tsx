@@ -55,7 +55,7 @@ it('toggles only map visibility while preserving every history record and making
   fireEvent.click(screen.getByRole('checkbox', { name: 'Show report history' }))
   expect(map.props?.showReviewedReports).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: /Report activity/ }))
-  expect(screen.getByText('3 received')).toBeTruthy()
+  expect(screen.getByText('3 loaded')).toBeTruthy()
   expect(screen.getByText('Confirmed by admin')).toBeTruthy()
   expect(screen.getByText('Rejected by admin')).toBeTruthy()
   expect(screen.getByText('Awaiting admin review')).toBeTruthy()

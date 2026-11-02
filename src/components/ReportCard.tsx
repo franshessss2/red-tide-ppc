@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { useReducedMotion } from '../motion/preferences'
 import { MOTION, tween } from '../motion/tokens'
@@ -34,13 +34,15 @@ export function ReportCard({
   report: Report
   zoneName: string
   busy: boolean
-  onApprove: () => void | Promise<void>
-  onReject: () => void | Promise<void>
+  onApprove: (note: string) => void | Promise<void>
+  onReject: (note: string) => void | Promise<void>
 }) {
   const isPending = report.status === 'pending'
   const theme = reportTheme(report.status)
   const reduceMotion = useReducedMotion()
   const [action, setAction] = useState<'approve' | 'reject' | null>(null)
+  const [note, setNote] = useState('')
+  const noteId = useId()
   const lock = useRef(false)
   const alive = useRef(false)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -122,11 +124,13 @@ export function ReportCard({
           <span className="text-faint/80">{report.id}</span>
         </p>
 
+        {report.reviewNote && <div className="mt-3 rounded-lg border border-line p-3"><p className="font-mono text-[10px] text-faint">ADMIN REVIEW NOTE</p><p className="mt-1 whitespace-pre-wrap text-sm text-paper/85">{report.reviewNote}</p></div>}
+        {isPending && <div className="mt-3"><label htmlFor={noteId} className="text-xs text-muted">Public review note (optional)</label><textarea id={noteId} value={note} maxLength={500} disabled={waiting} onChange={event => setNote(event.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-line bg-ink p-2 text-sm text-paper" placeholder="Explain the decision without personal information." /><p className="mt-1 text-[10px] text-faint">Visible in report history · {note.length}/500</p></div>}
         {isPending ? (
           <div className="mt-3.5 flex gap-2">
             <motion.button
               type="button"
-              onClick={() => void run('approve', onApprove)}
+              onClick={() => void run('approve', () => onApprove(note.trim()))}
               disabled={waiting}
               className="motion-press group relative flex-1 overflow-hidden rounded-lg bg-advisory px-3 py-2.5 text-sm font-semibold text-ink transition-transform duration-[var(--motion-base)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
             >
@@ -141,7 +145,7 @@ export function ReportCard({
 
             <motion.button
               type="button"
-              onClick={() => void run('reject', onReject)}
+              onClick={() => void run('reject', () => onReject(note.trim()))}
               disabled={waiting}
               className="motion-press flex-1 rounded-lg border border-line px-3 py-2.5 text-sm font-semibold text-paper/80 transition-colors duration-[var(--motion-base)] hover:border-line-soft hover:bg-white/5 hover:text-paper disabled:cursor-not-allowed disabled:opacity-45"
             >

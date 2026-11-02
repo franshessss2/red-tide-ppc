@@ -19,10 +19,12 @@
 .connection-card--compact .connection-card__heading > span { display: none; }
 dialog.report-sync-dialog { width: min(620px, calc(100vw - 24px)); }
 .report-sync-dialog .report-sync-heading { position: sticky; top: 0; background: var(--color-ink-2); z-index: 2; }
-.report-activity-views { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; margin-top: 20px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-ink); }
-.report-activity-views button { min-height: 44px; padding: 8px 10px; border-radius: 8px; color: var(--color-muted); font-size: 12px; cursor: pointer; }
-.report-activity-views button[aria-pressed=true] { background: var(--color-ink-3); color: var(--color-paper); box-shadow: 0 1px 4px #0003; }
-.report-activity-views button span { font: 9px var(--font-mono); margin-left: 7px; color: var(--color-accent); }
+.report-activity-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 5px; margin-top: 20px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-ink); }
+.report-activity-views button { position: relative; isolation: isolate; min-height: 44px; padding: 8px 10px; border-radius: 8px; color: var(--color-muted); font-size: 12px; cursor: pointer; transition: color 140ms, background-color 140ms; }
+.report-activity-views button[aria-pressed=true] { color: var(--color-paper); }
+.report-activity-selected { position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--color-ink-3); box-shadow: 0 1px 4px #0003; }
+.report-activity-view-label { position: relative; }
+.report-activity-view-label small { font: 9px var(--font-mono); margin-left: 7px; color: var(--color-accent); }
 .report-history-tools { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; margin: 8px 0 14px; }
 .report-history-tools label > span { display: block; margin-bottom: 7px; font-size: 10px; color: var(--color-muted); }
 .report-history-tools input, .report-history-tools select { min-height: 44px; width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--color-line); border-radius: 9px; background: var(--color-ink); color: var(--color-paper); font-size: 11px; }

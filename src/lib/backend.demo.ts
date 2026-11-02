@@ -4,9 +4,10 @@ import type {
   ReportStatus,
   Zone,
   KnownZoneStatus,
+  ZoneChange,
 } from '../types'
 import type { Backend } from './backend'
-import { mapReport, mapZone } from './firestoreMapping'
+import { mapReport, mapZone, mapZoneChange } from './firestoreMapping'
 import { SEED_ZONES } from '../data/zones'
 import { fileToCompressedDataUrl, MAX_PHOTO_BYTES } from './image'
 
@@ -26,6 +27,7 @@ type Listener = () => void
 interface DemoData {
   zones: Zone[]
   reports: Report[]
+  zoneChanges: ZoneChange[]
 }
 
 function freshData(): DemoData {
@@ -40,6 +42,7 @@ function freshData(): DemoData {
       lastUpdated: now,
     })),
     reports: [],
+    zoneChanges: [],
   }
 }
 
@@ -62,6 +65,10 @@ function readStorage(): DemoData | null {
         .map((zone) => mapZone(zone.id, zone as unknown as Record<string, unknown>)),
       reports: parsed.reports.filter((report) => report && typeof report.id === 'string')
         .map((report) => mapReport(report.id, report as unknown as Record<string, unknown>)),
+      zoneChanges: (Array.isArray(parsed.zoneChanges) ? parsed.zoneChanges : []).flatMap(change => {
+        const mapped = change && typeof change.id === 'string' ? mapZoneChange(change.id, change as unknown as Record<string, unknown>) : null
+        return mapped ? [mapped] : []
+      }),
     }
   } catch {
     return null
@@ -88,6 +95,7 @@ export function createDemoBackend(): Backend {
   let data: DemoData = readStorage() ?? freshData()
   const zoneListeners = new Set<Listener>()
   const reportListeners = new Set<Listener>()
+  const changeListeners = new Set<Listener>()
 
   function persist(): void {
     writeStorage(data)
@@ -109,6 +117,7 @@ export function createDemoBackend(): Backend {
 
   return {
     kind: 'demo',
+    outboxScope: 'demo:community-v1',
 
     subscribeToZones(onChange) {
       const listener: Listener = () => onChange(clone(data.zones), { fromCache: false, hasPendingWrites: false })
@@ -120,7 +129,12 @@ export function createDemoBackend(): Backend {
     },
 
     subscribeToReports(onChange) {
-      const listener: Listener = () => onChange(clone(data.reports), { fromCache: false, hasPendingWrites: false })
+      const listener: Listener = () => {
+        const sorted = [...data.reports].sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0) || b.id.localeCompare(a.id))
+        const records = new Map(sorted.slice(0, 30).map(report => [report.id, report]))
+        sorted.filter(report => report.status === 'pending').forEach(report => records.set(report.id, report))
+        onChange(clone([...records.values()]), { fromCache: false, hasPendingWrites: false, limited: sorted.length > 30, cursor: 30, hasMore: sorted.length > 30 })
+      }
       reportListeners.add(listener)
       listener()
       return () => {
@@ -128,9 +142,14 @@ export function createDemoBackend(): Backend {
       }
     },
 
-    async addReport(input: NewReport): Promise<Report> {
+    async addReport(input: NewReport, requestId?: string): Promise<Report> {
+      const existing = requestId && data.reports.find(report => report.id === requestId)
+      if (existing) {
+        if (existing.zoneId !== input.zoneId || existing.description !== input.description || existing.photoUrl !== input.photoUrl) throw new Error('This receipt belongs to a different report.')
+        return clone(existing)
+      }
       const report: Report = {
-        id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: requestId ?? `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         zoneId: input.zoneId,
         description: input.description,
         photoUrl: input.photoUrl,
@@ -142,6 +161,17 @@ export function createDemoBackend(): Backend {
       return clone(report)
     },
 
+    async getReport(id) { return clone(data.reports.find(report => report.id === id) ?? null) },
+    async reportPage(cursor, allRecords = false) {
+      const sorted = [...data.reports].sort((a, b) => allRecords ? a.id.localeCompare(b.id) : (b.submittedAt ?? 0) - (a.submittedAt ?? 0) || b.id.localeCompare(a.id))
+      const start = typeof cursor === 'number' ? cursor : 0
+      return { records: clone(sorted.slice(start, start + 30)), cursor: start + 30, hasMore: sorted.length > start + 30 }
+    },
+    async zoneChangePage(cursor) {
+      const start = typeof cursor === 'number' ? cursor : 0
+      return { records: clone(data.zoneChanges.slice(start, start + 30)), cursor: start + 30, hasMore: data.zoneChanges.length > start + 30 }
+    },
+
     async uploadReportPhoto(file: File): Promise<string> {
       if (file.size > MAX_PHOTO_BYTES) {
         throw new Error('Photo is larger than 5 MB. Please pick a smaller image.')
@@ -149,30 +179,43 @@ export function createDemoBackend(): Backend {
       return fileToCompressedDataUrl(file)
     },
 
-    async setReportStatus(reportId: string, status: ReportStatus): Promise<void> {
+    subscribeToZoneChanges(onChange) {
+      const listener = () => onChange(clone(data.zoneChanges.slice(0, 30)), { fromCache: false, hasPendingWrites: false, cursor: 30, hasMore: data.zoneChanges.length > 30 })
+      changeListeners.add(listener); listener()
+      return () => { changeListeners.delete(listener) }
+    },
+
+    async setReportStatus(reportId: string, status: ReportStatus, note = ''): Promise<void> {
+      if (note.trim().length > 500) throw new Error('Review notes must be 500 characters or fewer.')
       const found = data.reports.some((report) => report.id === reportId)
       if (!found) throw new Error(`No report with id "${reportId}".`)
       data = {
         ...data,
         reports: data.reports.map((report) =>
-          report.id === reportId ? { ...report, status, reviewedAt: Date.now() } : report,
+          report.id === reportId ? { ...report, status, reviewedAt: Date.now(), reviewNote: note.trim() } : report,
         ),
       }
       emitReports()
     },
 
-    async setZoneStatus(zoneId: string, status: KnownZoneStatus): Promise<void> {
-      const found = data.zones.some((zone) => zone.id === zoneId)
+    async setZoneStatus(zoneId: string, status: KnownZoneStatus, context = {}): Promise<void> {
+      const note = context.note?.trim() ?? ''
+      if (note.length > 500) throw new Error('Status notes must be 500 characters or fewer.')
+      const found = data.zones.find((zone) => zone.id === zoneId)
       if (!found) throw new Error(`No zone with id "${zoneId}".`)
+      if (found.status === status) return
+      const now = Date.now()
       data = {
         ...data,
+        zoneChanges: [{ id: `demo-change-${crypto.randomUUID()}`, zoneId, fromStatus: found.status, toStatus: status, note, reportId: context.reportId ?? null, changedAt: now }, ...data.zoneChanges],
         zones: data.zones.map((zone) =>
           zone.id === zoneId
-            ? { ...zone, status, lastUpdated: Date.now() }
+            ? { ...zone, status, lastUpdated: now }
             : zone,
         ),
       }
       emitZones()
+      emit(changeListeners)
     },
   }
 }

@@ -15,7 +15,7 @@
 .report-sync-count { padding: 1px 6px; background: var(--color-accent); color: var(--color-ink); border-radius: 20px; font-weight: 600; }
 .report-sync-arrival { display: grid; gap: 3px; max-width: 290px; margin-bottom: 8px; padding: 12px 15px; border: 1px solid var(--color-accent-deep); background: var(--color-ink-2); border-radius: 12px; animation: report-arrive 240ms ease-out both; pointer-events: none; }
 .report-sync-arrival > span:first-child { color: var(--color-accent); font-size: 11px; }
-.report-sync-dialog { margin: auto; width: min(460px, calc(100vw - 24px)); max-height: calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding: 0; border: 1px solid var(--color-line); border-radius: 18px; color: var(--color-paper); background: var(--color-ink-2); overflow-y: auto; overscroll-behavior: contain; animation: report-arrive 200ms ease-out both; }
+.report-sync-dialog { --activity-top: max(clamp(18px, 6dvh, 72px), env(safe-area-inset-top)); margin: var(--activity-top) auto 0; top: 0; bottom: auto; width: min(460px, calc(100vw - 24px)); max-height: calc(100dvh - var(--activity-top) - max(18px, env(safe-area-inset-bottom))); padding: 0; border: 1px solid var(--color-line); border-radius: 18px; color: var(--color-paper); background: var(--color-ink-2); overflow-y: auto; overscroll-behavior: contain; animation: report-arrive 200ms ease-out both; }
 .report-sync-dialog::backdrop { background: #000b; animation: report-backdrop 200ms ease-out both; }
 .report-sync-dialog[data-closing=true] { animation: report-depart 180ms ease-in both; }
 .report-sync-dialog[data-closing=true]::backdrop { animation: report-backdrop 180ms ease-in reverse both; }
@@ -24,6 +24,12 @@
 .report-sync-eyebrow { font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; color: var(--color-accent); text-transform: uppercase; }
 .report-sync-heading button { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: 10px; background: var(--color-ink-3); cursor: pointer; }
 .report-sync-content { padding: 20px 22px; }
+.report-activity-viewport { overflow: clip; }
+.report-activity-viewport:focus-within { overflow: visible; }
+.report-activity-measure { display: flow-root; }
+.report-sync-list > li { animation: report-row-enter 180ms var(--ease-out-quint, ease-out) both; }
+.report-sync-dialog button { transition: color 140ms, background-color 140ms, border-color 140ms; }
+@keyframes report-row-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 .report-sync-connection { display: flex; align-items: flex-start; gap: 12px; }
 .report-sync-connection > svg { flex-shrink: 0; color: var(--color-accent); margin-top: 2px; }
 .report-sync-connection h3 { font-size: 14px; font-weight: 600; }
@@ -53,4 +59,4 @@ body:has([aria-modal=true], dialog[open], .splash-overlay) .report-sync-dock { v
   .report-sync-dock[data-map=true] { bottom: calc(140px + env(safe-area-inset-bottom)); }
   body:has(.map-page:not([data-mobile-panel=peek])) .report-sync-dock[data-map=true] { visibility: hidden; }
 }
-@media (prefers-reduced-motion: reduce) { .report-sync-dialog, .report-sync-dialog::backdrop, .report-sync-arrival { animation-duration: 0s !important; } }
+@media (prefers-reduced-motion: reduce) { .report-sync-dialog, .report-sync-dialog::backdrop, .report-sync-arrival, .report-sync-list > li { animation-duration: 0s !important; animation-delay: 0s !important; } .report-sync-dialog button { transition-duration: 0s !important; } }

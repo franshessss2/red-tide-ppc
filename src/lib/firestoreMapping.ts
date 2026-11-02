@@ -1,4 +1,4 @@
-import type { LatLng, Report, ReportStatus, Zone, ZoneStatus } from '../types'
+import type { LatLng, Report, ReportStatus, Zone, ZoneStatus, ZoneChange } from '../types'
 
 /**
  * Pure mapping between raw Firestore documents and the app's domain types.
@@ -148,7 +148,16 @@ export function mapReport(id: string, data: Record<string, unknown>, hasPendingW
     status: normalizeReportStatus(data.status),
     ...('reviewedAt' in data ? { reviewedAt: toMillis(data.reviewedAt) } : {}),
     ...(hasPendingWrites && data.reviewedAt === null ? { reviewedAtPending: true } : {}),
+    ...(typeof data.reviewNote === 'string' ? { reviewNote: data.reviewNote.slice(0, 500) } : {}),
   }
+}
+
+export function mapZoneChange(id: string, data: Record<string, unknown>, pending = false): ZoneChange | null {
+  if (typeof data.zoneId !== 'string' || !['safe', 'advisory', 'unconfirmed'].includes(String(data.toStatus))) return null
+  return { id, zoneId: data.zoneId, fromStatus: normalizeZoneStatus(data.fromStatus), toStatus: data.toStatus as ZoneChange['toStatus'],
+    note: typeof data.note === 'string' ? data.note.slice(0, 500) : '', changedAt: toMillis(data.changedAt),
+    ...(pending && data.changedAt === null ? { changedAtPending: true } : {}),
+    reportId: typeof data.reportId === 'string' ? data.reportId : null }
 }
 
 /**
