@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router-dom'
-import { Bell, Check, ChevronRight, X } from 'lucide-react'
+import { Bell, Check, ChevronDown, ChevronRight, Radio, X } from 'lucide-react'
 import { LayoutGroup, motion } from 'motion/react'
 import { useAppStore } from '../store'
 import type { Report } from '../types'
@@ -162,14 +162,17 @@ export function SharedReportActivity() {
         <button type="button" onClick={requestClose} aria-label="Close report activity"><X size={19} /></button>
       </header>
       <div className="report-sync-content">
-        <ConnectionPanel />
+        <details className="report-connection-details">
+          <summary><Radio size={15} aria-hidden="true" /><strong>{connection.label}</strong><span>Connection details</span><ChevronDown size={15} aria-hidden="true" /></summary>
+          <ConnectionPanel />
+        </details>
         <LayoutGroup id={`report-views-${id}`}><div className="report-activity-views" aria-label="Activity view">
-          {([{ key: 'history', label: 'Report history' }, { key: 'changes', label: 'What changed?' }, { key: 'mine', label: 'My reports' }] as const).map(entry => <button key={entry.key} type="button" aria-pressed={view === entry.key} onClick={() => switchView(entry.key)}>
+          {([{ key: 'history', label: 'Report history', short: 'History' }, { key: 'changes', label: 'What changed?', short: 'Changes' }, { key: 'mine', label: 'My reports', short: 'My reports' }] as const).map(entry => <button key={entry.key} type="button" aria-label={`${entry.label}${entry.key === 'history' ? ` ${archive.records.length}` : ''}`} aria-pressed={view === entry.key} onClick={() => switchView(entry.key)}>
             {view === entry.key && <motion.i className="report-activity-selected" aria-hidden="true" layoutId="selected-view" transition={tween(reduceMotion, MOTION.time.base)} />}
-            <span className="report-activity-view-label">{entry.label}{entry.key === 'history' && <> <small>{archive.records.length}</small></>}</span>
+            <span className="report-activity-view-label"><span className="report-view-long">{entry.label}</span><span className="report-view-short">{entry.short}</span>{entry.key === 'history' && <> <small>{archive.records.length}</small></>}</span>
           </button>)}
         </div></LayoutGroup>
-        <p className="report-sync-note">Public reports stay pending until an authorized administrator reviews them. A report alone does not change a zone warning.</p>
+        <p className="report-sync-note">Reports need admin review. Submitting one does not change a zone warning.</p>
         {lookingUp && <p role="status" className="text-sm text-muted">Opening report receipt…</p>}
         {lookupError && <p role="alert" className="text-sm text-advisory">{lookupError}</p>}
         <ActivityViewport sceneKey={selected ? `report:${selected.id}` : view} direction={direction} onEntered={sceneEntered}>
@@ -184,7 +187,7 @@ export function SharedReportActivity() {
           <div className="report-sync-list-heading"><h3>Report history</h3><span>{archive.records.length} loaded</span></div>
           <ReportArchiveControls archive={archive} />
           <div className="report-history-tools">
-            <label><span>Find a report</span><input type="search" value={query} placeholder="Report ID, zone or observation" onChange={event => { setQuery(event.target.value); setLimit(30) }} /></label>
+            <label><span>Find a report</span><input type="search" value={query} placeholder="ID, zone or observation" onChange={event => { setQuery(event.target.value); setLimit(30) }} /></label>
             <label><span>Review status</span><select value={filter} onChange={event => { setFilter(event.target.value as typeof filter); setLimit(30) }}><option value="all">All reports</option><option value="pending">Awaiting review</option><option value="confirmed">Approved</option><option value="rejected">Rejected</option></select></label>
           </div>
           {/^[a-zA-Z0-9_-]{1,200}$/.test(query.trim()) && <button type="button" disabled={lookingUp} className="mb-3 min-h-11 text-xs text-accent underline" onClick={() => void lookupReport(query.trim())}>Open exact report ID</button>}

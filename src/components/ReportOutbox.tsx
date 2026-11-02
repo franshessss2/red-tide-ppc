@@ -42,7 +42,7 @@ export function ReportOutbox({ onReport }: { onReport: (id: string) => void }) {
   }
   return <section aria-label="My reports" className="mt-4">
     <h3 className="font-display text-xl text-paper">My reports on this device</h3>
-    <p className="mt-2 text-xs leading-relaxed text-muted">Saved text and photos stay on this device until you press Send. Keep RTP open while sending. Browser or app storage can be cleared, so send important observations when connected.</p>
+    <p className="mt-2 text-xs leading-relaxed text-muted">Saved here until you press Send. Keep RTP open while sending; clearing app data removes local copies.</p>
     <p className="mt-2 font-mono text-[10px] text-faint">20 unsent reports · 50 MB · latest 30 receipts · {kind === 'demo' ? 'Sample reports stay local' : 'This device only'}</p>
     {!online && <p className="mt-3 text-xs text-accent">Offline · unsent reports wait for a connection. Recorded receipts remain available below.</p>}
     {error && <p role="alert" className="mt-3 text-sm text-advisory">{error}</p>}
@@ -56,7 +56,7 @@ export function ReportOutbox({ onReport }: { onReport: (id: string) => void }) {
         <p className="mt-2 font-mono text-[10px] text-faint">Saved {formatRecordTime(record.createdAt)}{record.receivedAt ? ` · Received ${formatRecordTime(record.receivedAt)}` : ''}</p>
         <p className="mt-1 font-mono text-[10px] text-faint">{record.id}{record.photo ? ` · Photo saved (${formatBytes(record.photo.size)})` : ''}</p>
         {record.error && <p className="mt-2 text-xs text-muted">{record.error}</p>}
-        <div className="mt-3 flex flex-wrap gap-3 text-xs">
+        <div className="report-outbox-actions mt-3 flex flex-wrap gap-3 text-xs">
           {record.phase !== 'sent' ? <button type="button" disabled={!online || locked} className="min-h-11 rounded-lg bg-accent px-3 text-ink disabled:opacity-40" onClick={() => void send(record.id)}>{locked ? 'Awaiting receipt…' : 'Send now'}</button> : <>
             <button type="button" className="min-h-11 text-accent underline" onClick={() => onReport(record.id)}>Open report receipt</button>
             <button type="button" className="min-h-11 text-muted underline" onClick={() => { void navigator.clipboard.writeText(record.id).then(() => setCopied(record.id)).catch(() => setError('Could not copy. Select the report ID above.')) }}>{copied === record.id ? 'ID copied' : 'Copy report ID'}</button>
