@@ -74,6 +74,8 @@ afterEach(() => {
   setBackendForTesting(null)
   URL.createObjectURL = originalCreateObjectURL
   URL.revokeObjectURL = originalRevokeObjectURL
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   window.history.pushState({}, '', '/')
 })
 
@@ -256,9 +258,8 @@ describe('the full report → approve loop', () => {
 
 describe('photo attachment', () => {
   it('uploads a photo with the report and stores the resulting URL', async () => {
-    // jsdom has no createObjectURL, no real image decoding and no canvas, so
-    // stub the first and let the rest fall through to the raw-data-URL path
-    // that `fileToCompressedDataUrl` is designed to use.
+    // Browser decoding/encoding is covered separately. Supply a realistic
+    // canvas boundary here to exercise preparation through report persistence.
     URL.createObjectURL = vi
       .fn()
       .mockReturnValue('blob:http://localhost/mock') as typeof URL.createObjectURL
@@ -269,6 +270,8 @@ describe('photo attachment', () => {
       onerror: (() => void) | null = null
       width = 2400
       height = 1200
+      naturalWidth = 2400
+      naturalHeight = 1200
       set src(_value: string) {
         setTimeout(() => this.onload?.(), 0)
       }
@@ -278,6 +281,9 @@ describe('photo attachment', () => {
     const user = userEvent.setup()
     render(<App />)
     await openMap(user)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ fillRect: vi.fn(), drawImage: vi.fn() } as unknown as CanvasRenderingContext2D)
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(callback => callback(new Blob(['prepared'], { type: 'image/jpeg' })))
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,cHJlcGFyZWQ=')
 
     await user.click(
       within(zoneCard(ZONE)).getByRole('button', {
@@ -296,7 +302,7 @@ describe('photo attachment', () => {
     })
     await user.upload(within(dialog).getByLabelText(/Take or choose a photo/i), file)
 
-    expect(await within(dialog).findByText('redwater.jpg')).toBeTruthy()
+    expect(await within(dialog).findByText('report-photo.jpg')).toBeTruthy()
 
     await user.click(within(dialog).getByRole('button', { name: 'Submit report' }))
 

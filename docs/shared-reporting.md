@@ -48,11 +48,14 @@ An approved administrator manually confirms/rejects; review results and delibera
 zone changes reach all connected clients. Native apps open hosted Admin in the
 system browser, avoiding embedded Google OAuth and local passcode moderation.
 
-Without connectivity a write can remain pending in the current SDK session; it is
-not a successful shared submission until acknowledged. Do not close the form/app
-while it is sending. This release does not promise a durable offline outbox across
-app restarts. Feed labels distinguish cached/unacknowledged records from server
-delivery. A synced backend does not establish that a coast was scientifically tested.
+Without connectivity, reports can be saved with their prepared photo in the
+device outbox. Sending requires an explicit Submit or Send; returning online does
+not send automatically. A report is not received by the shared feed until the
+server acknowledges its stable ID. Keep RTP open while sending. Device storage
+may be cleared, and local sample reports never transfer into the live feed.
+See [offline reporting and history](offline-reporting-and-history.md) for limits.
+Feed labels distinguish cached/unacknowledged records from server delivery.
+A synced backend does not establish that a coast was scientifically tested.
 
 Local sample records/settings remain stored separately on each device and are not
 uploaded automatically. Installed apps need these new downloads; this is not an

@@ -1,6 +1,10 @@
 export interface FeedMetadata {
   fromCache: boolean
   hasPendingWrites: boolean
+  /** Bounded archive window; pending-report listeners remain complete. */
+  limited?: boolean
+  cursor?: unknown
+  hasMore?: boolean
 }
 
 export type FeedName = 'zones' | 'reports'

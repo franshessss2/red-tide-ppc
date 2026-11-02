@@ -13,6 +13,9 @@ import { Notice } from '../components/Notice'
 import { ReportQueueSkeleton } from '../components/LoadingState'
 import { ReportCard } from '../components/ReportCard'
 import { ZoneStatusBadge } from '../components/StatusBadge'
+import { ZoneHistory } from '../components/ZoneHistory'
+import { useReportArchive } from '../lib/useReportArchive'
+import { ReportArchiveControls } from '../components/ReportArchiveControls'
 import { ZONE_STATUS_META } from '../lib/status'
 import { zoneTheme } from '../styles/statusTheme'
 import {
@@ -24,12 +27,13 @@ import {
 } from '../store'
 import type { KnownZoneStatus } from '../types'
 
-type Tab = 'pending' | 'reviewed' | 'zones'
+type Tab = 'pending' | 'reviewed' | 'zones' | 'history'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'pending', label: 'Pending' },
   { id: 'reviewed', label: 'Reviewed' },
   { id: 'zones', label: 'Zones' },
+  { id: 'history', label: 'History' },
 ]
 
 const ADMIN_CONTAINER =
@@ -72,6 +76,7 @@ export function Admin() {
 }
 
 function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdminControls }) {
+  const archive = useReportArchive()
   const zones = useAppStore((state) => state.zones)
   const reports = useAppStore((state) => state.reports)
   const zonesReady = useAppStore((state) => state.zonesReady)
@@ -84,11 +89,12 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
   const lockAdmin = useAppStore((state) => state.lockAdmin)
 
   const [tab, setTab] = useState<Tab>('pending')
+  const [zoneNotes, setZoneNotes] = useState<Record<string, string>>({})
   const reduceMotion = useReducedMotion()
   const tabGroup = useId()
 
   const pendingReports = useMemo(() => selectPendingReports(reports), [reports])
-  const reviewedReports = useMemo(() => selectReviewedReports(reports), [reports])
+  const reviewedReports = useMemo(() => selectReviewedReports(archive.records), [archive.records])
   const pendingCounts = useMemo(
     () => selectPendingCountByZone(reports),
     [reports],
@@ -124,7 +130,7 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
         <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,8em),1fr))] gap-3 md:gap-4">
           <Stat label="Pending" value={pendingReports.length} ready={reportsReady} tone="amber" />
           <Stat label="Community warnings" value={advisoryZones.length} ready={zonesReady} tone="red" />
-          <Stat label="Total reports" value={reports.length} ready={reportsReady} tone="slate" />
+          <Stat label={archive.limited ? 'Recent + pending' : 'Total reports'} value={reports.length} ready={reportsReady} tone="slate" />
         </div>
 
         <LayoutGroup id={tabGroup}>
@@ -188,7 +194,7 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
                         {pendingReports.map((report) => (
                           <ReportCard key={report.id} report={report}
                             zoneName={zoneNameFor(zones, report.zoneId)} busy={busyReportId !== null}
-                            onApprove={() => approveReport(report.id)} onReject={() => rejectReport(report.id)} />
+                            onApprove={note => approveReport(report.id, note)} onReject={note => rejectReport(report.id, note)} />
                         ))}
                       </AnimatePresence>
                     </ul>
@@ -201,10 +207,11 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
 
         {tab === 'reviewed' && (
           <section className="mt-5" aria-label="Reviewed reports">
+            <ReportArchiveControls archive={archive} />
             {reviewedReports.length === 0 ? (
               <EmptyState
-                title="No reviewed reports yet"
-                body="Reports you approve or reject are archived here."
+                title={archive.limited || archive.allRecords ? 'No reviewed reports loaded' : 'No reviewed reports yet'}
+                body={archive.limited || archive.allRecords ? 'Load archive pages to browse older reviewed reports.' : 'Reports you approve or reject are archived here.'}
               />
             ) : (
               <ul className={REPORT_GRID}>
@@ -215,8 +222,8 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
                       report={report}
                       zoneName={zoneNameFor(zones, report.zoneId)}
                       busy={false}
-                      onApprove={() => approveReport(report.id)}
-                      onReject={() => rejectReport(report.id)}
+                      onApprove={note => approveReport(report.id, note)}
+                      onReject={note => rejectReport(report.id, note)}
                     />
                   ))}
                 </AnimatePresence>
@@ -253,6 +260,7 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
                       <ZoneStatusBadge status={zone.status} size="sm" />
                     </div>
 
+                    <label className="mt-3 block text-xs text-muted">Public status-change note (optional)<textarea aria-label={`Status note for ${zone.name}`} rows={2} maxLength={500} disabled={busy} value={zoneNotes[zone.id] ?? ''} onChange={event => setZoneNotes(notes => ({ ...notes, [zone.id]: event.target.value }))} className="mt-1 w-full rounded-lg border border-line bg-ink p-2 text-sm text-paper" placeholder="Explain why this zone is changing. Saved in public history." /></label>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {ZONE_STATUS_CHOICES.map((status) => {
                         const meta = ZONE_STATUS_META[status]
@@ -263,8 +271,8 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
                           <button
                             key={status}
                             type="button"
-                            disabled={busy}
-                            onClick={() => setZoneStatus(zone.id, status)}
+                            disabled={busy || isActive}
+                            onClick={async () => { await setZoneStatus(zone.id, status, zoneNotes[zone.id] ?? ''); if (!useAppStore.getState().error) setZoneNotes(notes => ({ ...notes, [zone.id]: '' })) }}
                             aria-pressed={isActive}
                             className={`flex items-center gap-1.5 rounded-lg px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] transition-all duration-[var(--motion-base)] disabled:cursor-not-allowed disabled:opacity-45 ${
                               isActive
@@ -290,6 +298,7 @@ function AdminDashboard({ firebaseControls }: { firebaseControls?: FirebaseAdmin
           </section>
         )}
 
+        {tab === 'history' && <ZoneHistory />}
         <p className="mt-8 rounded-lg border border-line bg-ink-2 p-3 font-mono text-[10px] leading-relaxed text-faint">
           {firebaseControls
             ? `Signed in as ${firebaseControls.email}. Firebase Auth verifies this account; deployed Firestore rules must enforce its administrator claim. Community records, not an official clearance.`

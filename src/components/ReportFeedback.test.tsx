@@ -35,7 +35,7 @@ describe('report feedback ownership', () => {
     expect(screen.getByText(/Photo attachments are unavailable/)).toBeTruthy()
     expect(document.querySelector('input[type="file"]')).toBeNull()
     fireEvent.submit(node)
-    expect(screen.getByText(/Waiting for server confirmation/)).toBeTruthy()
+    expect(screen.getByText(/Waiting for a server receipt/)).toBeTruthy()
     expect(screen.queryByText('Salamat!')).toBeNull()
     await act(async () => task.resolve())
     expect(await screen.findByText('Salamat!')).toBeTruthy()

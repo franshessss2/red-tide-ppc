@@ -47,6 +47,19 @@ export interface Report {
   /** Review time from the record; older reports may not have one. */
   reviewedAt?: number | null
   reviewedAtPending?: boolean
+  /** Public explanation from the administrator; legacy reports may omit it. */
+  reviewNote?: string
+}
+
+export interface ZoneChange {
+  id: string
+  zoneId: string
+  fromStatus: ZoneStatus
+  toStatus: KnownZoneStatus
+  note: string
+  changedAt: number | null
+  changedAtPending?: boolean
+  reportId: string | null
 }
 
 /** Payload used when writing a brand-new report. */

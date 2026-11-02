@@ -6,6 +6,13 @@ Explore seven approximate coastal zones, submit an observation, and demonstrate 
 
 [Production website](https://red-tide-ppc.vercel.app/) · [Public map](https://red-tide-ppc.vercel.app/map) · [Android download folder](https://drive.google.com/drive/folders/1mpUalyCgYrDXoN8L1KP7WVv11_p-VFSJ?usp=sharing) · [GitHub releases](https://github.com/franshessss2/red-tide-ppc/releases)
 
+Reporting supports smaller prepared photos, recoverable text, an explicit-send
+device outbox and matching receipts. Reports and zone history load in pages,
+while the complete pending queue remains available. Administrators can leave
+public review notes, and status changes append an immutable history event.
+See [reporting upgrades](docs/reporting-workflow-upgrades.md) and
+[offline reporting and history](docs/offline-reporting-and-history.md).
+
 [Community guide](docs/community/wiki/Home.md) · [Discussions](https://github.com/franshessss2/red-tide-ppc/discussions) · [Wiki publication and sources](docs/community/README.md)
 
 ## Current state — 13 October 2026

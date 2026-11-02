@@ -9,15 +9,31 @@ service cloud.firestore {
           && request.auth.token.email_verified == true
           && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
+    function previousStatus(data) {
+      return data.get('status', 'unknown') in ['safe', 'advisory', 'unconfirmed'] ? data.status : 'unknown';
+    }
+    function validReviewNote(data) {
+      return data.get('reviewNote', '') is string && data.get('reviewNote', '').size() <= 500;
+    }
+    function pairedZoneChange(zoneId) {
+      let id = request.resource.data.lastChangeId;
+      let change = getAfter(/databases/$(database)/documents/datasets/community-v1/zoneChanges/$(id)).data;
+      return id is string && id.matches('^[a-zA-Z0-9_-]{1,100}$')
+          && !exists(/databases/$(database)/documents/datasets/community-v1/zoneChanges/$(id))
+          && change.zoneId == zoneId && change.fromStatus == previousStatus(resource.data)
+          && change.toStatus == request.resource.data.status && change.changedAt == request.time;
+    }
     // Live clients use a clean dataset. Legacy root collections stay intact;
     // their historical demo flags and reports are never copied into this feed.
     match /datasets/community-v1/zones/{zoneId} {
       allow read: if true;
       allow create, delete: if false;
       allow update: if isAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastUpdated'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'lastUpdated', 'lastChangeId'])
           && request.resource.data.status in ['safe', 'advisory', 'unconfirmed']
-          && request.resource.data.lastUpdated == request.time;
+          && request.resource.data.status != previousStatus(resource.data)
+          && request.resource.data.lastUpdated == request.time
+          && pairedZoneChange(zoneId);
     }
     match /datasets/community-v1/reports/{reportId} {
       allow read: if true;
@@ -34,10 +50,32 @@ service cloud.firestore {
               && request.resource.data.photoUrl.matches('https://.*')))
           && request.resource.data.submittedAt == request.time;
       allow update: if isAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt', 'reviewNote'])
           && request.resource.data.status in ['pending', 'confirmed', 'rejected']
+          && validReviewNote(request.resource.data)
           && request.resource.data.reviewedAt == request.time;
       allow delete: if false;
+    }
+    match /datasets/community-v1/zoneChanges/{changeId} {
+      allow read: if true;
+      allow update, delete: if false;
+      allow create: if isAdmin()
+          && request.resource.data.keys().hasAll(['zoneId', 'fromStatus', 'toStatus', 'note', 'reportId', 'changedAt'])
+          && request.resource.data.keys().hasOnly(['zoneId', 'fromStatus', 'toStatus', 'note', 'reportId', 'changedAt'])
+          && request.resource.data.zoneId is string
+          && request.resource.data.zoneId.matches('^[a-zA-Z0-9_-]{1,100}$')
+          && request.resource.data.fromStatus == previousStatus(get(/databases/$(database)/documents/datasets/community-v1/zones/$(request.resource.data.zoneId)).data)
+          && request.resource.data.toStatus in ['safe', 'advisory', 'unconfirmed']
+          && request.resource.data.fromStatus != request.resource.data.toStatus
+          && request.resource.data.note is string && request.resource.data.note.size() <= 500
+          && request.resource.data.changedAt == request.time
+          && (request.resource.data.reportId == null || (request.resource.data.reportId is string
+              && request.resource.data.reportId.size() <= 200
+              && get(/databases/$(database)/documents/datasets/community-v1/reports/$(request.resource.data.reportId)).data.zoneId == request.resource.data.zoneId
+              && get(/databases/$(database)/documents/datasets/community-v1/reports/$(request.resource.data.reportId)).data.status == 'confirmed'))
+          && getAfter(/databases/$(database)/documents/datasets/community-v1/zones/$(request.resource.data.zoneId)).data.status == request.resource.data.toStatus
+          && getAfter(/databases/$(database)/documents/datasets/community-v1/zones/$(request.resource.data.zoneId)).data.lastChangeId == changeId
+          && getAfter(/databases/$(database)/documents/datasets/community-v1/zones/$(request.resource.data.zoneId)).data.lastUpdated == request.time;
     }
     match /zones/{zoneId} {
       allow read: if true;

@@ -13,6 +13,7 @@ export function ReportTimeline({ report, zone }: { report: Report; zone?: Zone }
   ]
   return <section className="report-journey" aria-label="Report timeline">
     <h4>Report timeline</h4>
+    {report.reviewNote && <div className="report-journey__note"><strong>Admin review note</strong><p className="mt-1 whitespace-pre-wrap">{report.reviewNote}</p></div>}
     <ol>{steps.map((step, index) => <li key={index} data-state={step.state} aria-current={step.state === 'current' ? 'step' : undefined}><span className="report-journey__number" aria-hidden="true">{step.state === 'complete' ? '✓' : String(index + 1).padStart(2, '0')}</span><div><strong>{step.title}</strong><p>{step.detail}</p></div></li>)}</ol>
     {zone?.status === 'safe' && !reviewed && <p className="report-journey__note">This zone has no alert recorded, so its map marker is hidden. This report is still awaiting review.</p>}
     {reviewed && <p className="report-journey__note">An admin review is a community moderation decision, not laboratory confirmation.</p>}
