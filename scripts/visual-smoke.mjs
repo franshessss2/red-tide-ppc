@@ -68,8 +68,14 @@ try {
       }
       await trigger.click()
       await page.getByRole('link', { name: 'Admin', exact: true }).waitFor({ state: 'visible' })
+      // Visibility can become true during the disclosure's translate transition.
+      // Measure settled touch targets, not fractional geometry in an entrance frame.
+      await page.waitForFunction(() => {
+        const panel = document.querySelector('.landing-nav__panel')
+        return getComputedStyle(panel).opacity === '1' && panel.getAnimations().every(animation => animation.playState !== 'running')
+      })
       const replay = await page.getByRole('button', { name: 'Watch introduction' }).boundingBox()
-      assert.ok(replay.width >= 44 && replay.height >= 44, 'Replay remains a readable full menu row')
+      assert.ok(replay.width >= 44 && replay.height >= 44, `Replay remains a readable full menu row: ${JSON.stringify(replay)}`)
       await page.keyboard.press('Escape')
       assert.equal(await trigger.getAttribute('aria-expanded'), 'false')
       assert.equal(await trigger.evaluate(node => node === document.activeElement), true)
